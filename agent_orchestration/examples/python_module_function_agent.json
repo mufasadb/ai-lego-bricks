@@ -1,0 +1,74 @@
+{
+  "name": "Python Module Function Agent",
+  "description": "Demonstrates using Python functions from existing modules",
+  "config": {
+    "memory_backend": "auto",
+    "default_llm_provider": "gemini",
+    "max_iterations": 10
+  },
+  "steps": [
+    {
+      "id": "get_text_input",
+      "type": "input",
+      "description": "Get text to process",
+      "config": {
+        "value": {"text": "This is a sample text with multiple words, punctuation! And some numbers: 123, 456."}
+      },
+      "outputs": ["text"]
+    },
+    {
+      "id": "analyze_text_builtin",
+      "type": "python_function", 
+      "description": "Analyze text using built-in string methods",
+      "config": {
+        "function": "builtins.len"
+      },
+      "inputs": {
+        "obj": {"from_step": "get_text_input", "field": "text"}
+      },
+      "outputs": ["length"]
+    },
+    {
+      "id": "regex_analysis",
+      "type": "python_function",
+      "description": "Analyze text using regex module functions",
+      "config": {
+        "function": {
+          "code": "import re\n\ndef analyze_text_regex(text):\n    \"\"\"Analyze text using regular expressions\"\"\"\n    \n    # Count different types of characters\n    word_count = len(re.findall(r'\\b\\w+\\b', text))\n    digit_count = len(re.findall(r'\\d', text))\n    punctuation_count = len(re.findall(r'[^\\w\\s]', text))\n    sentence_count = len(re.findall(r'[.!?]+', text))\n    \n    # Extract numbers\n    numbers = [int(match) for match in re.findall(r'\\b\\d+\\b', text)]\n    \n    return {\n        'word_count': word_count,\n        'digit_count': digit_count,\n        'punctuation_count': punctuation_count,\n        'sentence_count': sentence_count,\n        'numbers_found': numbers,\n        'avg_word_length': len(re.sub(r'[^a-zA-Z]', '', text)) / max(word_count, 1)\n    }",
+          "name": "analyze_text_regex"
+        }
+      },
+      "inputs": {
+        "text": {"from_step": "get_text_input", "field": "text"}
+      },
+      "outputs": ["analysis"]
+    },
+    {
+      "id": "combine_results",
+      "type": "python_function",
+      "description": "Combine analysis results",
+      "config": {
+        "function": {
+          "code": "def combine_analysis_results(char_count, regex_analysis):\n    \"\"\"Combine different text analysis results\"\"\"\n    \n    # Extract actual values from step results if needed\n    if isinstance(char_count, dict) and 'result' in char_count:\n        char_count = char_count['result']\n    if isinstance(regex_analysis, dict) and 'success' in regex_analysis:\n        # This is already the unwrapped result from the regex function\n        pass\n    \n    result = {\n        'total_characters': char_count,\n        'total_words': regex_analysis['word_count'],\n        'characters_per_word': char_count / max(regex_analysis['word_count'], 1),\n        'digit_characters': regex_analysis['digit_count'],\n        'punctuation_marks': regex_analysis['punctuation_count'],\n        'sentences': regex_analysis['sentence_count'],\n        'numbers_in_text': regex_analysis['numbers_found'],\n        'average_word_length': regex_analysis['avg_word_length']\n    }\n    \n    return result",
+          "name": "combine_analysis_results"
+        }
+      },
+      "inputs": {
+        "char_count": {"from_step": "analyze_text_builtin", "field": "length"},
+        "regex_analysis": {"from_step": "regex_analysis", "field": "analysis"}
+      },
+      "outputs": ["combined_analysis"]
+    },
+    {
+      "id": "format_final_output",
+      "type": "output",
+      "description": "Output the combined analysis",
+      "config": {
+        "format": "json"
+      },
+      "inputs": {
+        "analysis": {"from_step": "combine_results", "field": "combined_analysis"}
+      }
+    }
+  ]
+}

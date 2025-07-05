@@ -26,3 +26,6 @@ Claude Code should act as a thoughtful development partner, not just executing i
 - There is a claude-knlowleddge folder that is a folder built for claude to gather and store context about the repo
 - For tool use, always check context7 for information on how to utilise an API or tool
 - Check MCP/tools available and make use of them when need be
+
+## Debugging
+When debugging generating .py files for testing is fine, but dont leave them laying about remove them after testing.

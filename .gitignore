@@ -42,6 +42,16 @@ venv.bak/
 .env.local
 .env.*.local
 
+# Google Cloud credentials (NEVER commit these!)
+**/credentials.json
+**/service-account*.json
+**/google-credentials*.json
+**/gcp-*.json
+**/*google*key*.json
+**/*service*account*.json
+GooleKeys.json
+GoogleKeys.json
+
 # Logs
 *.log
 logs/

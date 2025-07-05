@@ -5,7 +5,12 @@ This demonstrates how to use the JSON-driven agent workflows
 to create sophisticated AI agents using the existing building blocks.
 """
 
+import sys
+import os
 from pathlib import Path
+
+# Add project root to path
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 # Import the orchestration system
 from agent_orchestration import AgentOrchestrator

@@ -43,10 +43,15 @@ class StepHandlerRegistry:
         self.handlers[StepType.OUTPUT] = self._handle_output
         self.handlers[StepType.FILE_OUTPUT] = self._handle_file_output
         self.handlers[StepType.HUMAN_APPROVAL] = self._handle_human_approval
+        self.handlers[StepType.CONCEPT_EVALUATION] = self._handle_concept_evaluation
         # Conversation management handlers
         self.handlers[StepType.START_CONVERSATION] = self._handle_start_conversation
         self.handlers[StepType.ADD_TO_CONVERSATION] = self._handle_add_to_conversation
         self.handlers[StepType.CONTINUE_CONVERSATION] = self._handle_continue_conversation
+        # Audio processing handlers
+        self.handlers[StepType.TTS] = self._handle_tts
+        # Python function execution handlers
+        self.handlers[StepType.PYTHON_FUNCTION] = self._handle_python_function
     
     def get_handler(self, step_type: StepType) -> Callable:
         """Get handler for a specific step type"""
@@ -67,6 +72,220 @@ class StepHandlerRegistry:
             return input(step.config["prompt"])
         else:
             return inputs
+    
+    def _handle_concept_evaluation(self, step: StepConfig, inputs: Dict[str, Any], 
+                                  context: ExecutionContext) -> Any:
+        """Handle concept evaluation step - run prompt evaluation using LLM judge"""
+        try:
+            # Import concept evaluation components
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'prompt'))
+            from concept_eval_storage import create_concept_eval_storage
+            from concept_evaluation_service import ConceptEvaluationService
+            
+            # Get configuration
+            eval_id = step.config.get("eval_id")
+            if not eval_id:
+                raise ValueError("eval_id required for concept evaluation")
+            
+            llm_provider = step.config.get("llm_provider", "gemini")
+            judge_model = step.config.get("judge_model", "gemini")
+            storage_backend = step.config.get("storage_backend", "auto")
+            save_results = step.config.get("save_results", True)
+            
+            # Create storage backend
+            storage = create_concept_eval_storage(storage_backend)
+            
+            # Create evaluation service
+            eval_service = ConceptEvaluationService(
+                storage_backend=storage,
+                default_llm_provider=llm_provider,
+                default_judge_model=judge_model
+            )
+            
+            # Check if we need to create evaluation on-the-fly
+            if "evaluation_definition" in step.config:
+                # Inline evaluation definition
+                from concept_eval_models import ConceptEvalDefinition
+                eval_def_data = step.config["evaluation_definition"]
+                eval_def = ConceptEvalDefinition(**eval_def_data)
+                
+                # Save it temporarily
+                storage.save_evaluation_definition(eval_def)
+                eval_id = eval_def.eval_id
+            
+            # Handle context variables for test cases
+            context_variables = inputs.get("context_variables", {})
+            if context_variables:
+                # If context variables provided, we need to modify the evaluation
+                # to use these variables in test cases
+                eval_def = storage.get_evaluation_definition(eval_id)
+                if eval_def:
+                    # Update test case contexts with provided variables
+                    for test_case in eval_def.test_cases:
+                        test_case["context"].update(context_variables)
+                    
+                    # Create a temporary evaluation with updated context
+                    temp_eval_id = f"{eval_id}_temp_{context.workflow_id}"
+                    eval_def.eval_id = temp_eval_id
+                    storage.save_evaluation_definition(eval_def)
+                    eval_id = temp_eval_id
+            
+            # Run the evaluation
+            results = eval_service.run_evaluation_by_id(
+                eval_id, 
+                llm_provider=llm_provider,
+                save_results=save_results
+            )
+            
+            if not results:
+                raise ValueError(f"Failed to run evaluation '{eval_id}' - evaluation not found or execution failed")
+            
+            # Format results for workflow consumption
+            formatted_results = {
+                "evaluation_name": results.evaluation_name,
+                "overall_score": results.overall_score,
+                "grade": self._get_performance_grade(results.overall_score),
+                "passed_test_cases": results.passed_test_cases,
+                "total_test_cases": results.total_test_cases,
+                "pass_rate": results.passed_test_cases / results.total_test_cases if results.total_test_cases > 0 else 0,
+                "execution_time_ms": results.total_execution_time_ms,
+                "judge_model": results.judge_model_used,
+                "llm_provider": results.llm_provider_used,
+                "summary": results.summary,
+                "recommendations": results.recommendations,
+                "concept_breakdown": results.concept_breakdown,
+                "started_at": results.started_at.isoformat(),
+                "completed_at": results.completed_at.isoformat()
+            }
+            
+            # Add detailed test results if requested
+            if step.config.get("include_detailed_results", False):
+                formatted_results["test_case_results"] = []
+                for test_result in results.test_case_results:
+                    formatted_results["test_case_results"].append({
+                        "name": test_result.test_case_name,
+                        "passed": test_result.overall_passed,
+                        "score": test_result.overall_score,
+                        "llm_output": test_result.llm_output,
+                        "execution_time_ms": test_result.execution_time_ms,
+                        "concept_checks": [
+                            {
+                                "type": check.check_type.value,
+                                "concept": check.concept,
+                                "passed": check.passed,
+                                "confidence": check.confidence,
+                                "reasoning": check.judge_reasoning
+                            }
+                            for check in test_result.check_results
+                        ]
+                    })
+            
+            # Add quality gate checking
+            min_score = step.config.get("min_score")
+            if min_score is not None:
+                formatted_results["quality_gate_passed"] = results.overall_score >= min_score
+                if not formatted_results["quality_gate_passed"]:
+                    formatted_results["quality_gate_message"] = f"Evaluation score {results.overall_score:.1%} below minimum threshold {min_score:.1%}"
+            
+            return formatted_results
+            
+        except Exception as e:
+            # Return error information for debugging
+            return {
+                "success": False,
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "evaluation_id": step.config.get("eval_id", "unknown"),
+                "timestamp": datetime.now().isoformat()
+            }
+    
+    def _get_performance_grade(self, score: float) -> str:
+        """Convert performance score to letter grade"""
+        if score >= 0.9:
+            return "A"
+        elif score >= 0.8:
+            return "B"
+        elif score >= 0.7:
+            return "C"
+        elif score >= 0.6:
+            return "D"
+        else:
+            return "F"
+    
+    def _handle_tts(self, step: StepConfig, inputs: Dict[str, Any], 
+                   context: ExecutionContext) -> Any:
+        """Handle text-to-speech step"""
+        tts_service = self.orchestrator.get_service("tts")
+        if not tts_service:
+            raise RuntimeError("TTS service not available")
+        
+        text = inputs.get("text")
+        if not text:
+            raise ValueError("text required for TTS step")
+        
+        # Get configuration
+        voice = step.config.get("voice")
+        output_path = step.config.get("output_path")
+        provider = step.config.get("provider")
+        speed = step.config.get("speed", 1.0)
+        output_format = step.config.get("output_format", "mp3")
+        
+        # Create TTS parameters
+        tts_params = {}
+        if voice:
+            tts_params["voice"] = voice
+        if output_path:
+            tts_params["output_path"] = output_path
+        if speed != 1.0:
+            tts_params["speed"] = speed
+        if output_format != "mp3":
+            tts_params["output_format"] = output_format
+        
+        # Add any extra parameters from config
+        extra_params = step.config.get("extra_params", {})
+        tts_params.update(extra_params)
+        
+        try:
+            # If provider is specified and different from current, create new service
+            if provider and provider != tts_service.config.provider.value:
+                # Import TTS factory to create new service
+                sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'tts'))
+                from tts.tts_factory import create_tts_service
+                tts_service = create_tts_service(provider, **tts_params)
+            
+            # Generate speech
+            response = tts_service.text_to_speech(text, **tts_params)
+            
+            if not response.success:
+                return {
+                    "success": False,
+                    "error": response.error_message,
+                    "provider": response.provider,
+                    "text": text
+                }
+            
+            return {
+                "success": True,
+                "audio_file_path": response.audio_file_path,
+                "audio_url": response.audio_url,
+                "audio_data": response.audio_data,
+                "duration_ms": response.duration_ms,
+                "provider": response.provider,
+                "voice_used": response.voice_used,
+                "format_used": response.format_used,
+                "text": text,
+                "text_length": len(text),
+                "metadata": response.metadata
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "provider": provider or "unknown",
+                "text": text,
+                "error_type": type(e).__name__
+            }
     
     def _handle_start_conversation(self, step: StepConfig, inputs: Dict[str, Any], 
                                   context: ExecutionContext) -> Any:
@@ -411,19 +630,22 @@ class StepHandlerRegistry:
         # Configure extraction options
         options = PDFExtractOptions()
         if "enhance_with_llm" in step.config:
-            options.use_llm_enhancement = step.config["enhance_with_llm"]
+            # Map enhance_with_llm to available vision processing options
+            options.use_vision_fallback = step.config["enhance_with_llm"]
         if "semantic_analysis" in step.config:
-            options.extract_key_points = step.config["semantic_analysis"]
+            # Map semantic_analysis to semantic chunking
+            options.create_semantic_chunks = step.config["semantic_analysis"]
         
         # Extract text from PDF
         result = pdf_service.extract_text_from_file(file_path, options)
         
         return {
-            "text": result.enhanced_text if result.enhanced_text else result.text,
+            "text": result.vision_text if result.vision_text else result.text,
             "original_text": result.text,
-            "enhanced_text": result.enhanced_text,
-            "key_points": result.key_points,
-            "page_count": result.page_count
+            "vision_text": result.vision_text,
+            "semantic_chunks": result.semantic_chunks,
+            "page_count": result.page_count,
+            "processing_method": result.processing_method
         }
     
     def _handle_memory_store(self, step: StepConfig, inputs: Dict[str, Any], 
@@ -482,6 +704,10 @@ class StepHandlerRegistry:
     def _handle_llm_chat(self, step: StepConfig, inputs: Dict[str, Any], 
                         context: ExecutionContext) -> Any:
         """Handle LLM chat step - uses generation service for one-shot, conversation service for multi-turn"""
+        # Check if using managed prompt
+        if step.prompt_ref:
+            return self._handle_llm_chat_with_prompt(step, inputs, context)
+        
         message = inputs.get("message")
         if not message:
             raise ValueError("message required for LLM chat")
@@ -491,6 +717,9 @@ class StepHandlerRegistry:
         model = step.config.get("model")
         temperature = step.config.get("temperature", 0.7)
         max_tokens = step.config.get("max_tokens", 1000)
+        
+        # Check if streaming is enabled
+        use_streaming = step.config.get("stream", False)
         
         # Check if we should use conversation context
         use_conversation = step.config.get("use_conversation", False)
@@ -518,8 +747,18 @@ class StepHandlerRegistry:
             if system_message:
                 conversation_service.add_system_message(system_message)
             
-            # Send message and get response
-            response = conversation_service.send_message(message)
+            # Send message and get response (streaming or regular)
+            if use_streaming:
+                # For streaming, we need to handle it differently in orchestration
+                # For now, we'll collect the full response but indicate it was streamed
+                response_chunks = []
+                for chunk in conversation_service.send_message_stream(message):
+                    response_chunks.append(chunk)
+                response = ''.join(response_chunks)
+                streaming_info = {"chunks": response_chunks, "streamed": True}
+            else:
+                response = conversation_service.send_message(message)
+                streaming_info = {"streamed": False}
             
             return {
                 "response": response,
@@ -530,7 +769,8 @@ class StepHandlerRegistry:
                 "total_messages": conversation_service.get_conversation_length(),
                 "first_prompt": conversation_service.get_first_prompt(),
                 "last_response": conversation_service.get_last_response(),
-                "service_type": "conversation"
+                "service_type": "conversation",
+                **streaming_info
             }
         
         else:
@@ -544,12 +784,29 @@ class StepHandlerRegistry:
             provider_enum = LLMProvider(provider)
             gen_service = type(generation_service)(provider_enum, model, temperature, max_tokens)
             
-            # Check for system prompt
+            # Check for system prompt and handle streaming
             system_prompt = step.config.get("system_message")
-            if system_prompt:
-                response = gen_service.generate_with_system_prompt(message, system_prompt)
+            
+            if use_streaming:
+                # Use streaming generation methods
+                if system_prompt:
+                    response_chunks = []
+                    for chunk in gen_service.generate_with_system_prompt_stream(message, system_prompt):
+                        response_chunks.append(chunk)
+                    response = ''.join(response_chunks)
+                else:
+                    response_chunks = []
+                    for chunk in gen_service.generate_stream(message):
+                        response_chunks.append(chunk)
+                    response = ''.join(response_chunks)
+                streaming_info = {"chunks": response_chunks, "streamed": True}
             else:
-                response = gen_service.generate(message)
+                # Use regular generation methods
+                if system_prompt:
+                    response = gen_service.generate_with_system_prompt(message, system_prompt)
+                else:
+                    response = gen_service.generate(message)
+                streaming_info = {"streamed": False}
             
             return {
                 "response": response,
@@ -557,12 +814,177 @@ class StepHandlerRegistry:
                 "provider": provider,
                 "model": model,
                 "system_prompt": system_prompt,
-                "service_type": "generation"
+                "service_type": "generation",
+                **streaming_info
+            }
+    
+    def _handle_llm_chat_with_prompt(self, step: StepConfig, inputs: Dict[str, Any], 
+                                   context: ExecutionContext) -> Any:
+        """Handle LLM chat step using managed prompt"""
+        import time
+        
+        prompt_service = self.orchestrator.get_service("prompt")
+        if not prompt_service:
+            raise RuntimeError("Prompt service not available")
+        
+        # Get the prompt
+        prompt = prompt_service.get_prompt(step.prompt_ref.prompt_id, step.prompt_ref.version)
+        if not prompt:
+            raise ValueError(f"Prompt not found: {step.prompt_ref.prompt_id}")
+        
+        # Build context for template rendering
+        template_context = {}
+        template_context.update(step.prompt_ref.context_variables)  # Static variables
+        template_context.update(inputs)  # Step inputs
+        template_context.update(context.global_variables)  # Global variables
+        
+        # Render the prompt
+        try:
+            rendered_messages = prompt.render(template_context)
+        except Exception as e:
+            raise ValueError(f"Failed to render prompt {step.prompt_ref.prompt_id}: {e}")
+        
+        # Configure LLM
+        provider = step.config.get("provider", "gemini")
+        model = step.config.get("model")
+        temperature = step.config.get("temperature", 0.7)
+        max_tokens = step.config.get("max_tokens", 1000)
+        
+        # Check if we should use conversation context
+        use_conversation = step.config.get("use_conversation", False)
+        conversation_id = step.config.get("conversation_id")
+        
+        start_time = time.time()
+        
+        if use_conversation:
+            # Use conversation service for multi-turn conversations
+            conversation_service = self.orchestrator.get_service("conversation")
+            if not conversation_service:
+                raise RuntimeError("Conversation service not available")
+            
+            # For conversation service, we need to handle the rendered messages differently
+            # Extract system message if present
+            system_message = None
+            user_message = None
+            
+            for msg in rendered_messages:
+                if msg["role"] == "system":
+                    system_message = msg["content"]
+                elif msg["role"] == "user":
+                    user_message = msg["content"]
+            
+            if not user_message:
+                raise ValueError("No user message found in rendered prompt")
+            
+            # Create conversation service instance for this call
+            from llm.llm_types import LLMProvider
+            provider_enum = LLMProvider(provider)
+            conversation_service = type(conversation_service)(
+                provider_enum, model, temperature, max_tokens, conversation_id
+            )
+            
+            # Add system message if provided
+            if system_message:
+                conversation_service.add_system_message(system_message)
+            
+            # Send message and get response
+            response = conversation_service.send_message(user_message)
+            
+            execution_time_ms = (time.time() - start_time) * 1000
+            
+            # Log execution
+            prompt_service.log_execution(
+                prompt_id=step.prompt_ref.prompt_id,
+                prompt_version=prompt.version.version,
+                execution_context=template_context,
+                rendered_messages=rendered_messages,
+                llm_provider=provider,
+                llm_model=model,
+                llm_response=response,
+                execution_time_ms=execution_time_ms,
+                success=True,
+                metadata={"step_id": step.id, "use_conversation": True}
+            )
+            
+            return {
+                "response": response,
+                "prompt_id": step.prompt_ref.prompt_id,
+                "prompt_version": prompt.version.version,
+                "rendered_messages": rendered_messages,
+                "provider": provider,
+                "model": model,
+                "conversation_id": conversation_service.conversation.id,
+                "total_messages": conversation_service.get_conversation_length(),
+                "service_type": "conversation",
+                "execution_time_ms": execution_time_ms
+            }
+        
+        else:
+            # Use generation service for one-shot interactions
+            generation_service = self.orchestrator.get_service("generation")
+            if not generation_service:
+                raise RuntimeError("Generation service not available")
+            
+            # Create generation service with specific config for this call
+            from llm.llm_types import LLMProvider
+            provider_enum = LLMProvider(provider)
+            gen_service = type(generation_service)(provider_enum, model, temperature, max_tokens)
+            
+            # For generation service, combine all messages into a single prompt
+            # Handle system and user messages appropriately
+            system_prompt = None
+            user_prompt = None
+            
+            for msg in rendered_messages:
+                if msg["role"] == "system":
+                    system_prompt = msg["content"]
+                elif msg["role"] == "user":
+                    user_prompt = msg["content"]
+            
+            if not user_prompt:
+                raise ValueError("No user message found in rendered prompt")
+            
+            # Generate response
+            if system_prompt:
+                response = gen_service.generate_with_system_prompt(user_prompt, system_prompt)
+            else:
+                response = gen_service.generate(user_prompt)
+            
+            execution_time_ms = (time.time() - start_time) * 1000
+            
+            # Log execution
+            prompt_service.log_execution(
+                prompt_id=step.prompt_ref.prompt_id,
+                prompt_version=prompt.version.version,
+                execution_context=template_context,
+                rendered_messages=rendered_messages,
+                llm_provider=provider,
+                llm_model=model,
+                llm_response=response,
+                execution_time_ms=execution_time_ms,
+                success=True,
+                metadata={"step_id": step.id, "use_conversation": False}
+            )
+            
+            return {
+                "response": response,
+                "prompt_id": step.prompt_ref.prompt_id,
+                "prompt_version": prompt.version.version,
+                "rendered_messages": rendered_messages,
+                "provider": provider,
+                "model": model,
+                "system_prompt": system_prompt,
+                "service_type": "generation",
+                "execution_time_ms": execution_time_ms
             }
     
     def _handle_llm_structured(self, step: StepConfig, inputs: Dict[str, Any], 
                               context: ExecutionContext) -> Any:
         """Handle structured LLM response step"""
+        # Check if using managed prompt
+        if step.prompt_ref:
+            return self._handle_llm_structured_with_prompt(step, inputs, context)
+        
         llm_factory = self.orchestrator.get_service("llm_factory")
         if not llm_factory:
             raise RuntimeError("LLM factory not available")
@@ -619,6 +1041,139 @@ class StepHandlerRegistry:
                 "schema": schema_class.__name__,
                 "structured_response": None,
                 "response_dict": {}
+            }
+    
+    def _handle_llm_structured_with_prompt(self, step: StepConfig, inputs: Dict[str, Any], 
+                                         context: ExecutionContext) -> Any:
+        """Handle structured LLM response step using managed prompt"""
+        import time
+        
+        prompt_service = self.orchestrator.get_service("prompt")
+        if not prompt_service:
+            raise RuntimeError("Prompt service not available")
+        
+        llm_factory = self.orchestrator.get_service("llm_factory")
+        if not llm_factory:
+            raise RuntimeError("LLM factory not available")
+        
+        # Get the prompt
+        prompt = prompt_service.get_prompt(step.prompt_ref.prompt_id, step.prompt_ref.version)
+        if not prompt:
+            raise ValueError(f"Prompt not found: {step.prompt_ref.prompt_id}")
+        
+        # Build context for template rendering
+        template_context = {}
+        template_context.update(step.prompt_ref.context_variables)  # Static variables
+        template_context.update(inputs)  # Step inputs
+        template_context.update(context.global_variables)  # Global variables
+        
+        # Render the prompt
+        try:
+            rendered_messages = prompt.render(template_context)
+        except Exception as e:
+            raise ValueError(f"Failed to render prompt {step.prompt_ref.prompt_id}: {e}")
+        
+        # Get schema configuration
+        schema_config = step.config.get("response_schema")
+        if not schema_config:
+            raise ValueError("response_schema required for structured LLM step")
+        
+        # Parse schema - can be either a class reference or a direct Pydantic model
+        schema_class = self._parse_schema_config(schema_config)
+        
+        # Configure LLM
+        provider = step.config.get("provider", "gemini")
+        model = step.config.get("model")
+        
+        # Create structured client
+        structured_client = llm_factory.create_structured_client(
+            provider=provider,
+            schema=schema_class,
+            model=model,
+            temperature=step.config.get("temperature", 0.7),
+            max_tokens=step.config.get("max_tokens", 1000)
+        )
+        
+        # For structured responses, we need to convert multi-message prompt to single message
+        # Combine system and user messages appropriately
+        combined_message = ""
+        
+        for msg in rendered_messages:
+            if msg["role"] == "system":
+                combined_message += f"System: {msg['content']}\n\n"
+            elif msg["role"] == "user":
+                combined_message += msg["content"]
+        
+        if not combined_message:
+            raise ValueError("No message content found in rendered prompt")
+        
+        start_time = time.time()
+        
+        # Generate structured response
+        try:
+            structured_response = structured_client.chat(combined_message.strip())
+            
+            execution_time_ms = (time.time() - start_time) * 1000
+            
+            # Convert to dict for easier access in workflows
+            response_dict = structured_response.model_dump()
+            
+            # Log execution
+            prompt_service.log_execution(
+                prompt_id=step.prompt_ref.prompt_id,
+                prompt_version=prompt.version.version,
+                execution_context=template_context,
+                rendered_messages=rendered_messages,
+                llm_provider=provider,
+                llm_model=model,
+                llm_response=str(structured_response),
+                execution_time_ms=execution_time_ms,
+                success=True,
+                metadata={"step_id": step.id, "schema": schema_class.__name__}
+            )
+            
+            return {
+                "structured_response": structured_response,
+                "response_dict": response_dict,
+                "prompt_id": step.prompt_ref.prompt_id,
+                "prompt_version": prompt.version.version,
+                "rendered_messages": rendered_messages,
+                "provider": provider,
+                "model": model,
+                "schema": schema_class.__name__,
+                "execution_time_ms": execution_time_ms,
+                **response_dict  # Include all fields at top level for easy access
+            }
+            
+        except Exception as e:
+            execution_time_ms = (time.time() - start_time) * 1000
+            
+            # Log failed execution
+            prompt_service.log_execution(
+                prompt_id=step.prompt_ref.prompt_id,
+                prompt_version=prompt.version.version,
+                execution_context=template_context,
+                rendered_messages=rendered_messages,
+                llm_provider=provider,
+                llm_model=model,
+                execution_time_ms=execution_time_ms,
+                success=False,
+                error_message=str(e),
+                metadata={"step_id": step.id, "schema": schema_class.__name__}
+            )
+            
+            # Handle structured response failures gracefully
+            return {
+                "error": str(e),
+                "prompt_id": step.prompt_ref.prompt_id,
+                "prompt_version": prompt.version.version,
+                "rendered_messages": rendered_messages,
+                "provider": provider,
+                "model": model,
+                "schema": schema_class.__name__,
+                "structured_response": None,
+                "response_dict": {},
+                "execution_time_ms": execution_time_ms
             }
     
     def _parse_schema_config(self, schema_config: Any) -> Type[BaseModel]:
@@ -781,31 +1336,28 @@ class StepHandlerRegistry:
     
     def _handle_chunk_text(self, step: StepConfig, inputs: Dict[str, Any], 
                           context: ExecutionContext) -> Any:
-        """Handle text chunking step"""
-        chunking_service = self.orchestrator.get_service("chunking")
-        if not chunking_service:
-            raise RuntimeError("Chunking service not available")
+        """Handle text chunking step using factory pattern"""
+        chunking_factory = self.orchestrator.get_service("chunking_factory")
+        if not chunking_factory:
+            raise RuntimeError("Chunking service factory not available")
         
         text = inputs.get("text")
         if not text:
             raise ValueError("text required for chunking")
         
-        # Configure chunking with required parameters
-        target_size = step.config.get("target_size", 1000)
-        tolerance = step.config.get("tolerance", 200)
+        # Prepare configuration dictionary from step config
+        config_dict = {
+            "target_size": step.config.get("target_size", 1000),
+            "tolerance": step.config.get("tolerance", 200),
+            "preserve_paragraphs": step.config.get("preserve_paragraphs", True),
+            "preserve_sentences": step.config.get("preserve_sentences", True),
+            "preserve_words": step.config.get("preserve_words", True),
+            "paragraph_separator": step.config.get("paragraph_separator", "\n\n"),
+            "sentence_pattern": step.config.get("sentence_pattern", r'[.!?]+\s+')
+        }
         
-        config = ChunkingConfig(
-            target_size=target_size,
-            tolerance=tolerance,
-            preserve_paragraphs=step.config.get("preserve_paragraphs", True),
-            preserve_sentences=step.config.get("preserve_sentences", True),
-            preserve_words=step.config.get("preserve_words", True),
-            paragraph_separator=step.config.get("paragraph_separator", "\n\n"),
-            sentence_pattern=step.config.get("sentence_pattern", r'[.!?]+\s+')
-        )
-        
-        # Update service config
-        chunking_service.config = config
+        # Get or create chunking service with the specified configuration
+        chunking_service = chunking_factory.get_or_create_service(config_dict)
         
         # Chunk the text
         chunks = chunking_service.chunk_text(text)
@@ -999,12 +1551,221 @@ class StepHandlerRegistry:
             if var_name in context.global_variables:
                 return context.global_variables[var_name]
             elif var_name in inputs:
-                return inputs[var_name]
-            else:
-                raise ValueError(f"Global variable not found: {var_name}")
+                return inputs
+    
+    def _handle_concept_evaluation(self, step: StepConfig, inputs: Dict[str, Any], 
+                                  context: ExecutionContext) -> Any:
+        """Handle concept evaluation step - run prompt evaluation using LLM judge"""
+        try:
+            # Import concept evaluation components
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'prompt'))
+            from concept_eval_storage import create_concept_eval_storage
+            from concept_evaluation_service import ConceptEvaluationService
+            
+            # Get configuration
+            eval_id = step.config.get("eval_id")
+            if not eval_id:
+                raise ValueError("eval_id required for concept evaluation")
+            
+            llm_provider = step.config.get("llm_provider", "gemini")
+            judge_model = step.config.get("judge_model", "gemini")
+            storage_backend = step.config.get("storage_backend", "auto")
+            save_results = step.config.get("save_results", True)
+            
+            # Create storage backend
+            storage = create_concept_eval_storage(storage_backend)
+            
+            # Create evaluation service
+            eval_service = ConceptEvaluationService(
+                storage_backend=storage,
+                default_llm_provider=llm_provider,
+                default_judge_model=judge_model
+            )
+            
+            # Check if we need to create evaluation on-the-fly
+            if "evaluation_definition" in step.config:
+                # Inline evaluation definition
+                from concept_eval_models import ConceptEvalDefinition
+                eval_def_data = step.config["evaluation_definition"]
+                eval_def = ConceptEvalDefinition(**eval_def_data)
+                
+                # Save it temporarily
+                storage.save_evaluation_definition(eval_def)
+                eval_id = eval_def.eval_id
+            
+            # Handle context variables for test cases
+            context_variables = inputs.get("context_variables", {})
+            if context_variables:
+                # If context variables provided, we need to modify the evaluation
+                # to use these variables in test cases
+                eval_def = storage.get_evaluation_definition(eval_id)
+                if eval_def:
+                    # Update test case contexts with provided variables
+                    for test_case in eval_def.test_cases:
+                        test_case["context"].update(context_variables)
+                    
+                    # Create a temporary evaluation with updated context
+                    temp_eval_id = f"{eval_id}_temp_{context.workflow_id}"
+                    eval_def.eval_id = temp_eval_id
+                    storage.save_evaluation_definition(eval_def)
+                    eval_id = temp_eval_id
+            
+            # Run the evaluation
+            results = eval_service.run_evaluation_by_id(
+                eval_id, 
+                llm_provider=llm_provider,
+                save_results=save_results
+            )
+            
+            if not results:
+                raise ValueError(f"Failed to run evaluation '{eval_id}' - evaluation not found or execution failed")
+            
+            # Format results for workflow consumption
+            formatted_results = {
+                "evaluation_name": results.evaluation_name,
+                "overall_score": results.overall_score,
+                "grade": self._get_performance_grade(results.overall_score),
+                "passed_test_cases": results.passed_test_cases,
+                "total_test_cases": results.total_test_cases,
+                "pass_rate": results.passed_test_cases / results.total_test_cases if results.total_test_cases > 0 else 0,
+                "execution_time_ms": results.total_execution_time_ms,
+                "judge_model": results.judge_model_used,
+                "llm_provider": results.llm_provider_used,
+                "summary": results.summary,
+                "recommendations": results.recommendations,
+                "concept_breakdown": results.concept_breakdown,
+                "started_at": results.started_at.isoformat(),
+                "completed_at": results.completed_at.isoformat()
+            }
+            
+            # Add detailed test results if requested
+            if step.config.get("include_detailed_results", False):
+                formatted_results["test_case_results"] = []
+                for test_result in results.test_case_results:
+                    formatted_results["test_case_results"].append({
+                        "name": test_result.test_case_name,
+                        "passed": test_result.overall_passed,
+                        "score": test_result.overall_score,
+                        "llm_output": test_result.llm_output,
+                        "execution_time_ms": test_result.execution_time_ms,
+                        "concept_checks": [
+                            {
+                                "type": check.check_type.value,
+                                "concept": check.concept,
+                                "passed": check.passed,
+                                "confidence": check.confidence,
+                                "reasoning": check.judge_reasoning
+                            }
+                            for check in test_result.check_results
+                        ]
+                    })
+            
+            # Add quality gate checking
+            min_score = step.config.get("min_score")
+            if min_score is not None:
+                formatted_results["quality_gate_passed"] = results.overall_score >= min_score
+                if not formatted_results["quality_gate_passed"]:
+                    formatted_results["quality_gate_message"] = f"Evaluation score {results.overall_score:.1%} below minimum threshold {min_score:.1%}"
+            
+            return formatted_results
+            
+        except Exception as e:
+            # Return error information for debugging
+            return {
+                "success": False,
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "evaluation_id": step.config.get("eval_id", "unknown"),
+                "timestamp": datetime.now().isoformat()
+            }
+    
+    def _get_performance_grade(self, score: float) -> str:
+        """Convert performance score to letter grade"""
+        if score >= 0.9:
+            return "A"
+        elif score >= 0.8:
+            return "B"
+        elif score >= 0.7:
+            return "C"
+        elif score >= 0.6:
+            return "D"
         else:
-            # Direct value
-            return value
+            return "F"
+    
+    def _handle_tts(self, step: StepConfig, inputs: Dict[str, Any], 
+                   context: ExecutionContext) -> Any:
+        """Handle text-to-speech step"""
+        tts_service = self.orchestrator.get_service("tts")
+        if not tts_service:
+            raise RuntimeError("TTS service not available")
+        
+        text = inputs.get("text")
+        if not text:
+            raise ValueError("text required for TTS step")
+        
+        # Get configuration
+        voice = step.config.get("voice")
+        output_path = step.config.get("output_path")
+        provider = step.config.get("provider")
+        speed = step.config.get("speed", 1.0)
+        output_format = step.config.get("output_format", "mp3")
+        
+        # Create TTS parameters
+        tts_params = {}
+        if voice:
+            tts_params["voice"] = voice
+        if output_path:
+            tts_params["output_path"] = output_path
+        if speed != 1.0:
+            tts_params["speed"] = speed
+        if output_format != "mp3":
+            tts_params["output_format"] = output_format
+        
+        # Add any extra parameters from config
+        extra_params = step.config.get("extra_params", {})
+        tts_params.update(extra_params)
+        
+        try:
+            # If provider is specified and different from current, create new service
+            if provider and provider != tts_service.config.provider.value:
+                # Import TTS factory to create new service
+                sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'tts'))
+                from tts.tts_factory import create_tts_service
+                tts_service = create_tts_service(provider, **tts_params)
+            
+            # Generate speech
+            response = tts_service.text_to_speech(text, **tts_params)
+            
+            if not response.success:
+                return {
+                    "success": False,
+                    "error": response.error_message,
+                    "provider": response.provider,
+                    "text": text
+                }
+            
+            return {
+                "success": True,
+                "audio_file_path": response.audio_file_path,
+                "audio_url": response.audio_url,
+                "audio_data": response.audio_data,
+                "duration_ms": response.duration_ms,
+                "provider": response.provider,
+                "voice_used": response.voice_used,
+                "format_used": response.format_used,
+                "text": text,
+                "text_length": len(text),
+                "metadata": response.metadata
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "provider": provider or "unknown",
+                "text": text,
+                "error_type": type(e).__name__
+            }
     
     def _handle_file_output(self, step: StepConfig, inputs: Dict[str, Any], 
                            context: ExecutionContext) -> Any:
@@ -1146,3 +1907,440 @@ class StepHandlerRegistry:
                     return str(inputs)
         
         return inputs
+    
+    def _handle_concept_evaluation(self, step: StepConfig, inputs: Dict[str, Any], 
+                                  context: ExecutionContext) -> Any:
+        """Handle concept evaluation step - run prompt evaluation using LLM judge"""
+        try:
+            # Import concept evaluation components
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'prompt'))
+            from concept_eval_storage import create_concept_eval_storage
+            from concept_evaluation_service import ConceptEvaluationService
+            
+            # Get configuration
+            eval_id = step.config.get("eval_id")
+            if not eval_id:
+                raise ValueError("eval_id required for concept evaluation")
+            
+            llm_provider = step.config.get("llm_provider", "gemini")
+            judge_model = step.config.get("judge_model", "gemini")
+            storage_backend = step.config.get("storage_backend", "auto")
+            save_results = step.config.get("save_results", True)
+            
+            # Create storage backend
+            storage = create_concept_eval_storage(storage_backend)
+            
+            # Create evaluation service
+            eval_service = ConceptEvaluationService(
+                storage_backend=storage,
+                default_llm_provider=llm_provider,
+                default_judge_model=judge_model
+            )
+            
+            # Check if we need to create evaluation on-the-fly
+            if "evaluation_definition" in step.config:
+                # Inline evaluation definition
+                from concept_eval_models import ConceptEvalDefinition
+                eval_def_data = step.config["evaluation_definition"]
+                eval_def = ConceptEvalDefinition(**eval_def_data)
+                
+                # Save it temporarily
+                storage.save_evaluation_definition(eval_def)
+                eval_id = eval_def.eval_id
+            
+            # Handle context variables for test cases
+            context_variables = inputs.get("context_variables", {})
+            if context_variables:
+                # If context variables provided, we need to modify the evaluation
+                # to use these variables in test cases
+                eval_def = storage.get_evaluation_definition(eval_id)
+                if eval_def:
+                    # Update test case contexts with provided variables
+                    for test_case in eval_def.test_cases:
+                        test_case["context"].update(context_variables)
+                    
+                    # Create a temporary evaluation with updated context
+                    temp_eval_id = f"{eval_id}_temp_{context.workflow_id}"
+                    eval_def.eval_id = temp_eval_id
+                    storage.save_evaluation_definition(eval_def)
+                    eval_id = temp_eval_id
+            
+            # Run the evaluation
+            results = eval_service.run_evaluation_by_id(
+                eval_id, 
+                llm_provider=llm_provider,
+                save_results=save_results
+            )
+            
+            if not results:
+                raise ValueError(f"Failed to run evaluation '{eval_id}' - evaluation not found or execution failed")
+            
+            # Format results for workflow consumption
+            formatted_results = {
+                "evaluation_name": results.evaluation_name,
+                "overall_score": results.overall_score,
+                "grade": self._get_performance_grade(results.overall_score),
+                "passed_test_cases": results.passed_test_cases,
+                "total_test_cases": results.total_test_cases,
+                "pass_rate": results.passed_test_cases / results.total_test_cases if results.total_test_cases > 0 else 0,
+                "execution_time_ms": results.total_execution_time_ms,
+                "judge_model": results.judge_model_used,
+                "llm_provider": results.llm_provider_used,
+                "summary": results.summary,
+                "recommendations": results.recommendations,
+                "concept_breakdown": results.concept_breakdown,
+                "started_at": results.started_at.isoformat(),
+                "completed_at": results.completed_at.isoformat()
+            }
+            
+            # Add detailed test results if requested
+            if step.config.get("include_detailed_results", False):
+                formatted_results["test_case_results"] = []
+                for test_result in results.test_case_results:
+                    formatted_results["test_case_results"].append({
+                        "name": test_result.test_case_name,
+                        "passed": test_result.overall_passed,
+                        "score": test_result.overall_score,
+                        "llm_output": test_result.llm_output,
+                        "execution_time_ms": test_result.execution_time_ms,
+                        "concept_checks": [
+                            {
+                                "type": check.check_type.value,
+                                "concept": check.concept,
+                                "passed": check.passed,
+                                "confidence": check.confidence,
+                                "reasoning": check.judge_reasoning
+                            }
+                            for check in test_result.check_results
+                        ]
+                    })
+            
+            # Add quality gate checking
+            min_score = step.config.get("min_score")
+            if min_score is not None:
+                formatted_results["quality_gate_passed"] = results.overall_score >= min_score
+                if not formatted_results["quality_gate_passed"]:
+                    formatted_results["quality_gate_message"] = f"Evaluation score {results.overall_score:.1%} below minimum threshold {min_score:.1%}"
+            
+            return formatted_results
+            
+        except Exception as e:
+            # Return error information for debugging
+            return {
+                "success": False,
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "evaluation_id": step.config.get("eval_id", "unknown"),
+                "timestamp": datetime.now().isoformat()
+            }
+    
+    def _get_performance_grade(self, score: float) -> str:
+        """Convert performance score to letter grade"""
+        if score >= 0.9:
+            return "A"
+        elif score >= 0.8:
+            return "B"
+        elif score >= 0.7:
+            return "C"
+        elif score >= 0.6:
+            return "D"
+        else:
+            return "F"
+    
+    def _handle_tts(self, step: StepConfig, inputs: Dict[str, Any], 
+                   context: ExecutionContext) -> Any:
+        """Handle text-to-speech step"""
+        tts_service = self.orchestrator.get_service("tts")
+        if not tts_service:
+            raise RuntimeError("TTS service not available")
+        
+        text = inputs.get("text")
+        if not text:
+            raise ValueError("text required for TTS step")
+        
+        # Get configuration
+        voice = step.config.get("voice")
+        output_path = step.config.get("output_path")
+        provider = step.config.get("provider")
+        speed = step.config.get("speed", 1.0)
+        output_format = step.config.get("output_format", "mp3")
+        
+        # Create TTS parameters
+        tts_params = {}
+        if voice:
+            tts_params["voice"] = voice
+        if output_path:
+            tts_params["output_path"] = output_path
+        if speed != 1.0:
+            tts_params["speed"] = speed
+        if output_format != "mp3":
+            tts_params["output_format"] = output_format
+        
+        # Add any extra parameters from config
+        extra_params = step.config.get("extra_params", {})
+        tts_params.update(extra_params)
+        
+        try:
+            # If provider is specified and different from current, create new service
+            if provider and provider != tts_service.config.provider.value:
+                # Import TTS factory to create new service
+                sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'tts'))
+                from tts.tts_factory import create_tts_service
+                tts_service = create_tts_service(provider, **tts_params)
+            
+            # Generate speech
+            response = tts_service.text_to_speech(text, **tts_params)
+            
+            if not response.success:
+                return {
+                    "success": False,
+                    "error": response.error_message,
+                    "provider": response.provider,
+                    "text": text
+                }
+            
+            return {
+                "success": True,
+                "audio_file_path": response.audio_file_path,
+                "audio_url": response.audio_url,
+                "audio_data": response.audio_data,
+                "duration_ms": response.duration_ms,
+                "provider": response.provider,
+                "voice_used": response.voice_used,
+                "format_used": response.format_used,
+                "text": text,
+                "text_length": len(text),
+                "metadata": response.metadata
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "provider": provider or "unknown",
+                "text": text,
+                "error_type": type(e).__name__
+            }
+    def _handle_python_function(self, step: StepConfig, inputs: Dict[str, Any], 
+                               context: ExecutionContext) -> Any:
+        """Handle Python function execution step"""
+        import importlib
+        import inspect
+        import traceback
+        import time
+        from types import ModuleType
+        
+        function_config = step.config.get("function")
+        if not function_config:
+            raise ValueError("function configuration required for python_function step")
+        
+        start_time = time.time()
+        
+        try:
+            # Get the function to execute
+            if isinstance(function_config, str):
+                # Function reference string: "module.function_name"
+                function_obj = self._import_function_from_string(function_config)
+            elif isinstance(function_config, dict):
+                if "module" in function_config and "name" in function_config:
+                    # Function reference dict: {"module": "mymodule", "name": "myfunction"}
+                    module_name = function_config["module"]
+                    function_name = function_config["name"]
+                    function_obj = self._import_function_from_module(module_name, function_name)
+                elif "code" in function_config:
+                    # Inline function code
+                    function_obj = self._create_function_from_code(function_config["code"], 
+                                                                 function_config.get("name", "dynamic_function"))
+                else:
+                    raise ValueError("Function config must contain either 'module'+'name' or 'code'")
+            else:
+                raise ValueError("Function config must be string or dict")
+            
+            # Prepare function arguments
+            function_args = self._prepare_function_arguments(function_obj, inputs, step.config)
+            
+            # Execute the function
+            if isinstance(function_args, list):
+                # Positional arguments (for built-in functions)
+                result = function_obj(*function_args)
+            else:
+                # Keyword arguments (for regular functions)
+                result = function_obj(**function_args)
+            
+            execution_time_ms = (time.time() - start_time) * 1000
+            
+            # Handle different return types
+            if result is None:
+                formatted_result = {"success": True, "result": None}
+            elif isinstance(result, dict):
+                formatted_result = {"success": True, **result}
+            else:
+                formatted_result = {"success": True, "result": result}
+            
+            # Add execution metadata
+            formatted_result.update({
+                "execution_time_ms": execution_time_ms,
+                "function_name": getattr(function_obj, "__name__", "unknown"),
+                "function_args": function_args,
+                "step_id": step.id
+            })
+            
+            return formatted_result
+            
+        except Exception as e:
+            execution_time_ms = (time.time() - start_time) * 1000
+            
+            return {
+                "success": False,
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "traceback": traceback.format_exc(),
+                "execution_time_ms": execution_time_ms,
+                "function_config": function_config,
+                "inputs": inputs,
+                "step_id": step.id
+            }
+    
+    def _import_function_from_string(self, function_string: str):
+        """Import a function from a string like 'module.submodule.function_name'"""
+        if "." not in function_string:
+            raise ValueError("Function string must contain module and function name separated by '.'")
+        
+        module_path, function_name = function_string.rsplit(".", 1)
+        
+        # Handle built-in functions specially
+        if module_path == "builtins":
+            import builtins
+            if hasattr(builtins, function_name):
+                return getattr(builtins, function_name)
+            else:
+                raise AttributeError(f"No built-in function named '{function_name}'")
+        
+        return self._import_function_from_module(module_path, function_name)
+    
+    def _import_function_from_module(self, module_name: str, function_name: str):
+        """Import a function from a module"""
+        try:
+            module = importlib.import_module(module_name)
+            if not hasattr(module, function_name):
+                raise AttributeError(f"Module '{module_name}' has no function '{function_name}'")
+            
+            function_obj = getattr(module, function_name)
+            if not callable(function_obj):
+                raise TypeError(f"'{function_name}' in module '{module_name}' is not callable")
+            
+            return function_obj
+            
+        except ImportError as e:
+            raise ImportError(f"Could not import module '{module_name}': {e}")
+    
+    def _create_function_from_code(self, code: str, function_name: str = "dynamic_function"):
+        """Create a function from code string"""
+        import types
+        import time
+        
+        # Create a new module to execute the code in
+        module = types.ModuleType("dynamic_module")
+        
+        # Add common imports that might be needed
+        module.__dict__.update({
+            "__builtins__": __builtins__,
+            "json": json,
+            "os": os,
+            "sys": sys,
+            "time": time,
+            "datetime": __import__("datetime"),
+            "re": __import__("re"),
+            "math": __import__("math"),
+            "random": __import__("random")
+        })
+        
+        try:
+            # Execute the code in the module namespace
+            exec(code, module.__dict__)
+            
+            # Look for the function
+            if function_name in module.__dict__:
+                function_obj = module.__dict__[function_name]
+                if not callable(function_obj):
+                    raise TypeError(f"'{function_name}' is not callable")
+                return function_obj
+            else:
+                # If specific function name not found, look for any callable
+                callables = [obj for name, obj in module.__dict__.items() 
+                           if callable(obj) and not name.startswith("_")]
+                
+                if len(callables) == 1:
+                    return callables[0]
+                elif len(callables) > 1:
+                    callable_names = [obj.__name__ for obj in callables]
+                    raise ValueError(f"Multiple functions found in code: {callable_names}. "
+                                   f"Please specify function name or define only one function.")
+                else:
+                    raise ValueError("No callable function found in the provided code")
+                    
+        except SyntaxError as e:
+            raise SyntaxError(f"Syntax error in function code: {e}")
+        except Exception as e:
+            raise RuntimeError(f"Error executing function code: {e}")
+    
+    def _prepare_function_arguments(self, function_obj, inputs: Dict[str, Any], step_config: Dict[str, Any]):
+        """Prepare arguments for function execution based on function signature"""
+        import inspect
+        
+        # Special handling for built-in functions that don't support keyword arguments
+        if hasattr(function_obj, '__module__') and function_obj.__module__ == 'builtins':
+            # For built-in functions, try to match parameters positionally
+            # Common built-ins like len, str, int, etc. take one argument
+            if function_obj.__name__ in ['len', 'str', 'int', 'float', 'bool', 'list', 'dict', 'set', 'tuple']:
+                # These functions take one positional argument
+                if len(inputs) == 1:
+                    return list(inputs.values())  # Return as positional args
+                else:
+                    # Try to find the most likely argument
+                    for key in ['obj', 'value', 'data', 'input']:
+                        if key in inputs:
+                            return [inputs[key]]
+                    # Fall back to first value
+                    return [list(inputs.values())[0]] if inputs else []
+        
+        # Get function signature
+        try:
+            signature = inspect.signature(function_obj)
+        except (ValueError, TypeError):
+            # If we can't get signature, pass all inputs as kwargs
+            return inputs
+        
+        function_args = {}
+        
+        # Handle each parameter in the function signature
+        for param_name, param in signature.parameters.items():
+            if param_name in inputs:
+                # Direct parameter match
+                function_args[param_name] = inputs[param_name]
+            elif param.default is not inspect.Parameter.empty:
+                # Parameter has default value, skip it
+                continue
+            elif param.kind == inspect.Parameter.VAR_KEYWORD:
+                # **kwargs parameter - pass all remaining inputs
+                used_params = set(function_args.keys())
+                remaining_inputs = {k: v for k, v in inputs.items() if k not in used_params}
+                function_args.update(remaining_inputs)
+            elif param.kind == inspect.Parameter.VAR_POSITIONAL:
+                # *args parameter - not supported in this context
+                continue
+            else:
+                # Required parameter not found in inputs
+                # Check if it's available in step config parameter mapping
+                param_mapping = step_config.get("parameter_mapping", {})
+                if param_name in param_mapping:
+                    mapped_input = param_mapping[param_name]
+                    if mapped_input in inputs:
+                        function_args[param_name] = inputs[mapped_input]
+                    else:
+                        raise ValueError(f"Required parameter '{param_name}' mapped to '{mapped_input}' "
+                                       f"but '{mapped_input}' not found in inputs")
+                else:
+                    raise ValueError(f"Required parameter '{param_name}' not found in inputs")
+        
+        return function_args

@@ -1,5 +1,5 @@
 import os
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Generator
 from dotenv import load_dotenv
 from pydantic import BaseModel
 import httpx
@@ -104,6 +104,44 @@ class ChatService:
         except Exception as e:
             raise RuntimeError(f"Error getting response from {self.service}: {str(e)}")
     
+    def chat_stream(self, message: str, chat_history: Optional[List[ChatMessage]] = None) -> Generator[str, None, str]:
+        """
+        Send a message and get a streaming response
+        
+        Args:
+            message: The user's message
+            chat_history: Optional list of previous messages for context
+            
+        Yields:
+            str: Partial response chunks as they arrive
+            
+        Returns:
+            str: Complete response when streaming is done
+        """
+        # Build the full conversation
+        messages = []
+        
+        # Add chat history if provided
+        if chat_history:
+            messages.extend(chat_history)
+        
+        # Add the current message
+        messages.append(ChatMessage(role='user', content=message))
+        
+        # Get streaming response based on service
+        try:
+            if self.service == "ollama":
+                return self._call_ollama_stream(messages)
+            elif self.service == "gemini":
+                return self._call_gemini_stream(messages)
+            else:
+                raise ValueError(f"Unsupported service: {self.service}")
+        except Exception as e:
+            # Fall back to regular chat if streaming fails
+            full_response = self.chat(message, chat_history)
+            yield full_response
+            return full_response
+    
     def _call_ollama(self, messages: List[ChatMessage]) -> str:
         """Make API call to Ollama"""
         ollama_messages = []
@@ -158,6 +196,82 @@ class ChatService:
             )
             response.raise_for_status()
             return response.json()["candidates"][0]["content"]["parts"][0]["text"]
+    
+    def _call_ollama_stream(self, messages: List[ChatMessage]) -> Generator[str, None, str]:
+        """Make streaming API call to Ollama"""
+        ollama_messages = []
+        for msg in messages:
+            ollama_messages.append({
+                "role": msg.role,
+                "content": msg.content
+            })
+        
+        payload = {
+            "model": self.model,
+            "messages": ollama_messages,
+            "stream": True,  # Enable streaming
+            "options": {
+                "temperature": self.temperature,
+                "num_predict": self.max_tokens
+            }
+        }
+        
+        full_response = ""
+        try:
+            with httpx.Client(timeout=60.0) as client:
+                with client.stream("POST", f"{self.base_url}/api/chat", json=payload) as response:
+                    response.raise_for_status()
+                    
+                    for line in response.iter_lines():
+                        if line.strip():
+                            try:
+                                chunk = json.loads(line)
+                                if "message" in chunk and "content" in chunk["message"]:
+                                    content = chunk["message"]["content"]
+                                    if content:
+                                        full_response += content
+                                        yield content
+                                
+                                # Check if this is the final chunk
+                                if chunk.get("done", False):
+                                    break
+                                    
+                            except json.JSONDecodeError:
+                                # Skip malformed JSON lines
+                                continue
+                                
+        except Exception as e:
+            # If streaming fails, fall back to regular response
+            full_response = self._call_ollama(messages)
+            yield full_response
+        
+        return full_response
+    
+    def _call_gemini_stream(self, messages: List[ChatMessage]) -> Generator[str, None, str]:
+        """Make streaming API call to Google Gemini"""
+        # Gemini streaming is more complex, so we'll simulate it for now
+        try:
+            # Get the full response first
+            full_response = self._call_gemini(messages)
+            
+            # Simulate streaming by yielding words in chunks
+            words = full_response.split()
+            current_chunk = ""
+            for i, word in enumerate(words):
+                current_chunk += word + " "
+                if i % 3 == 0 or i == len(words) - 1:  # Yield every 3 words
+                    yield current_chunk.strip()
+                    current_chunk = ""
+                    import time
+                    time.sleep(0.02)  # Small delay to simulate streaming
+            
+            return full_response
+            
+        except Exception as e:
+            # Fall back to regular response
+            full_response = self._call_gemini(messages)
+            yield full_response
+            return full_response
     
     def chat_with_history(self, message: str, chat_history: Optional[List[Dict[str, str]]] = None) -> tuple[str, List[Dict[str, str]]]:
         """
@@ -217,6 +331,17 @@ def quick_chat_gemini(message: str, model: str = None) -> str:
     """Quick one-off chat with Gemini"""
     chat_service = create_chat_service("gemini", model)
     return chat_service.chat(message)
+
+# Streaming convenience functions
+def quick_chat_ollama_stream(message: str, model: str = None) -> Generator[str, None, str]:
+    """Quick one-off streaming chat with Ollama"""
+    chat_service = create_chat_service("ollama", model)
+    return chat_service.chat_stream(message)
+
+def quick_chat_gemini_stream(message: str, model: str = None) -> Generator[str, None, str]:
+    """Quick one-off streaming chat with Gemini"""
+    chat_service = create_chat_service("gemini", model)
+    return chat_service.chat_stream(message)
 
 # Example usage
 if __name__ == "__main__":

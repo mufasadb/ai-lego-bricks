@@ -34,9 +34,9 @@ except ImportError:
     PDFToTextService = None
 
 try:
-    from chunking.chunking_service import ChunkingService
+    from chunking.chunking_factory import ChunkingServiceFactory
 except ImportError:
-    ChunkingService = None
+    ChunkingServiceFactory = None
 
 try:
     from chat.conversation_service import ConversationService
@@ -47,6 +47,16 @@ try:
     from llm.generation_service import GenerationService
 except ImportError:
     GenerationService = None
+
+try:
+    from prompt.prompt_service import create_prompt_service
+except ImportError:
+    create_prompt_service = None
+
+try:
+    from tts.tts_factory import create_tts_service
+except ImportError:
+    create_tts_service = None
 
 
 class AgentOrchestrator:
@@ -97,15 +107,15 @@ class AgentOrchestrator:
         else:
             self._services["pdf_processor"] = None
         
-        # Chunking service
-        if ChunkingService:
+        # Chunking service factory
+        if ChunkingServiceFactory:
             try:
-                self._services["chunking"] = ChunkingService()
+                self._services["chunking_factory"] = ChunkingServiceFactory()
             except Exception as e:
-                print(f"Warning: Chunking service not available: {e}")
-                self._services["chunking"] = None
+                print(f"Warning: Chunking service factory not available: {e}")
+                self._services["chunking_factory"] = None
         else:
-            self._services["chunking"] = None
+            self._services["chunking_factory"] = None
         
         # Conversation service (for multi-turn conversations)
         if ConversationService:
@@ -138,6 +148,35 @@ class AgentOrchestrator:
                 self._services["generation"] = None
         else:
             self._services["generation"] = None
+        
+        # Prompt service
+        if create_prompt_service:
+            try:
+                # Use same backend as memory service if available, otherwise auto-detect
+                prompt_backend = "auto"
+                if self.config and self.config.config:
+                    prompt_backend = self.config.config.memory_backend
+                self._services["prompt"] = create_prompt_service(prompt_backend)
+            except Exception as e:
+                print(f"Warning: Prompt service not available: {e}")
+                self._services["prompt"] = None
+        else:
+            self._services["prompt"] = None
+        
+        # TTS service
+        if create_tts_service:
+            try:
+                # Auto-detect available TTS provider
+                tts_provider = "auto"
+                if self.config and self.config.config:
+                    # Check if TTS provider is specified in config
+                    tts_provider = getattr(self.config.config, 'default_tts_provider', "auto")
+                self._services["tts"] = create_tts_service(tts_provider)
+            except Exception as e:
+                print(f"Warning: TTS service not available: {e}")
+                self._services["tts"] = None
+        else:
+            self._services["tts"] = None
     
     def get_service(self, service_name: str):
         """Get a service by name"""

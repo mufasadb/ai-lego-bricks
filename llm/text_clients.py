@@ -3,14 +3,18 @@ import os
 import time
 import random
 import json
-from typing import List, Optional, Union, Type, TypeVar, Dict, Any
+from typing import List, Optional, Union, Type, TypeVar, Dict, Any, Generator
 import httpx
 from pydantic import BaseModel
+from dotenv import load_dotenv
 from .llm_types import (
     TextLLMClient, ChatMessage, LLMConfig, LLMProvider, 
     StructuredLLMWrapper, StructuredResponseConfig,
     create_function_calling_schema
 )
+
+# Load environment variables
+load_dotenv()
 
 try:
     import anthropic
@@ -146,6 +150,65 @@ JSON Response:
     def with_structured_output(self, schema: Type[T]) -> StructuredLLMWrapper[T]:
         """Return a wrapper that ensures structured output of specified type"""
         return StructuredLLMWrapper(self, schema)
+    
+    def chat_stream(self, message: str, chat_history: Optional[List[ChatMessage]] = None) -> Generator[str, None, str]:
+        """Send a chat message and get streaming response"""
+        messages = []
+        if chat_history:
+            messages.extend(chat_history)
+        messages.append(ChatMessage(role='user', content=message))
+        return self.chat_with_messages_stream(messages)
+    
+    def chat_with_messages_stream(self, messages: List[ChatMessage]) -> Generator[str, None, str]:
+        """Send multiple messages and get streaming response"""
+        ollama_messages = []
+        for msg in messages:
+            ollama_messages.append({
+                "role": msg.role,
+                "content": msg.content
+            })
+        
+        payload = {
+            "model": self.model,
+            "messages": ollama_messages,
+            "stream": True,  # Enable streaming
+            "options": {
+                "temperature": self.config.temperature,
+                "num_predict": self.config.max_tokens,
+                **self.config.extra_params
+            }
+        }
+        
+        full_response = ""
+        try:
+            with httpx.Client(timeout=self.config.timeout) as client:
+                with client.stream("POST", f"{self.base_url}/api/chat", json=payload) as response:
+                    response.raise_for_status()
+                    
+                    for line in response.iter_lines():
+                        if line.strip():
+                            try:
+                                chunk = json.loads(line)
+                                if "message" in chunk and "content" in chunk["message"]:
+                                    content = chunk["message"]["content"]
+                                    if content:
+                                        full_response += content
+                                        yield content
+                                
+                                # Check if this is the final chunk
+                                if chunk.get("done", False):
+                                    break
+                                    
+                            except json.JSONDecodeError:
+                                # Skip malformed JSON lines
+                                continue
+                                
+        except Exception as e:
+            # If streaming fails, fall back to regular response
+            full_response = self.chat_with_messages(messages)
+            yield full_response
+        
+        return full_response
 
 
 class GeminiTextClient(TextLLMClient):
@@ -383,6 +446,40 @@ class GeminiTextClient(TextLLMClient):
     def with_structured_output(self, schema: Type[T]) -> StructuredLLMWrapper[T]:
         """Return a wrapper that ensures structured output of specified type"""
         return StructuredLLMWrapper(self, schema)
+    
+    def chat_stream(self, message: str, chat_history: Optional[List[ChatMessage]] = None) -> Generator[str, None, str]:
+        """Send a chat message and get streaming response"""
+        messages = []
+        if chat_history:
+            messages.extend(chat_history)
+        messages.append(ChatMessage(role='user', content=message))
+        return self.chat_with_messages_stream(messages)
+    
+    def chat_with_messages_stream(self, messages: List[ChatMessage]) -> Generator[str, None, str]:
+        """Send multiple messages and get streaming response"""
+        # Gemini doesn't have a simple streaming API like Ollama
+        # So we'll simulate streaming by chunking the response
+        try:
+            # Get the full response first
+            full_response = self.chat_with_messages(messages)
+            
+            # Simulate streaming by yielding words in chunks
+            words = full_response.split()
+            current_chunk = ""
+            for i, word in enumerate(words):
+                current_chunk += word + " "
+                if i % 4 == 0 or i == len(words) - 1:  # Yield every 4 words
+                    yield current_chunk.strip()
+                    current_chunk = ""
+                    time.sleep(0.03)  # Small delay to simulate streaming
+            
+            return full_response
+            
+        except Exception as e:
+            # Fall back to regular response
+            full_response = self.chat_with_messages(messages)
+            yield full_response
+            return full_response
 
 
 class AnthropicTextClient(TextLLMClient):
@@ -526,3 +623,63 @@ JSON Response:
     def with_structured_output(self, schema: Type[T]) -> StructuredLLMWrapper[T]:
         """Return a wrapper that ensures structured output of specified type"""
         return StructuredLLMWrapper(self, schema)
+    def chat_stream(self, message: str, chat_history: Optional[List[ChatMessage]] = None) -> Generator[str, None, str]:
+        """Send a chat message and get streaming response"""
+        messages = []
+        if chat_history:
+            messages.extend(chat_history)
+        messages.append(ChatMessage(role="user", content=message))
+        return self.chat_with_messages_stream(messages)
+    
+    def chat_with_messages_stream(self, messages: List[ChatMessage]) -> Generator[str, None, str]:
+        """Send multiple messages and get streaming response"""
+        anthropic_messages = []
+        system_message = None
+        
+        for msg in messages:
+            if msg.role == "system":
+                system_message = msg.content
+            else:
+                anthropic_messages.append({
+                    "role": msg.role,
+                    "content": msg.content
+                })
+        
+        try:
+            kwargs = {
+                "model": self.model,
+                "max_tokens": self.config.max_tokens,
+                "temperature": self.config.temperature,
+                "messages": anthropic_messages,
+                "stream": True,  # Enable streaming
+                **self.config.extra_params
+            }
+            
+            if system_message:
+                kwargs["system"] = system_message
+            
+            full_response = ""
+            with self.client.messages.stream(**kwargs) as stream:
+                for chunk in stream:
+                    if chunk.type == "content_block_delta":
+                        if hasattr(chunk.delta, "text"):
+                            text_chunk = chunk.delta.text
+                            full_response += text_chunk
+                            yield text_chunk
+            
+            return full_response
+            
+        except anthropic.APIError as e:
+            if e.status_code == 429:
+                print("🚨 CRITICAL: ANTHROPIC API RATE LIMIT EXCEEDED\! 🚨")
+                raise
+            else:
+                # Fall back to regular API
+                full_response = self.chat_with_messages(messages)
+                yield full_response
+                return full_response
+        except Exception as e:
+            # Fall back to regular API
+            full_response = self.chat_with_messages(messages)
+            yield full_response
+            return full_response

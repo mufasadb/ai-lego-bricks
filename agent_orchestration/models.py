@@ -23,10 +23,15 @@ class StepType(str, Enum):
     OUTPUT = "output"
     FILE_OUTPUT = "file_output"
     HUMAN_APPROVAL = "human_approval"
+    CONCEPT_EVALUATION = "concept_evaluation"
     # Conversation management step types
     START_CONVERSATION = "start_conversation"
     ADD_TO_CONVERSATION = "add_to_conversation"
     CONTINUE_CONVERSATION = "continue_conversation"
+    # Audio processing step types
+    TTS = "tts"
+    # Python function execution step types
+    PYTHON_FUNCTION = "python_function"
 
 
 class InputReference(BaseModel):
@@ -106,6 +111,13 @@ class LoopConfig(BaseModel):
     body: "StepConfig"
 
 
+class PromptReference(BaseModel):
+    """Reference to a managed prompt"""
+    prompt_id: str
+    version: Optional[str] = None  # Use latest if None
+    context_variables: Dict[str, Any] = Field(default_factory=dict)  # Variables for template rendering
+
+
 class StepConfig(BaseModel):
     """Configuration for a single workflow step"""
     id: str
@@ -119,6 +131,8 @@ class StepConfig(BaseModel):
     routes: Optional[Dict[str, str]] = Field(default_factory=dict)  # Maps condition results to next step IDs
     max_iterations: Optional[int] = None  # Maximum number of times this step can be executed
     preserve_previous_results: bool = False  # Whether to preserve results from previous iterations
+    # Prompt management integration
+    prompt_ref: Optional[PromptReference] = None  # Reference to managed prompt
 
 
 class WorkflowGlobalConfig(BaseModel):

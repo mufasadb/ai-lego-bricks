@@ -6,9 +6,10 @@ This folder contains documentation and instructions specifically for Claude Code
 
 - **`CLAUDE.md`** - Project instructions and guidelines for Claude Code
 - **`PROJECT_STRUCTURE.md`** - Detailed project structure documentation for Claude's reference
-- **`AGENT_ORCHESTRATION_OVERVIEW.md`** - Complete guide to structured responses and conditional workflows ⭐ **NEW**
+- **`AGENT_ORCHESTRATION_OVERVIEW.md`** - Complete guide to structured responses and conditional workflows
 - **`STRUCTURED_RESPONSES.md`** - Detailed implementation of structured LLM responses
 - **`CONDITIONAL_WORKFLOWS.md`** - Detailed implementation of conditional flow control
+- **`PROMPT_MANAGEMENT.md`** - Comprehensive guide to prompt management system ⭐ **NEW**
 - **`AGENT_ORCHESTRATION_GUIDE.md`** - Original orchestration system documentation
 
 ## 🎯 Purpose
@@ -31,14 +32,22 @@ Provides detailed technical documentation about:
 - Available features and capabilities
 - Usage patterns and best practices
 
-### Latest Features (⭐ NEW)
+### Latest Features
 
 **AGENT_ORCHESTRATION_OVERVIEW.md**
-Comprehensive guide covering the latest major enhancements:
+Comprehensive guide covering major orchestration enhancements:
 - **Structured LLM Responses**: Guaranteed, validated responses using Pydantic schemas
 - **Conditional Workflows**: Intelligent branching and routing based on LLM decisions
 - **Combined Usage Patterns**: How to use both features together
 - **Real-world Examples**: Production-ready workflow examples
+
+**PROMPT_MANAGEMENT.md** ⭐ **NEW**
+Complete guide to the prompt management system:
+- **Externalized Prompts**: Manage prompts outside of code with versioning
+- **Template System**: Dynamic prompts with Jinja2 variable substitution
+- **Evaluation & A/B Testing**: Performance tracking and optimization
+- **Storage & Caching**: File and Supabase backends with registry caching
+- **Workflow Integration**: Seamless integration with agent orchestration
 
 **STRUCTURED_RESPONSES.md**
 Deep dive into the structured response implementation:

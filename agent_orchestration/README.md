@@ -10,10 +10,14 @@ This system allows you to create sophisticated AI agents by combining different 
 
 - **JSON-driven workflows**: Define agent behavior through configuration
 - **Modular architecture**: Uses existing services as building blocks
+- **Streaming support**: Real-time LLM response streaming
+- **Text-to-speech integration**: Convert text responses to audio
 - **Flexible orchestration**: Support for conditional logic and loops
 - **Memory integration**: Persistent storage with semantic search
 - **Multi-modal support**: Text, vision, and document processing
 - **Step-by-step execution**: Clear data flow between operations
+- **Prompt Management**: Externalized, versioned prompts with evaluation and A/B testing
+- **Human-in-the-Loop**: Interactive approval and feedback collection
 
 ## Building Blocks
 
@@ -22,9 +26,21 @@ The system orchestrates these existing services:
 ### LLM Services
 - **Generation Service**: Stateless one-shot LLM interactions (optimized for speed)
 - **Conversation Service**: Rich multi-turn conversations with full state management
+- **Streaming Support**: Real-time response streaming (Ollama, Anthropic)
 - **Structured Responses**: Type-safe LLM outputs with Pydantic validation
 - **Vision Analysis**: Image analysis with Gemini Vision and LLaVA
 - **Embeddings**: Text embedding generation
+
+### Audio Services
+- **Text-to-Speech**: Multi-provider TTS with OpenAI, Google, and Coqui-XTTS support
+- **Streaming TTS**: Real-time audio generation from streaming LLM responses
+
+### Prompt Management
+- **Versioned Prompts**: Semantic versioning with lifecycle management
+- **Template System**: Dynamic prompts with Jinja2 variable substitution
+- **Execution Logging**: Automatic tracking for evaluation and training
+- **A/B Testing**: Performance comparison between prompt versions
+- **Storage Backends**: File-based and Supabase storage options
 
 ### Memory Services
 - **Vector Storage**: Supabase with pgvector
@@ -167,6 +183,102 @@ The system uses two distinct services for different LLM interaction patterns:
   "inputs": {"message": "How can I help you today?"}
 }
 ```
+
+## Prompt Management Integration
+
+The system supports externalized prompt management for better maintainability, evaluation, and A/B testing.
+
+### Using Managed Prompts
+
+Instead of hardcoding prompts in workflow configurations, you can reference managed prompts:
+
+```json
+{
+  "id": "analyze_document",
+  "type": "llm_structured",
+  "prompt_ref": {
+    "prompt_id": "document_analysis",
+    "version": "1.2.0",
+    "context_variables": {
+      "analysis_type": "comprehensive",
+      "focus_areas": ["metrics", "trends", "insights"]
+    }
+  },
+  "config": {
+    "provider": "gemini",
+    "response_schema": "classification"
+  },
+  "inputs": {
+    "document_text": "$document_content"
+  }
+}
+```
+
+### Prompt Reference Configuration
+
+- **`prompt_id`**: Unique identifier for the prompt
+- **`version`**: Specific version (optional, uses latest if omitted)
+- **`context_variables`**: Static variables for template rendering
+
+### Template Variable Resolution
+
+Variables are resolved in this order:
+1. `context_variables` from prompt reference
+2. Step `inputs` from workflow data flow
+3. Global workflow variables
+
+### Benefits of Managed Prompts
+
+- **Version Control**: Track prompt evolution and rollback capability
+- **A/B Testing**: Compare performance between prompt versions
+- **Team Collaboration**: Non-developers can manage prompts
+- **Evaluation**: Automatic performance tracking and analytics
+- **Reusability**: Share prompts across multiple workflows
+
+### Creating Managed Prompts
+
+```python
+from prompt import create_prompt_service, PromptStatus
+
+prompt_service = create_prompt_service("auto")
+
+# Create a template-based prompt
+prompt = prompt_service.create_prompt(
+    prompt_id="document_analysis",
+    name="Document Analysis Expert",
+    content=[
+        {
+            "role": "system",
+            "content": "You are an expert document analyst."
+        },
+        {
+            "role": "user",
+            "content": {
+                "template": """
+                Analyze this {{ document_type }}:
+                {{ document_text }}
+                
+                Focus on: {{ focus_areas | join(', ') }}
+                """,
+                "required_variables": ["document_type", "document_text"],
+                "variables": {"focus_areas": ["main topics", "insights"]}
+            }
+        }
+    ],
+    version="1.0.0",
+    status=PromptStatus.ACTIVE
+)
+```
+
+### Execution Tracking
+
+When using managed prompts, the system automatically logs:
+- Execution time and token usage
+- Success/failure rates
+- Template context and rendered output
+- LLM provider and model used
+
+This data powers evaluation reports and A/B testing capabilities.
 
 ### Rich Conversation Access
 

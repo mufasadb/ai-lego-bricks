@@ -1,0 +1,60 @@
+{
+  "name": "simple_streaming_to_tts_agent",
+  "description": "Simple agent that uses streaming LLM and TTS together",
+  "config": {
+    "default_llm_provider": "ollama"
+  },
+  "inputs": {
+    "user_query": {
+      "type": "string",
+      "description": "User's question or prompt",
+      "required": true
+    },
+    "voice": {
+      "type": "string",
+      "description": "Voice to use for TTS",
+      "required": false
+    }
+  },
+  "steps": [
+    {
+      "id": "stream_llm_response",
+      "type": "llm_chat",
+      "description": "Generate streaming response from LLM",
+      "config": {
+        "provider": "ollama",
+        "stream": true,
+        "use_conversation": false
+      },
+      "inputs": {
+        "message": "user_query"
+      }
+    },
+    {
+      "id": "convert_to_speech",
+      "type": "tts",
+      "description": "Convert the response to speech",
+      "config": {
+        "provider": "auto",
+        "voice": "default",
+        "output_path": "output/streaming_agent/response.wav"
+      },
+      "inputs": {
+        "text": {"from_step": "stream_llm_response", "field": "response"}
+      }
+    },
+    {
+      "id": "final_output",
+      "type": "output",
+      "description": "Combine streaming and TTS results",
+      "inputs": {
+        "user_query": "user_query",
+        "llm_response": {"from_step": "stream_llm_response", "field": "response"},
+        "was_streamed": {"from_step": "stream_llm_response", "field": "streamed"},
+        "tts_success": {"from_step": "convert_to_speech", "field": "success"},
+        "audio_file": {"from_step": "convert_to_speech", "field": "audio_file_path"},
+        "voice_used": {"from_step": "convert_to_speech", "field": "voice_used"}
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional, Union, TypeVar, Type, Protocol
+from typing import List, Dict, Any, Optional, Union, TypeVar, Type, Protocol, Iterator, Generator
 from pydantic import BaseModel
 from enum import Enum
 import json
@@ -59,6 +59,43 @@ class TextLLMClient(ABC):
     def chat_with_messages(self, messages: List[ChatMessage]) -> str:
         """Send multiple messages and get response"""
         pass
+    
+    def chat_stream(self, message: str, chat_history: Optional[List[ChatMessage]] = None) -> Generator[str, None, str]:
+        """
+        Send a chat message and get streaming response
+        
+        Args:
+            message: The user message
+            chat_history: Optional chat history
+            
+        Yields:
+            str: Partial response chunks as they arrive
+            
+        Returns:
+            str: Complete response when streaming is done
+        """
+        # Default implementation for clients that don't support streaming
+        full_response = self.chat(message, chat_history)
+        yield full_response
+        return full_response
+    
+    def chat_with_messages_stream(self, messages: List[ChatMessage]) -> Generator[str, None, str]:
+        """
+        Send multiple messages and get streaming response
+        
+        Args:
+            messages: List of chat messages
+            
+        Yields:
+            str: Partial response chunks as they arrive
+            
+        Returns:
+            str: Complete response when streaming is done
+        """
+        # Default implementation for clients that don't support streaming
+        full_response = self.chat_with_messages(messages)
+        yield full_response
+        return full_response
 
 
 class VisionLLMClient(ABC):

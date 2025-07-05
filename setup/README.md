@@ -160,6 +160,50 @@ NEO4J_PASSWORD=your_neo4j_password_here
    OLLAMA_DEFAULT_MODEL=llama2
    ```
 
+## 🎯 Prompt Management Setup
+
+The system includes a comprehensive prompt management system for versioning, evaluation, and A/B testing.
+
+### Configuration Options
+
+Add these to your `.env` file:
+
+```env
+# Prompt Management Configuration
+PROMPT_STORAGE_BACKEND=auto      # auto, file, or supabase
+PROMPT_STORAGE_PATH=./prompts    # for file backend (development)
+PROMPT_CACHE_TTL=3600           # cache timeout in seconds
+PROMPT_EVALUATION_ENABLED=true  # enable execution logging
+```
+
+### Storage Backend Options
+
+**1. Auto Detection (Recommended)**
+- Uses Supabase if available, falls back to file storage
+- Perfect for seamless dev-to-production workflow
+
+**2. File Storage (Development)**
+- JSON files stored locally
+- Great for development and testing
+- No external dependencies
+
+**3. Supabase Storage (Production)**
+- Uses same Supabase instance as memory storage
+- Enables advanced evaluation and analytics
+- Requires Supabase setup (see above)
+
+### First-Time Setup
+
+1. **Create sample prompts:**
+   ```bash
+   python prompt/example_usage.py
+   ```
+
+2. **Verify prompt system:**
+   ```bash
+   python -c "from prompt import create_prompt_service; print('✅ Prompt system working!')"
+   ```
+
 ## 🔍 Verification
 
 ### Supabase Setup Verification

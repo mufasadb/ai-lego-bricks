@@ -3,7 +3,7 @@ Enhanced conversation service for managing multi-turn conversations with rich st
 Provides access to conversation history, context, and state for agent orchestration.
 """
 
-from typing import List, Optional, Dict, Any, Union
+from typing import List, Optional, Dict, Any, Union, Generator
 from datetime import datetime
 from pydantic import BaseModel
 import json
@@ -12,8 +12,8 @@ import json
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'llm'))
-from llm_factory import LLMClientFactory
-from llm_types import LLMProvider, TextLLMClient
+from llm.llm_factory import LLMClientFactory
+from llm.llm_types import LLMProvider, TextLLMClient
 
 
 class ConversationMessage(BaseModel):
@@ -127,6 +127,37 @@ class ConversationService:
         self.add_message('assistant', response)
         
         return response
+    
+    def send_message_stream(self, message: str, metadata: Optional[Dict[str, Any]] = None) -> Generator[str, None, str]:
+        """
+        Send a user message and get a streaming assistant response.
+        
+        Args:
+            message: User message
+            metadata: Optional metadata for the user message
+            
+        Yields:
+            str: Partial response chunks as they arrive
+            
+        Returns:
+            str: Complete assistant response
+        """
+        # Add user message
+        self.add_message('user', message, metadata)
+        
+        # Prepare conversation context for LLM
+        conversation_context = self._build_conversation_context()
+        
+        # Get streaming response from LLM
+        full_response = ""
+        for chunk in self.client.chat_stream(conversation_context):
+            full_response += chunk
+            yield chunk
+        
+        # Add assistant response
+        self.add_message('assistant', full_response)
+        
+        return full_response
     
     def _build_conversation_context(self) -> str:
         """Build the conversation context for the LLM"""

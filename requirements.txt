@@ -18,6 +18,16 @@ numpy>=1.24.0
 # PDF processing
 pymupdf>=1.24.0
 
+# Prompt management
+jinja2>=3.0.0
+semantic-version>=2.10.0
+
+# TTS dependencies
+requests>=2.28.0          # HTTP client (used by Coqui-XTTS)
+openai>=1.0.0             # OpenAI TTS API
+google-cloud-texttospeech>=2.14.0  # Google TTS API (optional)
+pydub>=0.25.1             # Audio processing utilities (optional)
+
 # Optional: For better performance
 # faiss-cpu>=1.7.0  # For faster similarity search
 # torch>=2.0.0      # For sentence-transformers GPU support

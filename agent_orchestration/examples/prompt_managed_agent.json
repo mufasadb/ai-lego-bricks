@@ -1,0 +1,69 @@
+{
+  "name": "prompt_managed_chat_agent",
+  "description": "A chat agent using externally managed prompts for easy iteration and evaluation",
+  "config": {
+    "memory_backend": "auto",
+    "default_llm_provider": "gemini",
+    "default_model": "gemini-1.5-flash"
+  },
+  "steps": [
+    {
+      "id": "get_user_input",
+      "type": "input",
+      "description": "Get user query",
+      "config": {
+        "prompt": "What would you like to know?"
+      },
+      "outputs": ["user_query"]
+    },
+    {
+      "id": "generate_response",
+      "type": "llm_chat",
+      "description": "Generate AI response using managed prompt",
+      "prompt_ref": {
+        "prompt_id": "friendly_chat",
+        "version": "1.0.0",
+        "context_variables": {
+          "agent_personality": "a knowledgeable and helpful assistant"
+        }
+      },
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash"
+      },
+      "inputs": {
+        "user_message": {
+          "from_step": "get_user_input",
+          "field": "user_query"
+        }
+      },
+      "outputs": ["response", "prompt_id", "prompt_version"]
+    },
+    {
+      "id": "output_response",
+      "type": "output",
+      "description": "Return the response with prompt tracking",
+      "config": {
+        "format": "json"
+      },
+      "inputs": {
+        "response": {
+          "from_step": "generate_response",
+          "field": "response"
+        },
+        "prompt_used": {
+          "from_step": "generate_response",
+          "field": "prompt_id"
+        },
+        "prompt_version": {
+          "from_step": "generate_response",
+          "field": "prompt_version"
+        },
+        "execution_time_ms": {
+          "from_step": "generate_response",
+          "field": "execution_time_ms"
+        }
+      }
+    }
+  ]
+}

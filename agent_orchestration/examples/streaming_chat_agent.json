@@ -1,0 +1,62 @@
+{
+  "name": "streaming_chat_agent",
+  "description": "A chat agent that demonstrates streaming capabilities",
+  "config": {
+    "default_llm_provider": "ollama",
+    "default_model": "llama2"
+  },
+  "steps": [
+    {
+      "id": "get_user_input",
+      "type": "input",
+      "description": "Get user's message",
+      "config": {
+        "prompt": "What would you like to talk about?"
+      },
+      "outputs": ["user_message"]
+    },
+    {
+      "id": "stream_response",
+      "type": "llm_chat",
+      "description": "Generate streaming response",
+      "config": {
+        "provider": "ollama",
+        "model": "llama2",
+        "temperature": 0.7,
+        "max_tokens": 500,
+        "stream": true,
+        "use_conversation": false,
+        "system_message": "You are a helpful and engaging conversational assistant. Provide thoughtful, well-structured responses."
+      },
+      "inputs": {
+        "message": {
+          "from_step": "get_user_input",
+          "field": "user_message"
+        }
+      },
+      "outputs": ["response", "streamed", "chunks"]
+    },
+    {
+      "id": "output_response",
+      "type": "output",
+      "description": "Output the final response with streaming info",
+      "config": {
+        "format": "text"
+      },
+      "inputs": {
+        "response": {
+          "from_step": "stream_response",
+          "field": "response"
+        },
+        "was_streamed": {
+          "from_step": "stream_response",
+          "field": "streamed"
+        },
+        "chunk_count": {
+          "from_step": "stream_response",
+          "field": "chunks"
+        }
+      }
+    }
+  ]
+}

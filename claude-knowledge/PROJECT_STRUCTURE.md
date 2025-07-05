@@ -41,6 +41,21 @@ The codebase has been organized into logical folders for better maintainability 
 │   ├── __init__.py               # Package exports
 │   ├── chat_service.py           # LLM integrations (Ollama, Gemini)
 │   └── example_usage.py          # Chat usage examples
+├── prompt/                        # 🎯 Prompt management system
+│   ├── __init__.py               # Package exports
+│   ├── prompt_service.py         # Main prompt management service
+│   ├── prompt_models.py          # Pydantic models for prompts
+│   ├── prompt_storage.py         # Storage backends (Supabase, file)
+│   ├── prompt_registry.py        # Registry with caching
+│   ├── evaluation_service.py     # Evaluation and A/B testing
+│   ├── concept_eval_models.py    # 🆕 Concept evaluation data models
+│   ├── concept_eval_storage.py   # 🆕 Storage for evaluations and results
+│   ├── concept_judge.py          # 🆕 LLM-as-judge service
+│   ├── concept_evaluation_service.py  # 🆕 Main evaluation orchestration
+│   ├── eval_builder.py           # 🆕 Builder tools and templates
+│   ├── example_usage.py          # Usage examples and demos
+│   ├── README.md                 # Comprehensive documentation
+│   └── README_CONCEPT_EVAL.md    # 🆕 Concept evaluation documentation
 ├── agent_orchestration/           # 🎭 Agent orchestration system
 │   ├── __init__.py               # Package exports
 │   ├── orchestrator.py           # Main orchestration classes
@@ -170,6 +185,29 @@ chat_service = ChatService("gemini")
 response = chat_service.chat("Hello, how are you?")
 ```
 
+### Concept-Based Evaluation System ⭐ **NEW**
+```bash
+# Run concept evaluation examples
+python examples/concept_evaluation_example.py
+```
+```python
+from prompt.eval_builder import EvaluationBuilder
+from prompt.concept_eval_storage import create_concept_eval_storage
+from prompt.concept_evaluation_service import ConceptEvaluationService
+
+# Create evaluation
+builder = EvaluationBuilder("My Evaluation")
+builder.with_prompt_template("Summarize {{content}}")
+builder.add_concept_check("must_contain", "Contains facts", "specific data")
+builder.add_test_case({"content": "..."}, ["facts_check"])
+eval_def = builder.build()
+
+# Run evaluation
+storage = create_concept_eval_storage("auto")
+service = ConceptEvaluationService(storage)
+results = service.run_evaluation(eval_def.to_prompt_evaluation())
+```
+
 ### Running Tests
 ```bash
 # Test delete operations
@@ -192,6 +230,10 @@ python test/test_chunking_service.py
 - ✅ **Input/output mapping:** Flexible data passing between steps
 - ✅ **Example workflows:** Chat agent, document analysis, research agent
 - ✅ **Extensible:** Easy to add new step types and handlers
+- ✅ **Prompt integration:** Seamless integration with managed prompts
+- ✅ **Human-in-the-loop:** Interactive approval and feedback collection
+- ✅ **Conditional workflows:** Intelligent branching and routing
+- ✅ **Structured responses:** Type-safe LLM outputs with validation
 
 ### LLM Abstraction Layer
 - ✅ **Multi-provider support:** Gemini and Ollama integration
@@ -201,6 +243,32 @@ python test/test_chunking_service.py
 - ✅ **Model switching:** Runtime model changes without client recreation
 - ✅ **Factory pattern:** Consistent interface across providers
 - ✅ **Configuration management:** Flexible model and parameter configuration
+
+### Prompt Management System
+- ✅ **Versioned prompts:** Semantic versioning with lifecycle management
+- ✅ **Template system:** Dynamic prompts with Jinja2 variable substitution
+- ✅ **Storage backends:** File-based and Supabase storage options
+- ✅ **Registry with caching:** Fast access with configurable TTL
+- ✅ **Execution logging:** Automatic tracking for evaluation and training
+- ✅ **Performance metrics:** Response time, success rate, token usage analysis
+- ✅ **A/B testing:** Performance comparison between prompt versions
+- ✅ **Training data export:** Generate datasets in JSONL and CSV formats
+- ✅ **Template validation:** Validate prompts before deployment
+- ✅ **Workflow integration:** Seamless integration with agent orchestration
+
+### Concept-Based Evaluation System ⭐ **NEW**
+- ✅ **LLM-as-Judge:** Automated quality assessment using LLM evaluators
+- ✅ **Concept checking:** Must contain/not contain/binary decision validation
+- ✅ **Structured test suites:** Template + context + concept checks framework
+- ✅ **Builder patterns:** EvaluationBuilder and QuickEvaluationBuilder for easy creation
+- ✅ **Pre-built templates:** Common evaluation patterns (accuracy, style, classification)
+- ✅ **Storage backends:** File and Supabase storage with evaluation history
+- ✅ **Quality gates:** Pass/fail thresholds for automated quality control
+- ✅ **Agent integration:** Built-in concept_evaluation step type
+- ✅ **Comprehensive reporting:** Scores, grades, recommendations, and detailed results
+- ✅ **Multi-judge support:** Gemini, Anthropic, and Ollama as evaluation judges
+- ✅ **CSV import/export:** Import test cases and export results
+- ✅ **Chain-of-thought reasoning:** Judges provide detailed reasoning for decisions
 
 ### Document Processing
 - ✅ **PDF extraction:** Traditional and LLM-enhanced text extraction
@@ -257,6 +325,12 @@ SUPABASE_ANON_KEY=your-anon-key      # NOT service role key
 
 # AI/ML Configuration
 EMBEDDING_MODEL=all-MiniLM-L6-v2     # Sentence transformer model
+
+# Prompt Management Configuration
+PROMPT_STORAGE_BACKEND=supabase      # or 'file' or 'auto'
+PROMPT_STORAGE_PATH=./prompts        # for file backend
+PROMPT_CACHE_TTL=3600               # cache timeout in seconds
+PROMPT_EVALUATION_ENABLED=true      # enable execution logging
 ```
 
 ### Setup Instructions
@@ -277,7 +351,8 @@ The setup process includes:
 1. **Environment Configuration** - Copy .env.example to .env
 2. **Database Setup** - Choose between Supabase (recommended) or Neo4j
 3. **API Keys** - Configure Ollama, Gemini, or other LLM services
-4. **Verification** - Test all connections and functionality
+4. **Prompt Storage** - Configure prompt management backend (file or Supabase)
+5. **Verification** - Test all connections and functionality
 
 ## 📦 Benefits of Current Structure
 

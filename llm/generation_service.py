@@ -3,7 +3,7 @@ Pure generation service for stateless LLM interactions.
 Optimized for one-shot prompt → response without conversation history.
 """
 
-from typing import Optional, Any, Dict
+from typing import Optional, Any, Dict, Generator
 from .llm_types import LLMProvider, TextLLMClient
 from .llm_factory import LLMClientFactory
 
@@ -55,6 +55,23 @@ class GenerationService:
         # Use the client directly - no conversation context needed
         return self.client.chat(prompt)
     
+    def generate_stream(self, prompt: str, **override_params) -> Generator[str, None, str]:
+        """
+        Generate a streaming response to a single prompt.
+        
+        Args:
+            prompt: The input prompt
+            **override_params: Optional parameters to override defaults for this call
+            
+        Yields:
+            str: Partial response chunks as they arrive
+            
+        Returns:
+            str: Complete response when streaming is done
+        """
+        # Use the client's streaming method
+        return self.client.chat_stream(prompt)
+    
     def generate_with_system_prompt(self, prompt: str, system_prompt: str, **override_params) -> str:
         """
         Generate a response with a system prompt.
@@ -74,6 +91,29 @@ class GenerationService:
             # Fallback: prepend system prompt to user prompt
             combined_prompt = f"{system_prompt}\n\nUser: {prompt}\n\nAssistant:"
             return self.client.chat(combined_prompt)
+    
+    def generate_with_system_prompt_stream(self, prompt: str, system_prompt: str, **override_params) -> Generator[str, None, str]:
+        """
+        Generate a streaming response with a system prompt.
+        
+        Args:
+            prompt: The user prompt
+            system_prompt: System instruction/context
+            **override_params: Optional parameters to override defaults for this call
+            
+        Yields:
+            str: Partial response chunks as they arrive
+            
+        Returns:
+            str: Complete response when streaming is done
+        """
+        # Combine system and user prompts appropriately for the provider
+        if hasattr(self.client, 'chat_with_system_prompt_stream'):
+            return self.client.chat_with_system_prompt_stream(prompt, system_prompt)
+        else:
+            # Fallback: prepend system prompt to user prompt
+            combined_prompt = f"{system_prompt}\n\nUser: {prompt}\n\nAssistant:"
+            return self.client.chat_stream(combined_prompt)
     
     def batch_generate(self, prompts: list[str], **override_params) -> list[str]:
         """
@@ -165,6 +205,45 @@ def quick_generate_gemini(prompt: str, model: Optional[str] = None, **kwargs) ->
 def quick_generate_anthropic(prompt: str, model: Optional[str] = None, **kwargs) -> str:
     """Quick generation using Anthropic"""
     return quick_generate(prompt, LLMProvider.ANTHROPIC, model, **kwargs)
+
+
+# Streaming convenience functions
+def quick_generate_stream(prompt: str, provider: LLMProvider, model: Optional[str] = None, 
+                         temperature: float = 0.7, max_tokens: int = 1000, **kwargs) -> Generator[str, None, str]:
+    """
+    Quick one-shot streaming generation without creating a service instance.
+    
+    Args:
+        prompt: The input prompt
+        provider: LLM provider to use
+        model: Model name (optional)
+        temperature: Temperature for generation
+        max_tokens: Maximum tokens to generate
+        **kwargs: Additional parameters
+        
+    Yields:
+        str: Partial response chunks as they arrive
+        
+    Returns:
+        str: Complete response when streaming is done
+    """
+    service = GenerationService(provider, model, temperature, max_tokens, **kwargs)
+    return service.generate_stream(prompt)
+
+
+def quick_generate_ollama_stream(prompt: str, model: Optional[str] = None, **kwargs) -> Generator[str, None, str]:
+    """Quick streaming generation using Ollama"""
+    return quick_generate_stream(prompt, LLMProvider.OLLAMA, model, **kwargs)
+
+
+def quick_generate_gemini_stream(prompt: str, model: Optional[str] = None, **kwargs) -> Generator[str, None, str]:
+    """Quick streaming generation using Gemini"""
+    return quick_generate_stream(prompt, LLMProvider.GEMINI, model, **kwargs)
+
+
+def quick_generate_anthropic_stream(prompt: str, model: Optional[str] = None, **kwargs) -> Generator[str, None, str]:
+    """Quick streaming generation using Anthropic"""
+    return quick_generate_stream(prompt, LLMProvider.ANTHROPIC, model, **kwargs)
 
 
 # Example usage

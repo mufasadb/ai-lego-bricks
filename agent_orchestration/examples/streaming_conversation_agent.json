@@ -1,0 +1,98 @@
+{
+  "name": "streaming_conversation_agent",
+  "description": "A conversational agent with streaming support for multi-turn dialogues",
+  "config": {
+    "default_llm_provider": "gemini",
+    "default_model": "gemini-1.5-flash"
+  },
+  "steps": [
+    {
+      "id": "get_first_message",
+      "type": "input",
+      "description": "Get user's first message",
+      "config": {
+        "prompt": "Start a conversation - what's on your mind?"
+      },
+      "outputs": ["first_message"]
+    },
+    {
+      "id": "stream_first_response",
+      "type": "llm_chat",
+      "description": "Generate streaming response in conversation context",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "temperature": 0.8,
+        "max_tokens": 800,
+        "stream": true,
+        "use_conversation": true,
+        "conversation_id": "user_session_001",
+        "system_message": "You are a knowledgeable and empathetic conversation partner. Engage naturally and ask follow-up questions to keep the dialogue interesting."
+      },
+      "inputs": {
+        "message": {
+          "from_step": "get_first_message",
+          "field": "first_message"
+        }
+      },
+      "outputs": ["response", "conversation_id", "total_messages", "streamed"]
+    },
+    {
+      "id": "get_follow_up",
+      "type": "input",
+      "description": "Get user's follow-up message",
+      "config": {
+        "prompt": "Continue the conversation..."
+      },
+      "outputs": ["follow_up_message"]
+    },
+    {
+      "id": "stream_follow_up_response",
+      "type": "llm_chat",
+      "description": "Continue streaming conversation",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "temperature": 0.8,
+        "max_tokens": 800,
+        "stream": true,
+        "use_conversation": true,
+        "conversation_id": "user_session_001"
+      },
+      "inputs": {
+        "message": {
+          "from_step": "get_follow_up",
+          "field": "follow_up_message"
+        }
+      },
+      "outputs": ["response", "conversation_id", "total_messages", "first_prompt", "last_response"]
+    },
+    {
+      "id": "output_conversation_summary",
+      "type": "output",
+      "description": "Output conversation summary with streaming stats",
+      "config": {
+        "format": "json"
+      },
+      "inputs": {
+        "conversation_id": {
+          "from_step": "stream_follow_up_response",
+          "field": "conversation_id"
+        },
+        "total_messages": {
+          "from_step": "stream_follow_up_response",
+          "field": "total_messages"
+        },
+        "first_user_prompt": {
+          "from_step": "stream_follow_up_response",
+          "field": "first_prompt"
+        },
+        "latest_response": {
+          "from_step": "stream_follow_up_response",
+          "field": "last_response"
+        },
+        "streaming_enabled": true
+      }
+    }
+  ]
+}

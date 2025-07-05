@@ -26,7 +26,12 @@ Or view the setup files directly:
 ├── memory/                   # 🧠 Memory service implementations
 ├── llm/                      # 🧠 LLM services (generation + conversation)
 ├── chat/                     # 💬 Enhanced conversation management
+├── prompt/                   # 🎯 Prompt management and evaluation
+├── tts/                      # 🎵 Text-to-speech with streaming support
+├── pdf_to_text/             # 📄 PDF processing and text extraction
+├── chunking/                # ✂️ Text chunking and semantic processing
 ├── agent_orchestration/      # 🤖 JSON-driven agent workflows
+├── examples/                # 📋 Usage examples and demos
 ├── test/                     # 🧪 Test utilities
 ├── claude-knowledge/         # 🤖 Claude-specific documentation
 ├── .env.example             # 📝 Environment template
@@ -38,11 +43,14 @@ Or view the setup files directly:
 This project provides:
 
 1. **Clean LLM Architecture** - Separated Generation (one-shot) and Conversation (multi-turn) services
-2. **JSON-Driven Agent Orchestration** - Create sophisticated AI workflows through configuration
-3. **Intelligent Memory System** - Store and retrieve project knowledge using vector similarity search
-4. **Rich Conversation Management** - Full conversation state tracking with search and export
-5. **Structured LLM Responses** - Type-safe, validated outputs using Pydantic schemas
-6. **Multi-Modal Processing** - Text, vision, and document analysis capabilities
+2. **Streaming Support** - Real-time LLM response streaming with native Ollama and Anthropic support
+3. **Text-to-Speech Integration** - Convert text to audio with streaming LLM → TTS pipelines
+4. **JSON-Driven Agent Orchestration** - Create sophisticated AI workflows through configuration
+5. **Intelligent Memory System** - Store and retrieve project knowledge using vector similarity search
+6. **Rich Conversation Management** - Full conversation state tracking with search and export
+7. **Structured LLM Responses** - Type-safe, validated outputs using Pydantic schemas
+8. **Multi-Modal Processing** - Text, vision, and document analysis capabilities
+9. **Prompt Management** - Externalized, versioned prompts with evaluation and A/B testing
 
 ## 🏃‍♂️ Getting Started
 
@@ -73,8 +81,9 @@ This project provides:
 See **[setup/README.md](setup/README.md)** for detailed configuration instructions covering:
 
 - Supabase setup with pgvector for memory storage
-- Ollama local LLM configuration  
+- Ollama local LLM configuration (with streaming support)
 - Google AI Studio (Gemini) integration
+- Text-to-Speech provider setup (OpenAI, Google, Coqui-XTTS)
 - Neo4j graph database setup (optional)
 
 ## 📚 Usage Examples
@@ -106,6 +115,15 @@ from llm.generation_service import quick_generate_gemini
 response = quick_generate_gemini("Analyze this document")
 ```
 
+**Streaming Generation**
+```python
+from llm.generation_service import quick_generate_ollama_stream
+
+# Real-time streaming responses
+for chunk in quick_generate_ollama_stream("Tell me about AI"):
+    print(chunk, end='', flush=True)
+```
+
 **Conversation Service (Multi-Turn)**
 ```python
 from chat.conversation_service import create_gemini_conversation
@@ -120,6 +138,62 @@ response2 = conv.send_message("How do I use it for web development?")
 # Rich conversation access
 first_prompt = conv.get_first_prompt()
 summary = conv.get_conversation_summary()
+```
+
+### Text-to-Speech
+
+**Basic TTS**
+```python
+from tts import create_tts_service
+
+# Create TTS service (auto-detects available providers)
+tts = create_tts_service("auto")
+
+# Generate speech
+response = tts.text_to_speech(
+    text="Hello, this is a test of the TTS system!",
+    output_path="output/speech.wav"
+)
+```
+
+**Streaming LLM to TTS**
+```python
+from tts.streaming_tts_service import create_streaming_pipeline
+
+# Create streaming pipeline
+pipeline = create_streaming_pipeline(
+    llm_provider="ollama",
+    tts_provider="auto"
+)
+
+# Stream LLM response directly to audio files
+for progress in pipeline.stream_chat_to_audio("Explain quantum computing"):
+    print(f"Status: {progress['status']}, Audio files: {progress['audio_files_generated']}")
+```
+
+### Prompt Management
+```python
+from prompt import create_prompt_service, PromptStatus
+
+# Create managed prompts for reusability and evaluation
+prompt_service = create_prompt_service("auto")
+
+# Create a template-based prompt
+prompt = prompt_service.create_prompt(
+    prompt_id="helpful_assistant",
+    name="Helpful Assistant",
+    content=[
+        {"role": "system", "content": "You are a helpful AI assistant."},
+        {"role": "user", "content": {
+            "template": "Answer this question: {{ user_question }}",
+            "required_variables": ["user_question"]
+        }}
+    ],
+    version="1.0.0",
+    status=PromptStatus.ACTIVE
+)
+
+# Use in workflows for easy iteration and A/B testing
 ```
 
 ## 🤖 Creating Agents
@@ -179,6 +253,7 @@ result = orchestrator.execute_workflow(workflow, {"user_query": "Hello!"})
 - **`llm_chat`** - Generate text using LLM (auto-selects Generation/Conversation service)
 - **`llm_vision`** - Analyze images with vision models
 - **`llm_structured`** - Generate type-safe, validated JSON responses
+- **`tts`** - Convert text to speech with multiple provider support
 
 #### Document Processing
 - **`document_processing`** - Extract and enhance text from PDFs
@@ -238,6 +313,35 @@ Conditional Processing → Structured Output
     "provider": "gemini",
     "use_conversation": true,   // Uses stateful Conversation service
     "conversation_id": "user_session_123"
+  }
+}
+```
+
+**Streaming Support**
+```json
+{
+  "id": "streaming_response",
+  "type": "llm_chat",
+  "config": {
+    "provider": "ollama",      // Best streaming support
+    "stream": true,            // Enable streaming
+    "use_conversation": false
+  }
+}
+```
+
+**Text-to-Speech Integration**
+```json
+{
+  "id": "convert_to_speech",
+  "type": "tts",
+  "config": {
+    "provider": "auto",        // Auto-detect available TTS
+    "voice": "default",
+    "output_path": "output/response.wav"
+  },
+  "inputs": {
+    "text": {"from_step": "streaming_response", "field": "response"}
   }
 }
 ```

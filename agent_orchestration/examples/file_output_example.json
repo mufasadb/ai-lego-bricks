@@ -1,0 +1,98 @@
+{
+  "name": "file_output_demo",
+  "description": "Demonstrates file output capabilities in various formats",
+  "config": {
+    "default_llm_provider": "gemini"
+  },
+  "steps": [
+    {
+      "id": "generate_analysis",
+      "type": "llm_structured",
+      "description": "Generate structured analysis data",
+      "config": {
+        "provider": "gemini",
+        "response_schema": {
+          "name": "TopicAnalysis",
+          "fields": {
+            "topic": {"type": "string", "description": "The topic being analyzed"},
+            "summary": {"type": "string", "description": "Brief summary of the topic"},
+            "key_points": {"type": "list", "description": "List of key points"},
+            "rating": {"type": "float", "description": "Importance rating 1-10"},
+            "category": {"type": "string", "description": "Category classification"}
+          }
+        }
+      },
+      "inputs": {
+        "message": "Analyze the topic of renewable energy. Provide a summary, key points, importance rating, and categorize it."
+      },
+      "outputs": ["structured_response", "response_dict"]
+    },
+    {
+      "id": "save_json_output",
+      "type": "file_output",
+      "description": "Save analysis as JSON file",
+      "config": {
+        "file_path": "output/renewable_energy_analysis.json",
+        "format": "json",
+        "create_dirs": true
+      },
+      "inputs": {
+        "content": {"from_step": "generate_analysis", "field": "response_dict"}
+      },
+      "outputs": ["file_path", "success"]
+    },
+    {
+      "id": "save_markdown_report",
+      "type": "file_output", 
+      "description": "Save analysis as markdown report",
+      "config": {
+        "file_path": "output/renewable_energy_report.md",
+        "format": "markdown",
+        "create_dirs": true
+      },
+      "inputs": {
+        "content": {"from_step": "generate_analysis", "field": "response_dict"}
+      },
+      "outputs": ["file_path", "success"]
+    },
+    {
+      "id": "save_timestamped_backup",
+      "type": "file_output",
+      "description": "Save timestamped backup copy",
+      "config": {
+        "file_path": "output/backups/analysis_backup.json",
+        "format": "json",
+        "append_timestamp": true,
+        "create_dirs": true
+      },
+      "inputs": {
+        "content": {
+          "analysis": {"from_step": "generate_analysis", "field": "response_dict"},
+          "metadata": {
+            "workflow": "file_output_demo",
+            "generated_files": [
+              {"from_step": "save_json_output", "field": "file_path"},
+              {"from_step": "save_markdown_report", "field": "file_path"}
+            ]
+          }
+        }
+      },
+      "outputs": ["file_path", "success"]
+    },
+    {
+      "id": "final_output",
+      "type": "output",
+      "description": "Return summary of generated files",
+      "config": {
+        "format": "json"
+      },
+      "inputs": {
+        "analysis_topic": {"from_step": "generate_analysis", "field": "topic"},
+        "json_file": {"from_step": "save_json_output", "field": "file_path"},
+        "markdown_file": {"from_step": "save_markdown_report", "field": "file_path"},
+        "backup_file": {"from_step": "save_timestamped_backup", "field": "file_path"},
+        "success": "All files generated successfully"
+      }
+    }
+  ]
+}

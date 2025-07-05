@@ -1,0 +1,114 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Agent Workflow Configuration",
+  "description": "JSON schema for defining agent orchestration workflows",
+  "type": "object",
+  "required": ["name", "description", "steps"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Unique name for this workflow"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of what this workflow does"
+    },
+    "config": {
+      "type": "object",
+      "description": "Global configuration for the workflow",
+      "properties": {
+        "memory_backend": {
+          "type": "string",
+          "enum": ["auto", "supabase", "neo4j"],
+          "default": "auto"
+        },
+        "default_llm_provider": {
+          "type": "string",
+          "enum": ["gemini", "ollama"],
+          "default": "gemini"
+        },
+        "default_model": {
+          "type": "string",
+          "description": "Default model to use for LLM operations"
+        }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "description": "Ordered list of steps to execute",
+      "items": {
+        "$ref": "#/definitions/Step"
+      }
+    }
+  },
+  "definitions": {
+    "Step": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for this step"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "input",
+            "document_processing",
+            "memory_store",
+            "memory_retrieve", 
+            "llm_chat",
+            "llm_vision",
+            "chunk_text",
+            "condition",
+            "loop",
+            "output",
+            "human_approval"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of this step"
+        },
+        "config": {
+          "type": "object",
+          "description": "Step-specific configuration"
+        },
+        "inputs": {
+          "type": "object",
+          "description": "Input mapping from previous steps or external sources",
+          "patternProperties": {
+            "^[a-zA-Z_][a-zA-Z0-9_]*$": {
+              "oneOf": [
+                {"type": "string"},
+                {"type": "object", "properties": {"from_step": {"type": "string"}, "field": {"type": "string"}}}
+              ]
+            }
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "description": "Named outputs this step produces",
+          "items": {"type": "string"}
+        },
+        "condition": {
+          "type": "object",
+          "description": "Conditional execution logic",
+          "properties": {
+            "if": {"type": "string"},
+            "then": {"$ref": "#/definitions/Step"},
+            "else": {"$ref": "#/definitions/Step"}
+          }
+        },
+        "loop": {
+          "type": "object",
+          "description": "Loop execution logic",
+          "properties": {
+            "over": {"type": "string"},
+            "body": {"$ref": "#/definitions/Step"}
+          }
+        }
+      }
+    }
+  }
+}

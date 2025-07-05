@@ -1,0 +1,254 @@
+{
+  "name": "ollama_vision_pdf_comparison",
+  "description": "Compare different Ollama/LLaVA vision models' analysis of the same PDF document",
+  "config": {
+    "default_llm_provider": "ollama"
+  },
+  "steps": [
+    {
+      "id": "process_pdf_traditional",
+      "type": "document_processing",
+      "description": "Extract text from PDF using traditional methods",
+      "config": {
+        "enhance_with_llm": false
+      },
+      "inputs": {
+        "file_path": "$pdf_path"
+      },
+      "outputs": ["text", "page_count"]
+    },
+    {
+      "id": "process_pdf_with_llava_fallback",
+      "type": "document_processing", 
+      "description": "Extract text from PDF with LLaVA vision fallback enabled",
+      "config": {
+        "enhance_with_llm": false,
+        "use_vision_fallback": true,
+        "llm_provider": "llava"
+      },
+      "inputs": {
+        "file_path": "$pdf_path"
+      },
+      "outputs": ["text", "enhanced_text", "vision_text"]
+    },
+    {
+      "id": "force_llava_vision_general",
+      "type": "document_processing",
+      "description": "Force LLaVA Vision processing with general prompt",
+      "config": {
+        "force_vision_processing": true,
+        "llm_provider": "llava",
+        "vision_prompt": "Analyze this document and extract all the key information including any financial data, dates, and important details. Provide a comprehensive summary."
+      },
+      "inputs": {
+        "file_path": "$pdf_path"
+      },
+      "outputs": ["vision_text", "processing_method"]
+    },
+    {
+      "id": "force_llava_vision_tables",
+      "type": "document_processing",
+      "description": "Force LLaVA Vision processing focused on tables",
+      "config": {
+        "force_vision_processing": true,
+        "llm_provider": "llava",
+        "extract_tables": true
+      },
+      "inputs": {
+        "file_path": "$pdf_path"
+      },
+      "outputs": ["vision_text", "processing_method"]
+    },
+    {
+      "id": "force_llava_vision_financial",
+      "type": "document_processing",
+      "description": "Force LLaVA Vision processing focused on financial data",
+      "config": {
+        "force_vision_processing": true,
+        "llm_provider": "llava",
+        "vision_prompt": "Focus on extracting financial information from this document. Look for amounts, dates, invoice numbers, billing details, payment terms, and any other financial data. Format the output clearly."
+      },
+      "inputs": {
+        "file_path": "$pdf_path"
+      },
+      "outputs": ["vision_text", "processing_method"]
+    },
+    {
+      "id": "test_different_llava_models",
+      "type": "document_processing",
+      "description": "Test with a specific LLaVA model",
+      "config": {
+        "force_vision_processing": true,
+        "llm_provider": "llava",
+        "llm_model": "llava:13b",
+        "vision_prompt": "Extract all text and data from this document, focusing on structure and accuracy."
+      },
+      "inputs": {
+        "file_path": "$pdf_path"
+      },
+      "outputs": ["vision_text", "processing_method"]
+    },
+    {
+      "id": "output_traditional_text",
+      "type": "file_output",
+      "description": "Save traditional text extraction results",
+      "config": {
+        "file_path": "output/ollama_traditional_extraction.txt",
+        "format": "text",
+        "create_dirs": true
+      },
+      "inputs": {
+        "content": {
+          "from_step": "process_pdf_traditional",
+          "field": "text"
+        }
+      },
+      "outputs": ["file_path", "success"]
+    },
+    {
+      "id": "output_llava_fallback",
+      "type": "file_output", 
+      "description": "Save LLaVA vision fallback results",
+      "config": {
+        "file_path": "output/llava_vision_fallback_results.json",
+        "format": "json",
+        "create_dirs": true
+      },
+      "inputs": {
+        "content": {
+          "traditional_text": {"from_step": "process_pdf_with_llava_fallback", "field": "text"},
+          "vision_text": {"from_step": "process_pdf_with_llava_fallback", "field": "vision_text"},
+          "enhanced_text": {"from_step": "process_pdf_with_llava_fallback", "field": "enhanced_text"}
+        }
+      },
+      "outputs": ["file_path", "success"]
+    },
+    {
+      "id": "output_llava_general",
+      "type": "file_output",
+      "description": "Save LLaVA Vision general analysis",
+      "config": {
+        "file_path": "output/llava_vision_general.txt",
+        "format": "text",
+        "create_dirs": true
+      },
+      "inputs": {
+        "content": {
+          "from_step": "force_llava_vision_general",
+          "field": "vision_text"
+        }
+      },
+      "outputs": ["file_path", "success"]
+    },
+    {
+      "id": "output_llava_tables",
+      "type": "file_output",
+      "description": "Save LLaVA Vision table extraction",
+      "config": {
+        "file_path": "output/llava_vision_tables.txt",
+        "format": "text",
+        "create_dirs": true
+      },
+      "inputs": {
+        "content": {
+          "from_step": "force_llava_vision_tables",
+          "field": "vision_text"
+        }
+      },
+      "outputs": ["file_path", "success"]
+    },
+    {
+      "id": "output_llava_financial",
+      "type": "file_output",
+      "description": "Save LLaVA Vision financial analysis",
+      "config": {
+        "file_path": "output/llava_vision_financial.txt", 
+        "format": "text",
+        "create_dirs": true
+      },
+      "inputs": {
+        "content": {
+          "from_step": "force_llava_vision_financial",
+          "field": "vision_text"
+        }
+      },
+      "outputs": ["file_path", "success"]
+    },
+    {
+      "id": "output_llava_model_test",
+      "type": "file_output",
+      "description": "Save specific LLaVA model test results",
+      "config": {
+        "file_path": "output/llava_13b_model_test.txt", 
+        "format": "text",
+        "create_dirs": true
+      },
+      "inputs": {
+        "content": {
+          "from_step": "test_different_llava_models",
+          "field": "vision_text"
+        }
+      },
+      "outputs": ["file_path", "success"]
+    },
+    {
+      "id": "create_ollama_comparison_summary",
+      "type": "file_output",
+      "description": "Create a summary comparing all Ollama/LLaVA extraction methods",
+      "config": {
+        "file_path": "output/ollama_comparison_summary.json",
+        "format": "json",
+        "create_dirs": true
+      },
+      "inputs": {
+        "content": {
+          "pdf_path": "$pdf_path",
+          "extraction_methods": {
+            "traditional": {
+              "method": "PyMuPDF traditional extraction",
+              "result_file": "output/ollama_traditional_extraction.txt",
+              "text_length": {"from_step": "process_pdf_traditional", "field": "text"}
+            },
+            "llava_fallback": {
+              "method": "Traditional with LLaVA Vision fallback",
+              "result_file": "output/llava_vision_fallback_results.json",
+              "vision_used": {"from_step": "process_pdf_with_llava_fallback", "field": "vision_processing_used"}
+            },
+            "llava_general": {
+              "method": "LLaVA Vision - General Analysis", 
+              "result_file": "output/llava_vision_general.txt",
+              "processing_method": {"from_step": "force_llava_vision_general", "field": "processing_method"}
+            },
+            "llava_tables": {
+              "method": "LLaVA Vision - Table Extraction",
+              "result_file": "output/llava_vision_tables.txt",
+              "processing_method": {"from_step": "force_llava_vision_tables", "field": "processing_method"}
+            },
+            "llava_financial": {
+              "method": "LLaVA Vision - Financial Focus",
+              "result_file": "output/llava_vision_financial.txt", 
+              "processing_method": {"from_step": "force_llava_vision_financial", "field": "processing_method"}
+            },
+            "llava_13b_test": {
+              "method": "LLaVA 13B Model Test",
+              "result_file": "output/llava_13b_model_test.txt",
+              "processing_method": {"from_step": "test_different_llava_models", "field": "processing_method"}
+            }
+          }
+        }
+      },
+      "outputs": ["file_path", "success"]
+    },
+    {
+      "id": "final_output",
+      "type": "output",
+      "description": "Return summary of all Ollama/LLaVA processing results",
+      "inputs": {
+        "summary": "Ollama/LLaVA multi-vision PDF comparison completed successfully",
+        "results_directory": "output/",
+        "comparison_file": {"from_step": "create_ollama_comparison_summary", "field": "file_path"},
+        "pdf_processed": "$pdf_path"
+      }
+    }
+  ]
+}

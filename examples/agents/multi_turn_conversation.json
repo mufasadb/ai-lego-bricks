@@ -1,0 +1,124 @@
+{
+  "name": "multi_turn_conversation",
+  "description": "A workflow that demonstrates multiple turns of conversation in sequence",
+  "config": {
+    "memory_backend": "auto",
+    "default_llm_provider": "gemini",
+    "default_model": "gemini-1.5-flash"
+  },
+  "steps": [
+    {
+      "id": "start_conversation",
+      "type": "start_conversation",
+      "description": "Initialize conversation with a coding mentor persona",
+      "config": {
+        "conversation_id": "coding_mentor",
+        "name": "Coding Mentor Session",
+        "system_message": "You are an experienced coding mentor. Help the user learn programming concepts step by step. Ask follow-up questions to gauge their understanding."
+      },
+      "outputs": ["conversation_id"]
+    },
+    {
+      "id": "first_question",
+      "type": "input",
+      "description": "Get initial programming question",
+      "config": {
+        "prompt": "What programming concept would you like to learn about?"
+      },
+      "outputs": ["initial_question"]
+    },
+    {
+      "id": "first_response",
+      "type": "continue_conversation",
+      "description": "Provide initial explanation",
+      "config": {
+        "provider": "gemini",
+        "conversation_id": "coding_mentor",
+        "history_limit": 0
+      },
+      "inputs": {
+        "message": {
+          "from_step": "first_question",
+          "field": "initial_question"
+        }
+      },
+      "outputs": ["assistant_response"]
+    },
+    {
+      "id": "follow_up_question",
+      "type": "input",
+      "description": "Get follow-up question or clarification",
+      "config": {
+        "prompt": "Do you have any follow-up questions or need clarification on anything?"
+      },
+      "outputs": ["follow_up"]
+    },
+    {
+      "id": "follow_up_response",
+      "type": "continue_conversation",
+      "description": "Provide follow-up explanation with full conversation context",
+      "config": {
+        "provider": "gemini",
+        "conversation_id": "coding_mentor",
+        "history_limit": 0,
+        "include_system_messages": true
+      },
+      "inputs": {
+        "message": {
+          "from_step": "follow_up_question",
+          "field": "follow_up"
+        }
+      },
+      "outputs": ["final_response", "total_messages"]
+    },
+    {
+      "id": "conversation_summary",
+      "type": "llm_chat",
+      "description": "Generate a summary of the learning session",
+      "config": {
+        "provider": "gemini",
+        "use_conversation": true,
+        "conversation_id": "coding_mentor",
+        "history_limit": 0
+      },
+      "inputs": {
+        "message": "Please provide a brief summary of what we covered in this learning session and suggest next steps for the student."
+      },
+      "outputs": ["response"]
+    },
+    {
+      "id": "output_session",
+      "type": "output",
+      "description": "Return the complete session results",
+      "config": {
+        "format": "json"
+      },
+      "inputs": {
+        "initial_question": {
+          "from_step": "first_question",
+          "field": "initial_question"
+        },
+        "first_response": {
+          "from_step": "first_response",
+          "field": "assistant_response"
+        },
+        "follow_up_question": {
+          "from_step": "follow_up_question",
+          "field": "follow_up"
+        },
+        "final_response": {
+          "from_step": "follow_up_response",
+          "field": "final_response"
+        },
+        "session_summary": {
+          "from_step": "conversation_summary",
+          "field": "response"
+        },
+        "total_messages": {
+          "from_step": "follow_up_response",
+          "field": "total_messages"
+        }
+      }
+    }
+  ]
+}

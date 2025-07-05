@@ -1,0 +1,88 @@
+{
+  "name": "simple_human_input_example",
+  "description": "Simple workflow showing human input flowing to LLM for processing",
+  "config": {
+    "memory_backend": "auto",
+    "default_llm_provider": "gemini",
+    "default_model": "gemini-1.5-flash"
+  },
+  "steps": [
+    {
+      "id": "get_topic",
+      "type": "input",
+      "description": "Get topic from user",
+      "config": {
+        "prompt": "What topic would you like me to research?"
+      },
+      "outputs": ["topic"]
+    },
+    {
+      "id": "initial_research",
+      "type": "llm_chat",
+      "description": "Do initial research on the topic",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash"
+      },
+      "inputs": {
+        "message": "Please provide a brief overview of: {user_topic}"
+      },
+      "outputs": ["research_summary"]
+    },
+    {
+      "id": "human_feedback",
+      "type": "human_approval",
+      "description": "Get human feedback on the research",
+      "config": {
+        "approval_type": "custom_input",
+        "prompt": "Review the research summary below. What specific aspects would you like me to focus on or expand?",
+        "timeout_seconds": 120,
+        "default_action": "continue with current research",
+        "show_context": true,
+        "context_fields": ["research_summary", "topic"]
+      },
+      "inputs": {
+        "research_summary": {
+          "from_step": "initial_research",
+          "field": "research_summary"
+        },
+        "original_topic": {
+          "from_step": "get_topic",
+          "field": "topic"
+        }
+      },
+      "outputs": ["user_input", "feedback", "decision"]
+    },
+    {
+      "id": "enhanced_research",
+      "type": "llm_chat",
+      "description": "Create enhanced research based on human feedback",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-pro"
+      },
+      "inputs": {
+        "message": "Original topic: {original_topic}\n\nInitial research: {initial_research}\n\nHuman feedback: {human_feedback}\n\nPlease provide an enhanced and focused research summary that addresses the human feedback."
+      },
+      "outputs": ["enhanced_summary"]
+    },
+    {
+      "id": "final_output",
+      "type": "output",
+      "description": "Return the enhanced research",
+      "config": {
+        "format": "text"
+      },
+      "inputs": {
+        "final_research": {
+          "from_step": "enhanced_research",
+          "field": "enhanced_summary"
+        },
+        "human_input": {
+          "from_step": "human_feedback",
+          "field": "user_input"
+        }
+      }
+    }
+  ]
+}

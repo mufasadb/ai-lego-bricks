@@ -1,0 +1,129 @@
+{
+  "name": "research_agent",
+  "description": "An agent that processes multiple documents and provides comprehensive research analysis",
+  "config": {
+    "memory_backend": "auto",
+    "default_llm_provider": "gemini",
+    "default_model": "gemini-1.5-pro"
+  },
+  "steps": [
+    {
+      "id": "process_documents",
+      "type": "document_processing",
+      "description": "Process multiple research documents",
+      "config": {
+        "enhance_with_llm": true,
+        "semantic_analysis": true
+      },
+      "inputs": {
+        "file_path": "$document_paths"
+      },
+      "outputs": ["processed_docs"]
+    },
+    {
+      "id": "extract_key_concepts",
+      "type": "llm_chat",
+      "description": "Extract key concepts from processed documents",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-pro"
+      },
+      "inputs": {
+        "message": "Please analyze the following documents and extract key concepts, themes, and important findings. Documents: {documents}"
+      },
+      "outputs": ["key_concepts"]
+    },
+    {
+      "id": "chunk_and_store",
+      "type": "chunk_text",
+      "description": "Chunk processed documents for storage",
+      "config": {
+        "target_size": 800,
+        "tolerance": 0.3
+      },
+      "inputs": {
+        "text": {
+          "from_step": "process_documents",
+          "field": "processed_docs"
+        }
+      },
+      "outputs": ["chunks"]
+    },
+    {
+      "id": "store_research_data",
+      "type": "memory_store",
+      "description": "Store research data with metadata",
+      "config": {
+        "metadata": {
+          "content_type": "research_document",
+          "analysis_level": "comprehensive"
+        }
+      },
+      "inputs": {
+        "content": {
+          "from_step": "chunk_and_store",
+          "field": "chunks"
+        },
+        "metadata": {
+          "key_concepts": {
+            "from_step": "extract_key_concepts",
+            "field": "key_concepts"
+          }
+        }
+      },
+      "outputs": ["stored_memories"]
+    },
+    {
+      "id": "get_research_query",
+      "type": "input",
+      "description": "Get specific research question",
+      "config": {
+        "prompt": "What specific research question would you like me to investigate?"
+      },
+      "outputs": ["research_query"]
+    },
+    {
+      "id": "search_knowledge_base",
+      "type": "memory_retrieve",
+      "description": "Search stored research for relevant information",
+      "config": {
+        "limit": 5,
+        "threshold": 0.6
+      },
+      "inputs": {
+        "query": {
+          "from_step": "get_research_query",
+          "field": "research_query"
+        }
+      },
+      "outputs": ["relevant_research"]
+    },
+    {
+      "id": "synthesize_findings",
+      "type": "llm_chat",
+      "description": "Synthesize research findings into comprehensive answer",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-pro"
+      },
+      "inputs": {
+        "message": "Based on the following research findings, provide a comprehensive analysis and answer to the question: '{query}'\n\nResearch Findings:\n{findings}\n\nPlease provide:\n1. A direct answer to the question\n2. Supporting evidence from the research\n3. Any limitations or gaps in the available information\n4. Suggestions for further research"
+      },
+      "outputs": ["synthesis"]
+    },
+    {
+      "id": "format_research_report",
+      "type": "output",
+      "description": "Format final research report",
+      "config": {
+        "format": "text"
+      },
+      "inputs": {
+        "report": {
+          "from_step": "synthesize_findings",
+          "field": "synthesis"
+        }
+      }
+    }
+  ]
+}

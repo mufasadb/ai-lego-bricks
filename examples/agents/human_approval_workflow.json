@@ -1,0 +1,248 @@
+{
+  "name": "human_approval_workflow",
+  "description": "A workflow demonstrating human-in-the-loop approval for document analysis",
+  "config": {
+    "memory_backend": "auto",
+    "default_llm_provider": "gemini",
+    "default_model": "gemini-1.5-pro"
+  },
+  "steps": [
+    {
+      "id": "process_document",
+      "type": "document_processing",
+      "description": "Extract and enhance text from PDF",
+      "config": {
+        "enhance_with_llm": true,
+        "semantic_analysis": true
+      },
+      "inputs": {
+        "file_path": "$document_path"
+      },
+      "outputs": ["text", "enhanced_text", "key_points"]
+    },
+    {
+      "id": "initial_analysis",
+      "type": "llm_structured",
+      "description": "Perform initial automated analysis of the document",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-pro",
+        "response_schema": {
+          "name": "DocumentAnalysis",
+          "fields": {
+            "summary": {
+              "type": "string",
+              "description": "Brief summary of the document content"
+            },
+            "main_topics": {
+              "type": "list",
+              "description": "List of main topics covered"
+            },
+            "confidence": {
+              "type": "float",
+              "description": "Confidence in the analysis (0.0 to 1.0)"
+            },
+            "complexity": {
+              "type": "string",
+              "description": "Document complexity level: simple, moderate, complex"
+            },
+            "requires_human_review": {
+              "type": "boolean",
+              "description": "Whether this analysis requires human review"
+            }
+          }
+        }
+      },
+      "inputs": {
+        "message": "Analyze this document and provide a structured summary:\n\n{text}"
+      },
+      "outputs": ["summary", "main_topics", "confidence", "complexity", "requires_human_review"]
+    },
+    {
+      "id": "human_review",
+      "type": "human_approval",
+      "description": "Human review of the automated analysis",
+      "config": {
+        "approval_type": "multiple_choice",
+        "prompt": "Please review the automated analysis below. What would you like to do?",
+        "options": ["approve", "reject", "revise", "enhance"],
+        "timeout_seconds": 180,
+        "default_action": "reject",
+        "show_context": true,
+        "context_fields": ["summary", "main_topics", "confidence", "complexity", "requires_human_review"]
+      },
+      "inputs": {
+        "analysis_summary": {
+          "from_step": "initial_analysis",
+          "field": "summary"
+        },
+        "confidence_score": {
+          "from_step": "initial_analysis", 
+          "field": "confidence"
+        },
+        "document_complexity": {
+          "from_step": "initial_analysis",
+          "field": "complexity"
+        }
+      },
+      "outputs": ["decision", "feedback"],
+      "routes": {
+        "approve": "store_analysis",
+        "reject": "error_step",
+        "revise": "human_revision",
+        "enhance": "enhanced_analysis"
+      }
+    },
+    {
+      "id": "human_revision",
+      "type": "human_approval",
+      "description": "Get human feedback for revision",
+      "config": {
+        "approval_type": "custom_input",
+        "prompt": "Please provide specific feedback on how to improve the analysis:",
+        "timeout_seconds": 300,
+        "default_action": "Use original analysis",
+        "show_context": true,
+        "context_fields": ["summary", "main_topics"]
+      },
+      "inputs": {
+        "original_analysis": {
+          "from_step": "initial_analysis",
+          "field": "summary"
+        }
+      },
+      "outputs": ["user_input", "feedback"],
+      "routes": {
+        "default": "revised_analysis"
+      }
+    },
+    {
+      "id": "revised_analysis",
+      "type": "llm_chat",
+      "description": "Create revised analysis based on human feedback",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-pro"
+      },
+      "inputs": {
+        "message": "Original analysis: {original_analysis}\n\nHuman feedback: {human_feedback}\n\nPlease revise the analysis incorporating the human feedback."
+      },
+      "outputs": ["response"],
+      "routes": {
+        "default": "store_analysis"
+      }
+    },
+    {
+      "id": "enhanced_analysis", 
+      "type": "llm_chat",
+      "description": "Create enhanced analysis with deeper insights",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-pro"
+      },
+      "inputs": {
+        "message": "Original analysis: {original_summary}\n\nDocument text: {full_text}\n\nPlease provide an enhanced, more detailed analysis with deeper insights, additional context, and comprehensive conclusions."
+      },
+      "outputs": ["response"],
+      "routes": {
+        "default": "store_analysis"
+      }
+    },
+    {
+      "id": "store_analysis",
+      "type": "memory_store",
+      "description": "Store the approved analysis in memory",
+      "config": {
+        "metadata": {
+          "analysis_type": "human_approved",
+          "workflow_version": "1.0"
+        }
+      },
+      "inputs": {
+        "content": {
+          "from_step": "determine_final_analysis",
+          "field": "final_analysis"
+        },
+        "human_decision": {
+          "from_step": "human_review",
+          "field": "decision"
+        },
+        "timestamp": {
+          "from_step": "human_review",
+          "field": "timestamp"
+        }
+      },
+      "outputs": ["memory_id"],
+      "routes": {
+        "default": "final_output"
+      }
+    },
+    {
+      "id": "determine_final_analysis",
+      "type": "condition",
+      "description": "Determine which analysis to use based on workflow path",
+      "config": {
+        "condition_type": "simple_comparison",
+        "left_value": {
+          "from_step": "human_review",
+          "field": "decision"
+        },
+        "operator": "==",
+        "right_value": "approve"
+      },
+      "inputs": {
+        "original_analysis": {
+          "from_step": "initial_analysis",
+          "field": "summary"
+        },
+        "revised_analysis": {
+          "from_step": "revised_analysis",
+          "field": "response"
+        },
+        "enhanced_analysis": {
+          "from_step": "enhanced_analysis", 
+          "field": "response"
+        }
+      },
+      "outputs": ["final_analysis"],
+      "routes": {
+        "true": "store_analysis",
+        "false": "store_analysis"
+      }
+    },
+    {
+      "id": "error_step",
+      "type": "output",
+      "description": "Handle rejection case",
+      "config": {
+        "format": "text"
+      },
+      "inputs": {
+        "error_message": "Analysis was rejected by human reviewer. Please review the document and try again."
+      }
+    },
+    {
+      "id": "final_output",
+      "type": "output", 
+      "description": "Return the final approved analysis",
+      "config": {
+        "format": "json"
+      },
+      "inputs": {
+        "analysis": {
+          "from_step": "determine_final_analysis",
+          "field": "final_analysis"
+        },
+        "human_decision": {
+          "from_step": "human_review",
+          "field": "decision"
+        },
+        "memory_id": {
+          "from_step": "store_analysis", 
+          "field": "memory_id"
+        },
+        "workflow_status": "completed"
+      }
+    }
+  ]
+}

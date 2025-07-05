@@ -1,0 +1,129 @@
+{
+  "name": "document_analysis_agent",
+  "description": "An agent that processes PDFs, stores content in memory, and answers questions about it",
+  "config": {
+    "memory_backend": "auto",
+    "default_llm_provider": "gemini",
+    "default_model": "gemini-1.5-pro"
+  },
+  "steps": [
+    {
+      "id": "process_document",
+      "type": "document_processing",
+      "description": "Extract and enhance text from PDF",
+      "config": {
+        "enhance_with_llm": true,
+        "semantic_analysis": true
+      },
+      "inputs": {
+        "file_path": "$document_path"
+      },
+      "outputs": ["text", "semantic_analysis"]
+    },
+    {
+      "id": "chunk_document",
+      "type": "chunk_text",
+      "description": "Break document into chunks for storage",
+      "config": {
+        "target_size": 1000,
+        "tolerance": 0.2
+      },
+      "inputs": {
+        "text": {
+          "from_step": "process_document",
+          "field": "text"
+        }
+      },
+      "outputs": ["chunks"]
+    },
+    {
+      "id": "store_chunks",
+      "type": "memory_store",
+      "description": "Store document chunks in memory",
+      "config": {
+        "metadata": {
+          "document_type": "pdf",
+          "processing_date": "2024-01-01"
+        }
+      },
+      "inputs": {
+        "content": {
+          "from_step": "chunk_document",
+          "field": "chunks"
+        },
+        "metadata": {
+          "source_file": "$document_path"
+        }
+      },
+      "outputs": ["memory_id"]
+    },
+    {
+      "id": "get_user_question",
+      "type": "input",
+      "description": "Get user's question about the document",
+      "config": {
+        "prompt": "What would you like to know about this document?"
+      },
+      "outputs": ["question"]
+    },
+    {
+      "id": "retrieve_relevant_info",
+      "type": "memory_retrieve",
+      "description": "Find relevant information from stored document",
+      "config": {
+        "limit": 3,
+        "threshold": 0.7
+      },
+      "inputs": {
+        "query": {
+          "from_step": "get_user_question",
+          "field": "question"
+        }
+      },
+      "outputs": ["memories"]
+    },
+    {
+      "id": "generate_answer",
+      "type": "llm_chat",
+      "description": "Generate answer based on retrieved context",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-pro"
+      },
+      "inputs": {
+        "message": {
+          "from_step": "format_context",
+          "field": "contextualized_query"
+        }
+      },
+      "outputs": ["response"]
+    },
+    {
+      "id": "format_context",
+      "type": "llm_chat",
+      "description": "Format context and question for final answer",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash"
+      },
+      "inputs": {
+        "message": "Context: {context}\n\nQuestion: {question}\n\nPlease provide a comprehensive answer based on the context provided."
+      },
+      "outputs": ["contextualized_query"]
+    },
+    {
+      "id": "output_answer",
+      "type": "output",
+      "description": "Return the final answer",
+      "config": {
+        "format": "text"
+      },
+      "inputs": {
+        "answer": {
+          "from_step": "generate_answer",
+          "field": "response"
+        }
+      }
+    }
+  ]
+}

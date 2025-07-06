@@ -27,7 +27,7 @@
       "description": "Break document into semantic chunks",
       "config": {
         "target_size": 1000,
-        "tolerance": 0.2,
+        "tolerance": 200,
         "overlap": 100
       },
       "inputs": {

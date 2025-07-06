@@ -1487,6 +1487,8 @@ class StepHandlerRegistry:
             return self._handle_llm_condition(step, inputs, context)
         elif condition_type == "simple_comparison":
             return self._handle_simple_condition(step, inputs, context)
+        elif condition_type == "field_value":
+            return self._handle_field_value_condition(step, inputs, context)
         else:
             raise ValueError(f"Unknown condition type: {condition_type}")
     
@@ -1610,6 +1612,49 @@ class StepHandlerRegistry:
             "operator": operator,
             "right_value": right_value,
             "reasoning": f"{left_value} {operator} {right_value} = {result}"
+        }
+    
+    def _handle_field_value_condition(self, step: StepConfig, inputs: Dict[str, Any], 
+                                     context: ExecutionContext) -> Any:
+        """Handle field value routing condition - routes based on the value of a specific field"""
+        field_to_check = step.config.get("field_to_check")
+        if not field_to_check:
+            raise ValueError("field_to_check required for field_value condition")
+        
+        route_options = step.config.get("route_options", [])
+        default_route = step.config.get("default_route", "default")
+        
+        # Get the field value
+        field_value = inputs.get(field_to_check)
+        if field_value is None:
+            # Try to extract from a string response (common with LLM outputs)
+            for key, value in inputs.items():
+                if isinstance(value, str) and field_to_check.lower() in value.lower():
+                    # Look for the field value in the string
+                    import re
+                    for option in route_options:
+                        if option.lower() in value.lower():
+                            field_value = option
+                            break
+        
+        # Determine route
+        if field_value in route_options:
+            route = field_value
+        else:
+            # Check if field_value is a string containing one of the options
+            route = default_route
+            if isinstance(field_value, str):
+                for option in route_options:
+                    if option.lower() in field_value.lower():
+                        route = option
+                        break
+        
+        return {
+            "route": route,
+            "field_checked": field_to_check,
+            "field_value": field_value,
+            "available_routes": route_options,
+            "reasoning": f"Field '{field_to_check}' value '{field_value}' routed to '{route}'"
         }
     
     def _build_condition_prompt(self, base_prompt: str, inputs: Dict[str, Any], 

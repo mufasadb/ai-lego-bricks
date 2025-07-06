@@ -1,6 +1,6 @@
 {
-  "name": "simple_chat_agent",
-  "description": "A simple chat agent that responds to user queries",
+  "name": "basic_chat_agent",
+  "description": "Simple chat agent supporting multiple LLM providers with conversation memory",
   "config": {
     "memory_backend": "auto",
     "default_llm_provider": "gemini",
@@ -8,9 +8,12 @@
   },
   "_alternatives": {
     "anthropic_config": {
-      "memory_backend": "auto",
       "default_llm_provider": "anthropic",
       "default_model": "claude-3-5-sonnet-20241022"
+    },
+    "ollama_config": {
+      "default_llm_provider": "ollama",
+      "default_model": "llama2"
     }
   },
   "steps": [
@@ -26,15 +29,22 @@
     {
       "id": "generate_response",
       "type": "llm_chat",
-      "description": "Generate AI response",
+      "description": "Generate AI response with conversation memory",
       "config": {
         "provider": "gemini",
-        "model": "gemini-1.5-flash"
+        "model": "gemini-1.5-flash",
+        "use_conversation": true,
+        "temperature": 0.7,
+        "max_tokens": 1000
       },
       "_alternatives": {
         "anthropic": {
           "provider": "anthropic",
           "model": "claude-3-5-sonnet-20241022"
+        },
+        "ollama": {
+          "provider": "ollama",
+          "model": "llama2"
         }
       },
       "inputs": {

@@ -1,0 +1,271 @@
+{
+  "name": "complex_workflow_agent",
+  "description": "Advanced workflow demonstrating conditions, loops, human approval, and dynamic routing",
+  "config": {
+    "default_llm_provider": "gemini",
+    "default_model": "gemini-1.5-flash",
+    "max_iterations": 5
+  },
+  "steps": [
+    {
+      "id": "get_task_description",
+      "type": "input",
+      "description": "Get task description from user",
+      "config": {
+        "prompt": "Describe the task you want me to work on:"
+      },
+      "outputs": ["task_description"]
+    },
+    {
+      "id": "analyze_task_complexity",
+      "type": "llm_chat",
+      "description": "Analyze task complexity and determine approach",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "temperature": 0.3,
+        "system_message": "You are a task analysis expert. Analyze the complexity of tasks and categorize them."
+      },
+      "inputs": {
+        "message": "Analyze this task and categorize its complexity as either 'simple', 'moderate', or 'complex': {task}",
+        "task": {
+          "from_step": "get_task_description",
+          "field": "task_description"
+        }
+      },
+      "outputs": ["complexity_level", "analysis"]
+    },
+    {
+      "id": "route_by_complexity",
+      "type": "condition",
+      "description": "Route workflow based on task complexity",
+      "config": {
+        "condition_type": "field_value",
+        "field_to_check": "complexity_level",
+        "route_options": ["simple", "moderate", "complex"]
+      },
+      "inputs": {
+        "complexity_level": {
+          "from_step": "analyze_task_complexity",
+          "field": "complexity_level"
+        }
+      },
+      "routes": {
+        "simple": "handle_simple_task",
+        "moderate": "break_down_task",
+        "complex": "require_approval"
+      }
+    },
+    {
+      "id": "handle_simple_task",
+      "type": "llm_chat",
+      "description": "Handle simple task directly",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash"
+      },
+      "inputs": {
+        "message": "Complete this simple task: {task}",
+        "task": {
+          "from_step": "get_task_description",
+          "field": "task_description"
+        }
+      },
+      "outputs": ["result"],
+      "next_step": "output_final_result"
+    },
+    {
+      "id": "break_down_task",
+      "type": "llm_chat",
+      "description": "Break moderate task into steps",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-pro",
+        "temperature": 0.2
+      },
+      "inputs": {
+        "message": "Break this moderate complexity task into 3-5 actionable steps: {task}",
+        "task": {
+          "from_step": "get_task_description",
+          "field": "task_description"
+        }
+      },
+      "outputs": ["task_steps"],
+      "next_step": "execute_task_steps"
+    },
+    {
+      "id": "require_approval",
+      "type": "human_approval",
+      "description": "Get human approval for complex task",
+      "config": {
+        "approval_prompt": "This is a complex task that requires careful handling. Do you want to proceed?",
+        "include_context": true
+      },
+      "inputs": {
+        "task_to_approve": {
+          "from_step": "get_task_description",
+          "field": "task_description"
+        },
+        "complexity_analysis": {
+          "from_step": "analyze_task_complexity",
+          "field": "analysis"
+        }
+      },
+      "outputs": ["approved", "feedback"],
+      "routes": {
+        "approved": "break_down_task",
+        "rejected": "handle_rejection"
+      }
+    },
+    {
+      "id": "execute_task_steps",
+      "type": "loop",
+      "description": "Execute each task step iteratively",
+      "config": {
+        "loop_type": "iterate_list",
+        "max_iterations": 5
+      },
+      "inputs": {
+        "items_to_process": {
+          "from_step": "break_down_task",
+          "field": "task_steps"
+        }
+      },
+      "loop_body": [
+        {
+          "id": "execute_single_step",
+          "type": "llm_chat",
+          "description": "Execute individual task step",
+          "config": {
+            "provider": "gemini",
+            "model": "gemini-1.5-flash"
+          },
+          "inputs": {
+            "message": "Execute this step: {current_item}. Step {iteration_count} of {total_items}.",
+            "current_item": "$current_item",
+            "iteration_count": "$iteration_context.iteration_count",
+            "total_items": "$iteration_context.total_items"
+          },
+          "outputs": ["step_result"]
+        },
+        {
+          "id": "validate_step_result",
+          "type": "condition",
+          "description": "Check if step was successful",
+          "config": {
+            "condition_type": "llm_decision",
+            "condition_prompt": "Was this step completed successfully?",
+            "route_options": ["success", "retry", "fail"]
+          },
+          "inputs": {
+            "step_result": {
+              "from_step": "execute_single_step",
+              "field": "step_result"
+            }
+          },
+          "routes": {
+            "success": "continue",
+            "retry": "execute_single_step",
+            "fail": "handle_step_failure"
+          }
+        }
+      ],
+      "outputs": ["all_step_results", "successful_steps"],
+      "next_step": "compile_results"
+    },
+    {
+      "id": "handle_step_failure",
+      "type": "output",
+      "description": "Handle step execution failure",
+      "inputs": {
+        "error": "Step execution failed",
+        "failed_step": "$current_item"
+      }
+    },
+    {
+      "id": "handle_rejection",
+      "type": "output",
+      "description": "Handle task rejection",
+      "inputs": {
+        "message": "Task was rejected by user",
+        "feedback": {
+          "from_step": "require_approval",
+          "field": "feedback"
+        }
+      }
+    },
+    {
+      "id": "compile_results",
+      "type": "llm_chat",
+      "description": "Compile all step results into final output",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-pro",
+        "temperature": 0.2
+      },
+      "inputs": {
+        "message": "Compile these step results into a comprehensive final result: {results}",
+        "results": {
+          "from_step": "execute_task_steps",
+          "field": "all_step_results"
+        }
+      },
+      "outputs": ["compiled_result"]
+    },
+    {
+      "id": "save_workflow_log",
+      "type": "file_output",
+      "description": "Save complete workflow execution log",
+      "config": {
+        "file_path": "output/complex_workflow_log.json",
+        "format": "json",
+        "create_dirs": true
+      },
+      "inputs": {
+        "content": {
+          "original_task": {
+            "from_step": "get_task_description",
+            "field": "task_description"
+          },
+          "complexity_analysis": {
+            "from_step": "analyze_task_complexity",
+            "field": "analysis"
+          },
+          "workflow_path": "auto_determined",
+          "final_result": {
+            "from_step": "compile_results",
+            "field": "compiled_result"
+          },
+          "execution_metadata": {
+            "timestamp": "auto",
+            "steps_executed": "auto"
+          }
+        }
+      },
+      "outputs": ["log_file_path"]
+    },
+    {
+      "id": "output_final_result",
+      "type": "output",
+      "description": "Return comprehensive workflow results",
+      "config": {
+        "format": "json"
+      },
+      "inputs": {
+        "task_completed": {
+          "from_step": "get_task_description",
+          "field": "task_description"
+        },
+        "final_result": {
+          "from_step": "compile_results",
+          "field": "compiled_result"
+        },
+        "workflow_log": {
+          "from_step": "save_workflow_log",
+          "field": "log_file_path"
+        },
+        "execution_summary": "Complex workflow completed successfully with dynamic routing and conditional execution"
+      }
+    }
+  ]
+}

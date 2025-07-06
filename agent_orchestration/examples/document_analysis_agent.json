@@ -1,6 +1,6 @@
 {
   "name": "document_analysis_agent",
-  "description": "An agent that processes PDFs, stores content in memory, and answers questions about it",
+  "description": "Comprehensive document processing with chunking, memory storage, and Q&A capabilities",
   "config": {
     "memory_backend": "auto",
     "default_llm_provider": "gemini",
@@ -13,20 +13,22 @@
       "description": "Extract and enhance text from PDF",
       "config": {
         "enhance_with_llm": true,
-        "semantic_analysis": true
+        "semantic_analysis": true,
+        "use_vision_fallback": true
       },
       "inputs": {
         "file_path": "$document_path"
       },
-      "outputs": ["text", "semantic_analysis"]
+      "outputs": ["text", "semantic_analysis", "page_count"]
     },
     {
       "id": "chunk_document",
       "type": "chunk_text",
-      "description": "Break document into chunks for storage",
+      "description": "Break document into semantic chunks",
       "config": {
         "target_size": 1000,
-        "tolerance": 0.2
+        "tolerance": 0.2,
+        "overlap": 100
       },
       "inputs": {
         "text": {
@@ -39,11 +41,11 @@
     {
       "id": "store_chunks",
       "type": "memory_store",
-      "description": "Store document chunks in memory",
+      "description": "Store document chunks in vector memory",
       "config": {
         "metadata": {
           "document_type": "pdf",
-          "processing_date": "2024-01-01"
+          "processing_date": "auto"
         }
       },
       "inputs": {
@@ -52,10 +54,14 @@
           "field": "chunks"
         },
         "metadata": {
-          "source_file": "$document_path"
+          "source_file": "$document_path",
+          "page_count": {
+            "from_step": "process_document",
+            "field": "page_count"
+          }
         }
       },
-      "outputs": ["memory_id"]
+      "outputs": ["memory_id", "stored_count"]
     },
     {
       "id": "get_user_question",
@@ -71,7 +77,7 @@
       "type": "memory_retrieve",
       "description": "Find relevant information from stored document",
       "config": {
-        "limit": 3,
+        "limit": 5,
         "threshold": 0.7
       },
       "inputs": {
@@ -80,48 +86,83 @@
           "field": "question"
         }
       },
-      "outputs": ["memories"]
+      "outputs": ["memories", "relevance_scores"]
     },
     {
       "id": "generate_answer",
       "type": "llm_chat",
-      "description": "Generate answer based on retrieved context",
+      "description": "Generate comprehensive answer based on retrieved context",
       "config": {
         "provider": "gemini",
-        "model": "gemini-1.5-pro"
+        "model": "gemini-1.5-pro",
+        "temperature": 0.3,
+        "max_tokens": 1500,
+        "system_message": "You are a document analysis expert. Provide comprehensive, accurate answers based on the provided context. Always cite specific sections when possible."
       },
       "inputs": {
-        "message": {
-          "from_step": "format_context",
-          "field": "contextualized_query"
+        "message": "Context from document: {context}\n\nUser Question: {question}\n\nPlease provide a detailed answer based on the context provided, citing relevant sections.",
+        "context": {
+          "from_step": "retrieve_relevant_info",
+          "field": "memories"
+        },
+        "question": {
+          "from_step": "get_user_question",
+          "field": "question"
         }
       },
       "outputs": ["response"]
     },
     {
-      "id": "format_context",
-      "type": "llm_chat",
-      "description": "Format context and question for final answer",
+      "id": "save_analysis",
+      "type": "file_output",
+      "description": "Save analysis results to file",
       "config": {
-        "provider": "gemini",
-        "model": "gemini-1.5-flash"
+        "file_path": "output/document_analysis_results.json",
+        "format": "json",
+        "create_dirs": true
       },
       "inputs": {
-        "message": "Context: {context}\n\nQuestion: {question}\n\nPlease provide a comprehensive answer based on the context provided."
+        "content": {
+          "document_path": "$document_path",
+          "question": {
+            "from_step": "get_user_question",
+            "field": "question"
+          },
+          "answer": {
+            "from_step": "generate_answer",
+            "field": "response"
+          },
+          "chunks_stored": {
+            "from_step": "store_chunks",
+            "field": "stored_count"
+          },
+          "relevance_scores": {
+            "from_step": "retrieve_relevant_info",
+            "field": "relevance_scores"
+          }
+        }
       },
-      "outputs": ["contextualized_query"]
+      "outputs": ["file_path", "success"]
     },
     {
       "id": "output_answer",
       "type": "output",
-      "description": "Return the final answer",
+      "description": "Return the final analysis",
       "config": {
-        "format": "text"
+        "format": "json"
       },
       "inputs": {
         "answer": {
           "from_step": "generate_answer",
           "field": "response"
+        },
+        "analysis_file": {
+          "from_step": "save_analysis",
+          "field": "file_path"
+        },
+        "chunks_processed": {
+          "from_step": "store_chunks",
+          "field": "stored_count"
         }
       }
     }

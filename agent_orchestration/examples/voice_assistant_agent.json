@@ -1,0 +1,166 @@
+{
+  "name": "voice_assistant_agent",
+  "description": "Complete voice interaction pipeline: STT → LLM → TTS with conversation memory",
+  "config": {
+    "default_stt_provider": "faster_whisper",
+    "default_llm_provider": "anthropic",
+    "default_tts_provider": "coqui_xtts",
+    "memory_backend": "auto"
+  },
+  "steps": [
+    {
+      "id": "get_voice_input",
+      "type": "input",
+      "description": "Get voice input file path",
+      "config": {
+        "prompt": "Enter path to voice input file (.wav, .mp3, etc.):"
+      },
+      "outputs": ["voice_input_path"]
+    },
+    {
+      "id": "transcribe_speech",
+      "type": "stt",
+      "description": "Convert speech to text",
+      "config": {
+        "provider": "faster_whisper",
+        "language": "auto",
+        "model": "base",
+        "enable_word_timestamps": true,
+        "temperature": 0.0
+      },
+      "inputs": {
+        "audio_file_path": {
+          "from_step": "get_voice_input",
+          "field": "voice_input_path"
+        }
+      },
+      "outputs": ["transcript", "success", "language_detected", "confidence"]
+    },
+    {
+      "id": "process_with_llm",
+      "type": "llm_chat",
+      "description": "Generate intelligent response",
+      "config": {
+        "provider": "anthropic",
+        "model": "claude-3-5-sonnet-20241022",
+        "max_tokens": 800,
+        "temperature": 0.7,
+        "use_conversation": true,
+        "system_message": "You are a helpful voice assistant. Provide clear, concise responses optimized for speech. Keep responses conversational and under 150 words when possible. Speak naturally as if having a real conversation."
+      },
+      "inputs": {
+        "message": {
+          "from_step": "transcribe_speech",
+          "field": "transcript"
+        }
+      },
+      "outputs": ["response", "conversation_id"]
+    },
+    {
+      "id": "convert_to_speech",
+      "type": "tts",
+      "description": "Convert response to natural speech",
+      "config": {
+        "provider": "coqui_xtts",
+        "voice": "default",
+        "output_format": "wav",
+        "output_path": "output/voice_assistant_response.wav",
+        "speed": 1.0,
+        "create_dirs": true
+      },
+      "inputs": {
+        "text": {
+          "from_step": "process_with_llm",
+          "field": "response"
+        }
+      },
+      "outputs": ["audio_file_path", "success", "duration_ms"]
+    },
+    {
+      "id": "save_conversation",
+      "type": "file_output",
+      "description": "Save complete conversation log",
+      "config": {
+        "file_path": "output/voice_conversation_log.json",
+        "format": "json",
+        "create_dirs": true
+      },
+      "inputs": {
+        "content": {
+          "timestamp": "auto",
+          "conversation_id": {
+            "from_step": "process_with_llm",
+            "field": "conversation_id"
+          },
+          "user_input": {
+            "audio_file": {
+              "from_step": "get_voice_input",
+              "field": "voice_input_path"
+            },
+            "transcript": {
+              "from_step": "transcribe_speech",
+              "field": "transcript"
+            },
+            "language_detected": {
+              "from_step": "transcribe_speech",
+              "field": "language_detected"
+            },
+            "confidence": {
+              "from_step": "transcribe_speech",
+              "field": "confidence"
+            }
+          },
+          "assistant_response": {
+            "text": {
+              "from_step": "process_with_llm",
+              "field": "response"
+            },
+            "audio_file": {
+              "from_step": "convert_to_speech",
+              "field": "audio_file_path"
+            },
+            "duration_ms": {
+              "from_step": "convert_to_speech",
+              "field": "duration_ms"
+            }
+          }
+        }
+      },
+      "outputs": ["file_path", "success"]
+    },
+    {
+      "id": "output_conversation",
+      "type": "output",
+      "description": "Return complete voice interaction results",
+      "config": {
+        "format": "json"
+      },
+      "inputs": {
+        "user_transcript": {
+          "from_step": "transcribe_speech",
+          "field": "transcript"
+        },
+        "language_detected": {
+          "from_step": "transcribe_speech",
+          "field": "language_detected"
+        },
+        "assistant_response": {
+          "from_step": "process_with_llm",
+          "field": "response"
+        },
+        "response_audio_file": {
+          "from_step": "convert_to_speech",
+          "field": "audio_file_path"
+        },
+        "response_duration_ms": {
+          "from_step": "convert_to_speech",
+          "field": "duration_ms"
+        },
+        "conversation_log": {
+          "from_step": "save_conversation",
+          "field": "file_path"
+        }
+      }
+    }
+  ]
+}

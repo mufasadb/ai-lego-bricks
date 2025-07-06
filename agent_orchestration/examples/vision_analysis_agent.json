@@ -1,0 +1,154 @@
+{
+  "name": "vision_analysis_agent",
+  "description": "Multi-modal document analysis comparing different vision processing approaches",
+  "config": {
+    "default_llm_provider": "gemini",
+    "default_model": "gemini-1.5-pro"
+  },
+  "steps": [
+    {
+      "id": "process_traditional",
+      "type": "document_processing",
+      "description": "Extract text using traditional OCR methods",
+      "config": {
+        "enhance_with_llm": false,
+        "force_vision_processing": false
+      },
+      "inputs": {
+        "file_path": "$document_path"
+      },
+      "outputs": ["text", "page_count", "processing_method"]
+    },
+    {
+      "id": "process_vision_general",
+      "type": "document_processing",
+      "description": "Process with vision AI for comprehensive analysis",
+      "config": {
+        "force_vision_processing": true,
+        "llm_provider": "gemini",
+        "vision_prompt": "Analyze this document comprehensively. Extract all text, identify key information, and describe any visual elements like charts, tables, or diagrams."
+      },
+      "inputs": {
+        "file_path": "$document_path"
+      },
+      "outputs": ["vision_text", "processing_method"]
+    },
+    {
+      "id": "process_vision_structured",
+      "type": "document_processing",
+      "description": "Process with vision AI focused on structured data extraction",
+      "config": {
+        "force_vision_processing": true,
+        "llm_provider": "gemini",
+        "extract_tables": true,
+        "vision_prompt": "Focus on extracting structured data from this document. Identify and format any tables, lists, financial data, dates, and other structured information clearly."
+      },
+      "inputs": {
+        "file_path": "$document_path"
+      },
+      "outputs": ["vision_text", "processing_method"]
+    },
+    {
+      "id": "compare_results",
+      "type": "llm_chat",
+      "description": "Compare and analyze different processing results",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-pro",
+        "temperature": 0.2,
+        "max_tokens": 2000,
+        "system_message": "You are a document analysis expert. Compare different text extraction methods and provide insights on their effectiveness."
+      },
+      "inputs": {
+        "message": "Compare these three text extraction results from the same document:\n\n1. Traditional OCR:\n{traditional}\n\n2. Vision AI General:\n{vision_general}\n\n3. Vision AI Structured:\n{vision_structured}\n\nProvide a detailed comparison highlighting strengths and weaknesses of each approach, and recommend which method would be best for different use cases.",
+        "traditional": {
+          "from_step": "process_traditional",
+          "field": "text"
+        },
+        "vision_general": {
+          "from_step": "process_vision_general",
+          "field": "vision_text"
+        },
+        "vision_structured": {
+          "from_step": "process_vision_structured",
+          "field": "vision_text"
+        }
+      },
+      "outputs": ["comparison_analysis"]
+    },
+    {
+      "id": "save_results",
+      "type": "file_output",
+      "description": "Save all processing results and comparison",
+      "config": {
+        "file_path": "output/vision_analysis_comparison.json",
+        "format": "json",
+        "create_dirs": true
+      },
+      "inputs": {
+        "content": {
+          "document_path": "$document_path",
+          "traditional_extraction": {
+            "text": {
+              "from_step": "process_traditional",
+              "field": "text"
+            },
+            "method": {
+              "from_step": "process_traditional",
+              "field": "processing_method"
+            }
+          },
+          "vision_general": {
+            "text": {
+              "from_step": "process_vision_general",
+              "field": "vision_text"
+            },
+            "method": {
+              "from_step": "process_vision_general",
+              "field": "processing_method"
+            }
+          },
+          "vision_structured": {
+            "text": {
+              "from_step": "process_vision_structured",
+              "field": "vision_text"
+            },
+            "method": {
+              "from_step": "process_vision_structured",
+              "field": "processing_method"
+            }
+          },
+          "comparison_analysis": {
+            "from_step": "compare_results",
+            "field": "comparison_analysis"
+          }
+        }
+      },
+      "outputs": ["file_path", "success"]
+    },
+    {
+      "id": "output_results",
+      "type": "output",
+      "description": "Return comprehensive analysis results",
+      "config": {
+        "format": "json"
+      },
+      "inputs": {
+        "document_analyzed": "$document_path",
+        "comparison_analysis": {
+          "from_step": "compare_results",
+          "field": "comparison_analysis"
+        },
+        "results_file": {
+          "from_step": "save_results",
+          "field": "file_path"
+        },
+        "processing_methods_tested": [
+          "Traditional OCR",
+          "Gemini Vision (General)",
+          "Gemini Vision (Structured)"
+        ]
+      }
+    }
+  ]
+}

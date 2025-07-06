@@ -1,9 +1,10 @@
 {
-  "name": "streaming_chat_agent",
-  "description": "A chat agent that demonstrates streaming capabilities",
+  "name": "streaming_agent",
+  "description": "Demonstrates streaming capabilities with real-time response and TTS output",
   "config": {
     "default_llm_provider": "ollama",
-    "default_model": "llama2"
+    "default_model": "llama2",
+    "default_tts_provider": "coqui_xtts"
   },
   "steps": [
     {
@@ -37,14 +38,33 @@
       "outputs": ["response", "streamed", "chunks"]
     },
     {
-      "id": "output_response",
-      "type": "output",
-      "description": "Output the final response with streaming info",
+      "id": "convert_to_speech",
+      "type": "tts",
+      "description": "Convert response to speech",
       "config": {
-        "format": "text"
+        "provider": "coqui_xtts",
+        "voice": "default",
+        "output_format": "wav",
+        "output_path": "output/streaming_response.wav",
+        "speed": 1.0
       },
       "inputs": {
-        "response": {
+        "text": {
+          "from_step": "stream_response",
+          "field": "response"
+        }
+      },
+      "outputs": ["audio_file_path", "success", "duration_ms"]
+    },
+    {
+      "id": "output_response",
+      "type": "output",
+      "description": "Output response with streaming and audio info",
+      "config": {
+        "format": "json"
+      },
+      "inputs": {
+        "text_response": {
           "from_step": "stream_response",
           "field": "response"
         },
@@ -55,6 +75,14 @@
         "chunk_count": {
           "from_step": "stream_response",
           "field": "chunks"
+        },
+        "audio_file": {
+          "from_step": "convert_to_speech",
+          "field": "audio_file_path"
+        },
+        "audio_duration_ms": {
+          "from_step": "convert_to_speech",
+          "field": "duration_ms"
         }
       }
     }

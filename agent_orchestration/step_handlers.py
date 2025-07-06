@@ -50,6 +50,7 @@ class StepHandlerRegistry:
         self.handlers[StepType.CONTINUE_CONVERSATION] = self._handle_continue_conversation
         # Audio processing handlers
         self.handlers[StepType.TTS] = self._handle_tts
+        self.handlers[StepType.STT] = self._handle_stt
         # Python function execution handlers
         self.handlers[StepType.PYTHON_FUNCTION] = self._handle_python_function
     
@@ -64,12 +65,29 @@ class StepHandlerRegistry:
     def _handle_input(self, step: StepConfig, inputs: Dict[str, Any], 
                      context: ExecutionContext) -> Any:
         """Handle input step - typically collects user input or external data"""
-        # For now, just return the configured input or prompt for it
+        # Check for workflow inputs first
+        for output_key in step.outputs:
+            if output_key in inputs:
+                return inputs[output_key]
+        
+        # Check common input keys
+        if "user_input" in inputs:
+            return inputs["user_input"]
+        elif "user_query" in inputs:
+            return inputs["user_query"]
+        elif "user_message" in inputs:
+            return inputs["user_message"]
+        
+        # Check for configured value
         if "value" in step.config:
             return step.config["value"]
         elif "prompt" in step.config:
-            # In a real implementation, this would prompt the user
-            return input(step.config["prompt"])
+            # Only prompt interactively if no inputs provided
+            if not inputs:
+                return input(step.config["prompt"])
+            else:
+                # Return first available input if we have inputs but no direct match
+                return list(inputs.values())[0]
         else:
             return inputs
     
@@ -284,6 +302,87 @@ class StepHandlerRegistry:
                 "error": str(e),
                 "provider": provider or "unknown",
                 "text": text,
+                "error_type": type(e).__name__
+            }
+    
+    def _handle_stt(self, step: StepConfig, inputs: Dict[str, Any], 
+                   context: ExecutionContext) -> Any:
+        """Handle speech-to-text step"""
+        stt_service = self.orchestrator.get_service("stt")
+        if not stt_service:
+            raise RuntimeError("STT service not available")
+        
+        audio_file_path = inputs.get("audio_file_path")
+        if not audio_file_path:
+            raise ValueError("audio_file_path required for STT step")
+        
+        # Get configuration
+        language = step.config.get("language")
+        model = step.config.get("model")
+        provider = step.config.get("provider")
+        enable_word_timestamps = step.config.get("enable_word_timestamps", False)
+        enable_speaker_diarization = step.config.get("enable_speaker_diarization", False)
+        temperature = step.config.get("temperature", 0.0)
+        beam_size = step.config.get("beam_size", 5)
+        
+        # Create STT parameters
+        stt_params = {}
+        if language:
+            stt_params["language"] = language
+        if model:
+            stt_params["model"] = model
+        if enable_word_timestamps:
+            stt_params["enable_word_timestamps"] = enable_word_timestamps
+        if enable_speaker_diarization:
+            stt_params["enable_speaker_diarization"] = enable_speaker_diarization
+        if temperature != 0.0:
+            stt_params["temperature"] = temperature
+        if beam_size != 5:
+            stt_params["beam_size"] = beam_size
+        
+        # Add any extra parameters from config
+        extra_params = step.config.get("extra_params", {})
+        stt_params.update(extra_params)
+        
+        try:
+            # If provider is specified and different from current, create new service
+            if provider and provider != stt_service.config.provider.value:
+                # Import STT factory to create new service
+                sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'stt'))
+                from stt.stt_factory import create_stt_service
+                stt_service = create_stt_service(provider, **stt_params)
+            
+            # Transcribe speech
+            response = stt_service.speech_to_text(audio_file_path, **stt_params)
+            
+            if not response.success:
+                return {
+                    "success": False,
+                    "error": response.error_message,
+                    "provider": response.provider,
+                    "audio_file_path": audio_file_path
+                }
+            
+            return {
+                "success": True,
+                "transcript": response.transcript,
+                "language_detected": response.language_detected,
+                "confidence": response.confidence,
+                "word_timestamps": [wt.model_dump() for wt in response.word_timestamps],
+                "speaker_segments": [ss.model_dump() for ss in response.speaker_segments],
+                "duration_seconds": response.duration_seconds,
+                "provider": response.provider,
+                "model_used": response.model_used,
+                "audio_file_path": audio_file_path,
+                "metadata": response.metadata
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "provider": provider or "unknown",
+                "audio_file_path": audio_file_path,
                 "error_type": type(e).__name__
             }
     

@@ -28,6 +28,13 @@ openai>=1.0.0             # OpenAI TTS API
 google-cloud-texttospeech>=2.14.0  # Google TTS API (optional)
 pydub>=0.25.1             # Audio processing utilities (optional)
 
+# STT dependencies
+google-cloud-speech>=2.20.0  # Google Cloud Speech-to-Text API (optional)
+
+# Image generation dependencies  
+Pillow>=10.0.0              # Image processing
+google-cloud-aiplatform>=1.35.0  # Google Vertex AI (optional)
+
 # Optional: For better performance
 # faiss-cpu>=1.7.0  # For faster similarity search
 # torch>=2.0.0      # For sentence-transformers GPU support

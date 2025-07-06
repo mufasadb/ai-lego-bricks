@@ -95,6 +95,9 @@ node_modules/
 # Jupyter Notebook
 .ipynb_checkpoints
 
+# Audio files
+*.wav
+
 #TODOs
 IMPROVEMENT_TODOS.md
 

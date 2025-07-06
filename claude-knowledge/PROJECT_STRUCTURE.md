@@ -44,6 +44,20 @@ The codebase has been organized into logical folders for better maintainability 
 │   ├── __init__.py               # Package exports
 │   ├── chat_service.py           # LLM integrations (Ollama, Gemini)
 │   └── example_usage.py          # Chat usage examples
+├── tts/                           # 🎵 Text-to-speech service package
+│   ├── __init__.py               # Package exports
+│   ├── tts_service.py            # Main TTS service interface
+│   ├── tts_factory.py            # Factory for creating TTS services
+│   ├── tts_clients.py            # Provider implementations (OpenAI, Google, Coqui-XTTS)
+│   ├── tts_types.py              # Type definitions and configuration models
+│   └── streaming_tts_service.py  # Streaming LLM → TTS pipeline
+├── stt/                           # 🎤 Speech-to-text service package
+│   ├── __init__.py               # Package exports
+│   ├── stt_service.py            # Main STT service interface
+│   ├── stt_factory.py            # Factory for creating STT services
+│   ├── stt_clients.py            # Provider implementations (Faster Whisper, Google Speech)
+│   ├── stt_types.py              # Type definitions and configuration models
+│   └── README.md                 # STT service documentation
 ├── prompt/                        # 🎯 Prompt management system
 │   ├── __init__.py               # Package exports
 │   ├── prompt_service.py         # Main prompt management service
@@ -188,6 +202,29 @@ chat_service = ChatService("gemini")
 response = chat_service.chat("Hello, how are you?")
 ```
 
+### Text-to-Speech Service
+```bash
+# Run TTS examples
+python examples/tts_workflow_example.py
+```
+```python
+from tts import create_tts_service
+tts_service = create_tts_service("auto")  # Auto-detects available providers
+response = tts_service.text_to_speech("Hello, world!", output_path="output.wav")
+```
+
+### Speech-to-Text Service
+```bash
+# Run STT examples
+python examples/stt_workflow_example.py
+```
+```python
+from stt import create_stt_service
+stt_service = create_stt_service("auto")  # Auto-detects available providers
+response = stt_service.speech_to_text("audio.wav")
+print(response.transcript)
+```
+
 ### Concept-Based Evaluation System ⭐ **NEW**
 ```bash
 # Run concept evaluation examples
@@ -306,6 +343,24 @@ python test/test_chunking_service.py
 - ✅ **Message format:** Standardized ChatMessage structure
 - ✅ **Backward compatibility:** Legacy adapter for existing code
 
+### Text-to-Speech Service
+- ✅ **Multi-provider support:** OpenAI TTS, Google Cloud TTS, Coqui-XTTS
+- ✅ **Auto-detection:** Automatically selects available providers
+- ✅ **Streaming pipeline:** LLM → TTS streaming for real-time voice responses
+- ✅ **Multiple formats:** MP3, WAV, OGG support
+- ✅ **Voice selection:** Provider-specific voice options
+- ✅ **Agent integration:** Built-in TTS step type for workflows
+
+### Speech-to-Text Service
+- ✅ **Multi-provider support:** Faster Whisper (local), Google Cloud Speech
+- ✅ **Auto-detection:** Automatically selects available providers  
+- ✅ **Word timestamps:** Detailed timing information for each word
+- ✅ **Speaker diarization:** Identify different speakers (Google provider)
+- ✅ **Language detection:** Automatic language identification
+- ✅ **Multiple formats:** MP3, WAV, OGG, FLAC, M4A, WEBM support
+- ✅ **Agent integration:** Built-in STT step type for voice workflows
+- ✅ **Voice assistant workflows:** Complete STT → LLM → TTS pipelines
+
 ### Testing & Quality
 - ✅ **Comprehensive tests:** All core operations validated
 - ✅ **Error handling:** Invalid inputs, missing services, network issues
@@ -328,6 +383,17 @@ SUPABASE_ANON_KEY=your-anon-key      # NOT service role key
 
 # AI/ML Configuration
 EMBEDDING_MODEL=all-MiniLM-L6-v2     # Sentence transformer model
+
+# TTS Configuration
+COQUI_XTTS_URL=http://localhost:5000 # Local Coqui-XTTS server
+OPENAI_API_KEY=your-openai-key       # OpenAI TTS API
+GOOGLE_APPLICATION_CREDENTIALS=path/to/creds.json  # Google TTS
+
+# STT Configuration  
+FASTER_WHISPER_URL=http://localhost:10300  # Local Faster Whisper server
+GOOGLE_APPLICATION_CREDENTIALS=path/to/creds.json  # Google Speech (same as TTS)
+FASTER_WHISPER_DEFAULT_LANGUAGE=auto       # Default language for Whisper
+FASTER_WHISPER_DEFAULT_MODEL=base          # Default model size
 
 # Prompt Management Configuration
 PROMPT_STORAGE_BACKEND=supabase      # or 'file' or 'auto'

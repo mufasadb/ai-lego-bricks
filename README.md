@@ -88,6 +88,8 @@ Or view the setup files directly:
 ├── chat/                     # 💬 Enhanced conversation management
 ├── prompt/                   # 🎯 Prompt management and evaluation
 ├── tts/                      # 🎵 Text-to-speech with streaming support
+├── stt/                      # 🎤 Speech-to-text with multiple providers
+├── image_generation/         # 🎨 Image generation with multiple providers
 ├── pdf_to_text/             # 📄 PDF processing and text extraction
 ├── chunking/                # ✂️ Text chunking and semantic processing
 ├── agent_orchestration/      # 🤖 JSON-driven agent workflows
@@ -107,12 +109,14 @@ This project provides:
 2. **Clean LLM Architecture** - Separated Generation (one-shot) and Conversation (multi-turn) services
 3. **Streaming Support** - Real-time LLM response streaming with native Ollama and Anthropic support
 4. **Text-to-Speech Integration** - Convert text to audio with streaming LLM → TTS pipelines
-5. **JSON-Driven Agent Orchestration** - Create sophisticated AI workflows through configuration
-6. **Intelligent Memory System** - Store and retrieve project knowledge using vector similarity search
-7. **Rich Conversation Management** - Full conversation state tracking with search and export
-8. **Structured LLM Responses** - Type-safe, validated outputs using Pydantic schemas
-9. **Multi-Modal Processing** - Text, vision, and document analysis capabilities
-10. **Prompt Management** - Externalized, versioned prompts with evaluation and A/B testing
+5. **Speech-to-Text Processing** - Convert audio to text with multiple providers (Faster Whisper, Google)
+6. **Image Generation** - Create images from text with OpenAI DALL-E, Stability AI, Google Imagen, and local models
+7. **JSON-Driven Agent Orchestration** - Create sophisticated AI workflows through configuration
+8. **Intelligent Memory System** - Store and retrieve project knowledge using vector similarity search
+9. **Rich Conversation Management** - Full conversation state tracking with search and export
+10. **Structured LLM Responses** - Type-safe, validated outputs using Pydantic schemas
+11. **Multi-Modal Processing** - Text, vision, and document analysis capabilities
+12. **Prompt Management** - Externalized, versioned prompts with evaluation and A/B testing
 
 ## 🏃‍♂️ Getting Started
 
@@ -172,6 +176,7 @@ See **[setup/README.md](setup/README.md)** for detailed configuration instructio
 - Ollama local LLM configuration (with streaming support)
 - Google AI Studio (Gemini) integration
 - Text-to-Speech provider setup (OpenAI, Google, Coqui-XTTS)
+- Speech-to-Text provider setup (Faster Whisper, Google Cloud Speech)
 - Neo4j graph database setup (optional)
 
 ## 📚 Usage Examples
@@ -272,6 +277,105 @@ for progress in pipeline.stream_chat_to_audio("Explain quantum computing"):
     print(f"Status: {progress['status']}, Audio files: {progress['audio_files_generated']}")
 ```
 
+### Speech-to-Text
+
+**Basic STT**
+```python
+from stt import create_stt_service
+from credentials import CredentialManager
+
+# Option 1: Environment variables (auto-detects providers)
+stt = create_stt_service("auto")
+
+# Option 2: Explicit credentials for Google Speech
+creds = CredentialManager({"GOOGLE_APPLICATION_CREDENTIALS": "/path/to/creds.json"}, load_env=False)
+stt = create_stt_service("google", credential_manager=creds)
+
+# Transcribe audio
+response = stt.speech_to_text("path/to/audio.wav")
+print(f"Transcript: {response.transcript}")
+print(f"Confidence: {response.confidence}")
+print(f"Language: {response.language_detected}")
+```
+
+**Voice Assistant Workflow (STT → LLM → TTS)**
+```python
+from stt import create_stt_service
+from llm.generation_service import quick_generate_gemini
+from tts import create_tts_service
+
+# Complete voice interaction pipeline
+stt = create_stt_service("faster_whisper")
+tts = create_tts_service("auto")
+
+# 1. Convert voice to text
+voice_input = stt.speech_to_text("user_question.wav")
+user_text = voice_input.transcript
+
+# 2. Process with LLM
+ai_response = quick_generate_gemini(f"Answer this question: {user_text}")
+
+# 3. Convert response to speech
+voice_output = tts.text_to_speech(ai_response, output_path="ai_response.wav")
+```
+
+### Image Generation
+
+**Basic Image Generation**
+```python
+from image_generation import create_image_generation_service
+from credentials import CredentialManager
+
+# Option 1: Environment variables (auto-detects providers)
+image_service = create_image_generation_service("auto")
+
+# Option 2: Explicit credentials for OpenAI DALL-E
+creds = CredentialManager({"OPENAI_API_KEY": "your-key"}, load_env=False)
+image_service = create_image_generation_service("openai", credential_manager=creds)
+
+# Generate images
+response = image_service.generate_image(
+    prompt="A serene mountain landscape at sunset with a crystal clear lake",
+    size="1024x1024",
+    quality="hd",
+    num_images=2
+)
+
+if response.success:
+    print(f"Generated images: {response.images}")
+else:
+    print(f"Error: {response.error_message}")
+```
+
+**Quick Image Generation**
+```python
+from image_generation import quick_image_generation
+
+# One-line image generation
+image_path = quick_image_generation(
+    "A futuristic cityscape with flying cars and neon lights",
+    provider="auto",
+    size="1024x1024"
+)
+print(f"Image saved to: {image_path}")
+```
+
+**Batch Image Generation**
+```python
+from image_generation import create_image_generation_service
+
+service = create_image_generation_service("auto")
+
+# Generate variations
+base_prompt = "A majestic dragon"
+variations = ["in a medieval castle", "flying over a modern city", "breathing colorful flames"]
+
+responses = service.generate_variations(base_prompt, variations)
+for i, response in enumerate(responses):
+    if response.success:
+        print(f"Variation {i+1}: {response.images[0]}")
+```
+
 ### Prompt Management
 ```python
 from prompt import create_prompt_service, PromptStatus
@@ -355,6 +459,7 @@ result = orchestrator.execute_workflow(workflow, {"user_query": "Hello!"})
 - **`llm_vision`** - Analyze images with vision models
 - **`llm_structured`** - Generate type-safe, validated JSON responses
 - **`tts`** - Convert text to speech with multiple provider support
+- **`stt`** - Convert speech to text with word timestamps and speaker detection
 
 #### Document Processing
 - **`document_processing`** - Extract and enhance text from PDFs
@@ -445,6 +550,48 @@ Conditional Processing → Structured Output
     "text": {"from_step": "streaming_response", "field": "response"}
   }
 }
+```
+
+**Speech-to-Text Integration**
+```json
+{
+  "id": "transcribe_audio",
+  "type": "stt",
+  "config": {
+    "provider": "faster_whisper",  // Local or Google Cloud
+    "language": "auto",
+    "enable_word_timestamps": true,
+    "enable_speaker_diarization": false
+  },
+  "inputs": {
+    "audio_file_path": {"from_step": "get_audio", "field": "file_path"}
+  }
+}
+```
+
+**Voice Assistant Pipeline**
+```json
+[
+  {
+    "id": "transcribe",
+    "type": "stt",
+    "config": {"provider": "faster_whisper"}
+  },
+  {
+    "id": "process",
+    "type": "llm_chat",
+    "inputs": {
+      "message": {"from_step": "transcribe", "field": "transcript"}
+    }
+  },
+  {
+    "id": "respond",
+    "type": "tts",
+    "inputs": {
+      "text": {"from_step": "process", "field": "response"}
+    }
+  }
+]
 ```
 
 **Rich Conversation Access**
@@ -554,6 +701,7 @@ ailego run <workflow.json> --output results.json  # Save results
 - `research` - Multi-source research and synthesis
 - `vision` - Image analysis and description
 - `streaming` - Real-time conversation with TTS
+- `voice` - Voice-enabled agents with STT + TTS integration
 
 ### Available Project Templates
 - `basic` - Simple chat and text processing

@@ -30,6 +30,7 @@ class StepType(str, Enum):
     CONTINUE_CONVERSATION = "continue_conversation"
     # Audio processing step types
     TTS = "tts"
+    STT = "stt"
     # Python function execution step types
     PYTHON_FUNCTION = "python_function"
 

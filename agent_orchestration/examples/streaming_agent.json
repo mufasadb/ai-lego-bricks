@@ -3,7 +3,7 @@
   "description": "Demonstrates streaming capabilities with real-time response and TTS output",
   "config": {
     "default_llm_provider": "ollama",
-    "default_model": "llama2",
+    "default_model": "qwen2.5:7b",
     "default_tts_provider": "coqui_xtts"
   },
   "steps": [
@@ -22,7 +22,7 @@
       "description": "Generate streaming response",
       "config": {
         "provider": "ollama",
-        "model": "llama2",
+        "model": "qwen2.5:7b",
         "temperature": 0.7,
         "max_tokens": 500,
         "stream": true,
@@ -36,25 +36,6 @@
         }
       },
       "outputs": ["response", "streamed", "chunks"]
-    },
-    {
-      "id": "convert_to_speech",
-      "type": "tts",
-      "description": "Convert response to speech",
-      "config": {
-        "provider": "coqui_xtts",
-        "voice": "default",
-        "output_format": "wav",
-        "output_path": "output/streaming_response.wav",
-        "speed": 1.0
-      },
-      "inputs": {
-        "text": {
-          "from_step": "stream_response",
-          "field": "response"
-        }
-      },
-      "outputs": ["audio_file_path", "success", "duration_ms"]
     },
     {
       "id": "output_response",
@@ -75,14 +56,6 @@
         "chunk_count": {
           "from_step": "stream_response",
           "field": "chunks"
-        },
-        "audio_file": {
-          "from_step": "convert_to_speech",
-          "field": "audio_file_path"
-        },
-        "audio_duration_ms": {
-          "from_step": "convert_to_speech",
-          "field": "duration_ms"
         }
       }
     }

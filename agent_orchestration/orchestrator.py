@@ -54,6 +54,11 @@ try:
 except ImportError:
     create_tts_service = None
 
+try:
+    from stt.stt_factory import create_stt_service
+except ImportError:
+    create_stt_service = None
+
 
 class AgentOrchestrator:
     """
@@ -173,6 +178,21 @@ class AgentOrchestrator:
                 self._services["tts"] = None
         else:
             self._services["tts"] = None
+        
+        # STT service
+        if create_stt_service:
+            try:
+                # Auto-detect available STT provider
+                stt_provider = "auto"
+                if self.config and self.config.config:
+                    # Check if STT provider is specified in config
+                    stt_provider = getattr(self.config.config, 'default_stt_provider', "auto")
+                self._services["stt"] = create_stt_service(stt_provider)
+            except Exception as e:
+                print(f"Warning: STT service not available: {e}")
+                self._services["stt"] = None
+        else:
+            self._services["stt"] = None
     
     def get_service(self, service_name: str):
         """Get a service by name"""
@@ -301,6 +321,10 @@ class WorkflowExecutor:
         
         # Resolve inputs
         resolved_inputs = self._resolve_inputs(step.inputs)
+        
+        # For input steps, also include global variables so they can access workflow inputs
+        if step.type.value == "input":
+            resolved_inputs.update(self.context.global_variables)
         
         # Get the appropriate handler for this step type
         handler = self.orchestrator.step_registry.get_handler(step.type)

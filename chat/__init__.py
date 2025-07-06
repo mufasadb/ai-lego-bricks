@@ -8,7 +8,7 @@ This package provides:
 """
 
 from .conversation_service import (
-    create_conversation_service,
+    create_conversation,
     create_gemini_conversation,
     create_anthropic_conversation,
     create_ollama_conversation,
@@ -20,7 +20,7 @@ from .chat_service import (
 )
 
 __all__ = [
-    "create_conversation_service",
+    "create_conversation",
     "create_gemini_conversation",
     "create_anthropic_conversation", 
     "create_ollama_conversation",

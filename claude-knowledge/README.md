@@ -6,6 +6,7 @@ This folder contains documentation and instructions specifically for Claude Code
 
 - **`CLAUDE.md`** - Project instructions and guidelines for Claude Code
 - **`PROJECT_STRUCTURE.md`** - Detailed project structure documentation for Claude's reference
+- **`CREDENTIAL_MANAGEMENT.md`** - Secure credential management system documentation ⭐ **NEW**
 - **`AGENT_ORCHESTRATION_OVERVIEW.md`** - Complete guide to structured responses and conditional workflows
 - **`STRUCTURED_RESPONSES.md`** - Detailed implementation of structured LLM responses
 - **`CONDITIONAL_WORKFLOWS.md`** - Detailed implementation of conditional flow control
@@ -33,6 +34,14 @@ Provides detailed technical documentation about:
 - Usage patterns and best practices
 
 ### Latest Features
+
+**CREDENTIAL_MANAGEMENT.md** ⭐ **NEW**
+Complete guide to the secure credential management system:
+- **Library-Safe Credentials**: Optional .env loading to prevent interference when used as dependency
+- **Credential Isolation**: Different services can have different credentials for multi-tenant applications
+- **Explicit Injection**: Direct credential passing for library integration scenarios
+- **Backward Compatibility**: Existing environment variable patterns continue to work
+- **Migration Guide**: Step-by-step guide for updating existing code
 
 **AGENT_ORCHESTRATION_OVERVIEW.md**
 Comprehensive guide covering major orchestration enhancements:

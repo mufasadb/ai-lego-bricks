@@ -1,4 +1,7 @@
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..credentials import CredentialManager
 import uuid
 import os
 from datetime import datetime
@@ -24,7 +27,7 @@ logger = logging.getLogger(__name__)
 class SupabaseMemoryService(MemoryService):
     """Memory service using Supabase with RAG (Retrieval-Augmented Generation)"""
     
-    def __init__(self, supabase_url: str = None, supabase_key: str = None, table_name: str = "memories"):
+    def __init__(self, supabase_url: str = None, supabase_key: str = None, table_name: str = "memories", credential_manager: Optional['CredentialManager'] = None):
         """
         Initialize Supabase memory service with pgvector support
         
@@ -32,9 +35,13 @@ class SupabaseMemoryService(MemoryService):
             supabase_url: Supabase project URL (defaults to env var)
             supabase_key: Supabase anon key (defaults to env var)
             table_name: Name of the table to store memories
+            credential_manager: Optional credential manager for explicit credential handling
         """
-        self.supabase_url = supabase_url or os.getenv("SUPABASE_URL")
-        self.supabase_key = supabase_key or os.getenv("SUPABASE_ANON_KEY") or os.getenv("SUPABASE_ACCESS_TOKEN")
+        from ..credentials import default_credential_manager
+        
+        self.credential_manager = credential_manager or default_credential_manager
+        self.supabase_url = supabase_url or self.credential_manager.get_credential("SUPABASE_URL")
+        self.supabase_key = supabase_key or self.credential_manager.get_credential("SUPABASE_ANON_KEY") or self.credential_manager.get_credential("SUPABASE_ACCESS_TOKEN")
         self.table_name = table_name
         
         if not self.supabase_url or not self.supabase_key:

@@ -118,7 +118,16 @@ testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "--cov=ailego --cov-report=html --cov-report=term-missing"
+addopts = "--strict-markers --strict-config -v"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning"
+]
+markers = [
+    "integration: marks tests as integration tests (may require external services)",
+    "performance: marks tests as performance tests",
+    "slow: marks tests as slow running"
+]
 
 [tool.mypy]
 python_version = "3.8"

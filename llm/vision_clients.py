@@ -164,7 +164,7 @@ class LLaVAClient(VisionLLMClient):
     
     def __init__(self, config: VisionConfig):
         self.config = config
-        self.base_url = os.getenv("LLAVA_URL", "http://localhost:11434")
+        self.base_url = os.getenv("OLLAMA_URL", os.getenv("LLAVA_URL", "http://localhost:11434"))
         self.model = config.model or os.getenv("LLAVA_DEFAULT_MODEL", "llava")
         
         # Verify LLaVA is available
@@ -180,15 +180,15 @@ class LLaVAClient(VisionLLMClient):
                 models = response.json().get("models", [])
                 available_models = [model["name"] for model in models]
                 
-                # Check if any LLaVA model is available
-                llava_models = [m for m in available_models if "llava" in m.lower()]
-                if not llava_models:
-                    raise RuntimeError(f"No LLaVA models found. Available models: {available_models}")
+                # Check if any vision model is available (LLaVA, Qwen-VL, etc.)
+                vision_models = [m for m in available_models if self._is_vision_model(m)]
+                if not vision_models:
+                    raise RuntimeError(f"No vision models found. Available models: {available_models}")
                 
-                # Use the first available LLaVA model if none specified
-                if self.model not in available_models and llava_models:
-                    self.model = llava_models[0]
-                    print(f"Using LLaVA model: {self.model}")
+                # Use the first available vision model if none specified
+                if self.model not in available_models and vision_models:
+                    self.model = vision_models[0]
+                    print(f"Using vision model: {self.model}")
                     
         except Exception as e:
             raise RuntimeError(f"LLaVA not available: {e}")
@@ -292,5 +292,5 @@ class LLaVAClient(VisionLLMClient):
         Returns:
             True if it's a vision model, False otherwise
         """
-        vision_indicators = ["llava", "vision", "multimodal"]
+        vision_indicators = ["llava", "vision", "multimodal", "vl", "qwen2.5-vl"]
         return any(indicator in model_name.lower() for indicator in vision_indicators)

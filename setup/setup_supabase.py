@@ -8,15 +8,19 @@ Run this after creating your Supabase project and configuring your .env file.
 
 import os
 import sys
-from dotenv import load_dotenv
 from supabase import create_client
+
+# Import credential manager
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from credentials import CredentialManager
 
 def load_environment():
     """Load environment variables and validate Supabase credentials"""
-    load_dotenv()
+    # Use credential manager with environment loading
+    cred_manager = CredentialManager(load_env=True)
     
-    url = os.getenv('SUPABASE_URL')
-    key = os.getenv('SUPABASE_ANON_KEY')
+    url = cred_manager.get_credential('SUPABASE_URL')
+    key = cred_manager.get_credential('SUPABASE_ANON_KEY')
     
     if not url or not key:
         print("❌ Error: SUPABASE_URL and SUPABASE_ANON_KEY must be set in .env file")

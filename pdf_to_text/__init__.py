@@ -11,11 +11,9 @@ This package provides:
 from .pdf_to_text_service import (
     PDFToTextService,
     extract_text_from_pdf,
-    process_document,
 )
 
 __all__ = [
     "PDFToTextService",
     "extract_text_from_pdf",
-    "process_document",
 ]

@@ -8,7 +8,10 @@ import requests
 import tempfile
 import base64
 from pathlib import Path
-from typing import Optional, Dict, Any, Union
+from typing import Optional, Dict, Any, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..credentials import CredentialManager
 from .tts_types import (
     TTSClient, TTSConfig, TTSResponse, TTSProvider, AudioFormat,
     OpenAIVoice, OpenAIModel, GoogleVoiceConfig, CoquiXTTSConfig
@@ -20,9 +23,12 @@ class CoquiXTTSClient(TTSClient):
     Client for Coqui-XTTS local instance
     """
     
-    def __init__(self, config: TTSConfig):
+    def __init__(self, config: TTSConfig, credential_manager: Optional['CredentialManager'] = None):
         super().__init__(config)
-        self.server_url = config.extra_params.get("server_url", os.getenv("COQUI_XTTS_URL"))
+        from ..credentials import default_credential_manager
+        
+        self.credential_manager = credential_manager or default_credential_manager
+        self.server_url = config.extra_params.get("server_url", self.credential_manager.get_credential("COQUI_XTTS_URL"))
         if not self.server_url:
             raise ValueError("COQUI_XTTS_URL environment variable is required for Coqui-XTTS client. Please set it in your .env file.")
         self.timeout = config.extra_params.get("timeout", 30)
@@ -229,11 +235,12 @@ class OpenAITTSClient(TTSClient):
     Client for OpenAI TTS API
     """
     
-    def __init__(self, config: TTSConfig):
+    def __init__(self, config: TTSConfig, credential_manager: Optional['CredentialManager'] = None):
         super().__init__(config)
-        self.api_key = os.getenv("OPENAI_API_KEY")
-        if not self.api_key:
-            raise ValueError("OPENAI_API_KEY environment variable required for OpenAI TTS")
+        from ..credentials import default_credential_manager
+        
+        self.credential_manager = credential_manager or default_credential_manager
+        self.api_key = self.credential_manager.require_credential("OPENAI_API_KEY", "OpenAI TTS")
         
         self.model = config.extra_params.get("model", OpenAIModel.TTS_1.value)
         self.base_url = "https://api.openai.com/v1"
@@ -370,13 +377,12 @@ class GoogleTTSClient(TTSClient):
     Client for Google Cloud Text-to-Speech API
     """
     
-    def __init__(self, config: TTSConfig):
+    def __init__(self, config: TTSConfig, credential_manager: Optional['CredentialManager'] = None):
         super().__init__(config)
+        from ..credentials import default_credential_manager
         
-        # Check for Google Cloud credentials
-        self.credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-        if not self.credentials_path:
-            raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable required for Google TTS")
+        self.credential_manager = credential_manager or default_credential_manager
+        self.credentials_path = self.credential_manager.require_credential("GOOGLE_APPLICATION_CREDENTIALS", "Google TTS")
     
     def text_to_speech(self, text: str, **kwargs) -> TTSResponse:
         """Convert text to speech using Google TTS"""

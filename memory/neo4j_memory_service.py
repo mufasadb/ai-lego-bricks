@@ -1,4 +1,7 @@
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..credentials import CredentialManager
 import uuid
 import os
 import json
@@ -25,7 +28,7 @@ logger = logging.getLogger(__name__)
 class Neo4jMemoryService(MemoryService):
     """Memory service using Neo4j graph database"""
     
-    def __init__(self, uri: str = None, username: str = None, password: str = None):
+    def __init__(self, uri: str = None, username: str = None, password: str = None, credential_manager: Optional['CredentialManager'] = None):
         """
         Initialize Neo4j memory service
         
@@ -33,11 +36,14 @@ class Neo4jMemoryService(MemoryService):
             uri: Neo4j connection URI (defaults to NEO4J_URI env var)
             username: Neo4j username (optional, defaults to neo4j)
             password: Neo4j password (optional, uses no-auth if not provided)
+            credential_manager: Optional credential manager for explicit credential handling
         """
-        # Simple credential handling
-        self.uri = uri or os.getenv("NEO4J_URI") or "bolt://localhost:7687"
-        self.username = username or os.getenv("NEO4J_USERNAME", "neo4j")
-        self.password = password if password is not None else os.getenv("NEO4J_PASSWORD")
+        from ..credentials import default_credential_manager
+        
+        self.credential_manager = credential_manager or default_credential_manager
+        self.uri = uri or self.credential_manager.get_credential("NEO4J_URI", "bolt://localhost:7687")
+        self.username = username or self.credential_manager.get_credential("NEO4J_USERNAME", "neo4j")
+        self.password = password if password is not None else self.credential_manager.get_credential("NEO4J_PASSWORD")
         
         # Create driver (no-auth if no password)
         if self.password:

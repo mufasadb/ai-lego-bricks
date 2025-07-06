@@ -6,15 +6,12 @@ import json
 from typing import List, Optional, Union, Type, TypeVar, Dict, Any, Generator
 import httpx
 from pydantic import BaseModel
-from dotenv import load_dotenv
 from .llm_types import (
     TextLLMClient, ChatMessage, LLMConfig, LLMProvider, 
     StructuredLLMWrapper, StructuredResponseConfig,
     create_function_calling_schema
 )
-
-# Load environment variables
-load_dotenv()
+from credentials import CredentialManager, default_credential_manager
 
 try:
     import anthropic
@@ -28,10 +25,11 @@ T = TypeVar('T', bound=BaseModel)
 class OllamaTextClient(TextLLMClient):
     """Ollama text client implementation"""
     
-    def __init__(self, config: LLMConfig):
+    def __init__(self, config: LLMConfig, credential_manager: Optional[CredentialManager] = None):
         self.config = config
-        self.base_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
-        self.model = config.model or os.getenv("OLLAMA_DEFAULT_MODEL", "llama2")
+        self.credential_manager = credential_manager or default_credential_manager
+        self.base_url = self.credential_manager.get_credential("OLLAMA_URL", "http://localhost:11434")
+        self.model = config.model or self.credential_manager.get_credential("OLLAMA_DEFAULT_MODEL", "llama2")
     
     def chat(self, message: str, chat_history: Optional[List[ChatMessage]] = None) -> str:
         """Send a chat message and get response"""
@@ -214,15 +212,14 @@ JSON Response:
 class GeminiTextClient(TextLLMClient):
     """Gemini text client implementation"""
     
-    def __init__(self, config: LLMConfig):
+    def __init__(self, config: LLMConfig, credential_manager: Optional[CredentialManager] = None):
         self.config = config
-        self.api_key = os.getenv("GOOGLE_AI_STUDIO_KEY")
-        if not self.api_key:
-            raise ValueError("GOOGLE_AI_STUDIO_KEY not found in environment variables")
+        self.credential_manager = credential_manager or default_credential_manager
+        self.api_key = self.credential_manager.require_credential("GOOGLE_AI_STUDIO_KEY", "Gemini")
         
-        self.api_base_url = os.getenv("GEMINI_API_BASE_URL", 
-                                     "https://generativelanguage.googleapis.com/v1beta")
-        self.model = config.model or os.getenv("GEMINI_DEFAULT_MODEL", "gemini-1.5-flash")
+        self.api_base_url = self.credential_manager.get_credential("GEMINI_API_BASE_URL", 
+                                                                  "https://generativelanguage.googleapis.com/v1beta")
+        self.model = config.model or self.credential_manager.get_credential("GEMINI_DEFAULT_MODEL", "gemini-1.5-flash")
     
     def chat(self, message: str, chat_history: Optional[List[ChatMessage]] = None) -> str:
         """Send a chat message and get response"""
@@ -485,17 +482,16 @@ class GeminiTextClient(TextLLMClient):
 class AnthropicTextClient(TextLLMClient):
     """Anthropic Claude text client implementation"""
     
-    def __init__(self, config: LLMConfig):
+    def __init__(self, config: LLMConfig, credential_manager: Optional[CredentialManager] = None):
         if not ANTHROPIC_AVAILABLE:
             raise ValueError("Anthropic package not available. Install with: pip install anthropic")
         
         self.config = config
-        self.api_key = os.getenv("ANTHROPIC_API_KEY")
-        if not self.api_key:
-            raise ValueError("ANTHROPIC_API_KEY not found in environment variables")
+        self.credential_manager = credential_manager or default_credential_manager
+        self.api_key = self.credential_manager.require_credential("ANTHROPIC_API_KEY", "Anthropic")
         
         self.client = anthropic.Anthropic(api_key=self.api_key)
-        self.model = config.model or os.getenv("ANTHROPIC_DEFAULT_MODEL", "claude-3-5-sonnet-20241022")
+        self.model = config.model or self.credential_manager.get_credential("ANTHROPIC_DEFAULT_MODEL", "claude-3-5-sonnet-20241022")
     
     def chat(self, message: str, chat_history: Optional[List[ChatMessage]] = None) -> str:
         """Send a chat message and get response"""

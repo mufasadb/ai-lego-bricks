@@ -1,0 +1,64 @@
+{
+  "name": "GST Text Detection Agent",
+  "description": "Agent that analyzes invoice text to detect GST amounts and estimates coordinates",
+  "config": {
+    "default_llm_provider": "gemini"
+  },
+  "steps": [
+    {
+      "id": "load_invoice_document",
+      "type": "document_processing",
+      "description": "Load and extract text from the Zoom invoice PDF",
+      "inputs": {
+        "file_path": "zoom_invoice_august.pdf"
+      },
+      "config": {
+        "force_vision_processing": false,
+        "use_vision_fallback": false
+      },
+      "outputs": ["text", "processing_method", "page_count"]
+    },
+    {
+      "id": "analyze_gst_in_text",
+      "type": "llm_chat",
+      "description": "Analyze the extracted text to find GST amounts and estimate their positions",
+      "inputs": {
+        "message": "Analyze the following invoice text and locate the GST (Goods and Services Tax) dollar amount. I need you to:\n\n1. Identify the specific GST amount in dollars\n2. Analyze the text structure to estimate where this amount would appear on the page\n3. Look for patterns like line numbers or positioning clues in the text\n4. Provide estimated bounding box coordinates (even if approximate)\n\nInvoice Text:\n{from_step.load_invoice_document.text}\n\nPlease respond in this exact JSON format:\n{\n  \"gst_amount\": \"$X.XX\",\n  \"text_found\": \"exact text string containing GST amount\",\n  \"estimated_bounding_box\": {\n    \"x_min\": 0,\n    \"y_min\": 0,\n    \"x_max\": 0,\n    \"y_max\": 0\n  },\n  \"confidence\": \"high/medium/low\",\n  \"description\": \"Brief description of where you found the GST amount in the text\",\n  \"text_analysis\": \"Analysis of text structure and positioning clues\"\n}\n\nFocus on finding the exact GST amount and providing your best estimate of coordinates."
+      },
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "temperature": 0.1,
+        "max_tokens": 800
+      },
+      "outputs": ["response"]
+    },
+    {
+      "id": "validate_results",
+      "type": "llm_chat",
+      "description": "Validate the detected GST amount and provide implementation guidance",
+      "inputs": {
+        "message": "Review the GST detection results and provide validation:\n\nDetection Results: {from_step.analyze_gst_in_text.response}\n\nPlease validate and return in JSON format:\n{\n  \"validated_gst_amount\": \"$X.XX\",\n  \"validation_status\": \"valid/invalid/needs_review\",\n  \"confidence_score\": 0.0-1.0,\n  \"implementation_notes\": \"Guidance for frontend implementation\",\n  \"coordinate_accuracy\": \"Notes about coordinate estimation accuracy\",\n  \"frontend_ready\": true/false\n}\n\nProvide specific guidance for implementing bounding box highlighting in a PDF viewer."
+      },
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "temperature": 0.1,
+        "max_tokens": 400
+      },
+      "outputs": ["response"]
+    },
+    {
+      "id": "final_output",
+      "type": "output",
+      "description": "Return GST detection results with implementation guidance",
+      "inputs": {
+        "gst_analysis": {"from_step": "analyze_gst_in_text", "field": "response"},
+        "validation": {"from_step": "validate_results", "field": "response"},
+        "source_document": "zoom_invoice_august.pdf",
+        "processing_method": {"from_step": "load_invoice_document", "field": "processing_method"},
+        "page_count": {"from_step": "load_invoice_document", "field": "page_count"}
+      }
+    }
+  ]
+}

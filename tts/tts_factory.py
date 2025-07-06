@@ -3,26 +3,27 @@ Factory for creating TTS service instances
 """
 
 import os
-from typing import Dict, Any, Optional, Union
-from dotenv import load_dotenv
+from typing import Dict, Any, Optional, Union, TYPE_CHECKING
 
 from .tts_types import TTSProvider, TTSConfig, AudioFormat
 from .tts_service import TTSService
 from .tts_clients import CoquiXTTSClient, OpenAITTSClient, GoogleTTSClient
 
-load_dotenv()
+if TYPE_CHECKING:
+    from ..credentials import CredentialManager
 
 
 class TTSServiceFactory:
     """Factory for creating TTS service instances"""
     
     @staticmethod
-    def create_tts_service(provider: Union[str, TTSProvider] = "auto", **kwargs) -> TTSService:
+    def create_tts_service(provider: Union[str, TTSProvider] = "auto", credential_manager: Optional['CredentialManager'] = None, **kwargs) -> TTSService:
         """
         Create a TTS service instance
         
         Args:
             provider: Provider type ("auto", "coqui_xtts", "openai", "google")
+            credential_manager: Optional credential manager for explicit credential handling
             **kwargs: Additional configuration parameters
             
         Returns:
@@ -45,11 +46,11 @@ class TTSServiceFactory:
         
         # Create appropriate client
         if provider == TTSProvider.COQUI_XTTS:
-            client = TTSServiceFactory._create_coqui_xtts_client(config)
+            client = TTSServiceFactory._create_coqui_xtts_client(config, credential_manager)
         elif provider == TTSProvider.OPENAI:
-            client = TTSServiceFactory._create_openai_client(config)
+            client = TTSServiceFactory._create_openai_client(config, credential_manager)
         elif provider == TTSProvider.GOOGLE:
-            client = TTSServiceFactory._create_google_client(config)
+            client = TTSServiceFactory._create_google_client(config, credential_manager)
         else:
             raise ValueError(f"Unsupported TTS provider: {provider}")
         
@@ -149,19 +150,19 @@ class TTSServiceFactory:
         return TTSConfig(**config_dict)
     
     @staticmethod
-    def _create_coqui_xtts_client(config: TTSConfig) -> CoquiXTTSClient:
+    def _create_coqui_xtts_client(config: TTSConfig, credential_manager: Optional['CredentialManager'] = None) -> CoquiXTTSClient:
         """Create Coqui-XTTS client"""
-        return CoquiXTTSClient(config)
+        return CoquiXTTSClient(config, credential_manager)
     
     @staticmethod
-    def _create_openai_client(config: TTSConfig) -> OpenAITTSClient:
+    def _create_openai_client(config: TTSConfig, credential_manager: Optional['CredentialManager'] = None) -> OpenAITTSClient:
         """Create OpenAI TTS client"""
-        return OpenAITTSClient(config)
+        return OpenAITTSClient(config, credential_manager)
     
     @staticmethod
-    def _create_google_client(config: TTSConfig) -> GoogleTTSClient:
+    def _create_google_client(config: TTSConfig, credential_manager: Optional['CredentialManager'] = None) -> GoogleTTSClient:
         """Create Google TTS client"""
-        return GoogleTTSClient(config)
+        return GoogleTTSClient(config, credential_manager)
     
     @staticmethod
     def get_available_providers() -> Dict[str, bool]:
@@ -216,9 +217,9 @@ class TTSServiceFactory:
 
 
 # Convenience functions
-def create_tts_service(provider: str = "auto", **kwargs) -> TTSService:
+def create_tts_service(provider: str = "auto", credential_manager: Optional['CredentialManager'] = None, **kwargs) -> TTSService:
     """Create a TTS service instance (convenience function)"""
-    return TTSServiceFactory.create_tts_service(provider, **kwargs)
+    return TTSServiceFactory.create_tts_service(provider, credential_manager, **kwargs)
 
 
 def get_available_providers() -> Dict[str, bool]:

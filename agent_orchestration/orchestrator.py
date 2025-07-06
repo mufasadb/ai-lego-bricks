@@ -6,12 +6,8 @@ import json
 import time
 from typing import Any, Dict, Optional
 
-try:
-    from .models import WorkflowConfig, ExecutionContext, WorkflowResult, StepConfig
-    from .step_handlers import StepHandlerRegistry
-except ImportError:
-    from models import WorkflowConfig, ExecutionContext, WorkflowResult, StepConfig
-    from step_handlers import StepHandlerRegistry
+from .models import WorkflowConfig, ExecutionContext, WorkflowResult, StepConfig
+from .step_handlers import StepHandlerRegistry
 
 # Import existing services
 import sys

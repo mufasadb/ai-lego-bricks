@@ -49,6 +49,28 @@ Ensure you have:
 2. Configured your `.env` file with necessary API keys
 3. Installed requirements: `pip install -r requirements.txt`
 
+### 🔐 Credential Management
+
+All examples support both traditional environment variables and explicit credential injection:
+
+**Traditional (uses .env file):**
+```python
+# Examples work as-is with .env configuration
+python streaming_example.py
+```
+
+**Library-safe (explicit credentials):**
+```python
+from credentials import CredentialManager
+
+# Pass credentials directly
+creds = CredentialManager({
+    "GOOGLE_AI_STUDIO_KEY": "your-key"
+}, load_env=False)
+
+# Use in examples that support credential_manager parameter
+```
+
 ## 🚀 Running Examples
 
 ### Core Examples

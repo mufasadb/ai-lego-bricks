@@ -10,6 +10,7 @@ from .text_clients import OllamaTextClient, GeminiTextClient, AnthropicTextClien
 from .vision_clients import GeminiVisionClient, LLaVAClient
 from .embedding_client import SentenceTransformerEmbeddingClient
 from .model_manager import ModelManager
+from credentials import CredentialManager
 
 T = TypeVar('T', bound=BaseModel)
 
@@ -36,6 +37,7 @@ class LLMClientFactory:
     @staticmethod
     def create_text_client(provider: LLMProvider, model: Optional[str] = None,
                           temperature: float = 0.7, max_tokens: int = 1000,
+                          credential_manager: Optional[CredentialManager] = None,
                           **kwargs) -> TextLLMClient:
         """
         Create a text LLM client
@@ -45,6 +47,7 @@ class LLMClientFactory:
             model: Model name (optional, uses defaults)
             temperature: Temperature for generation
             max_tokens: Maximum tokens to generate
+            credential_manager: Optional credential manager for explicit credential handling
             **kwargs: Additional configuration parameters
             
         Returns:
@@ -59,11 +62,11 @@ class LLMClientFactory:
         )
         
         if provider == LLMProvider.OLLAMA:
-            return OllamaTextClient(config)
+            return OllamaTextClient(config, credential_manager)
         elif provider == LLMProvider.GEMINI:
-            return GeminiTextClient(config)
+            return GeminiTextClient(config, credential_manager)
         elif provider == LLMProvider.ANTHROPIC:
-            return AnthropicTextClient(config)
+            return AnthropicTextClient(config, credential_manager)
         else:
             raise ValueError(f"Unsupported text provider: {provider}")
     
@@ -300,9 +303,9 @@ class LLMClientFactory:
 
 
 # Convenience functions for quick access
-def create_text_client(provider: str, **kwargs) -> TextLLMClient:
+def create_text_client(provider: str, credential_manager: Optional[CredentialManager] = None, **kwargs) -> TextLLMClient:
     """Convenience function to create text client from string"""
-    return LLMClientFactory.create_text_client(LLMProvider(provider), **kwargs)
+    return LLMClientFactory.create_text_client(LLMProvider(provider), credential_manager=credential_manager, **kwargs)
 
 
 def create_vision_client(provider: str, **kwargs) -> VisionLLMClient:

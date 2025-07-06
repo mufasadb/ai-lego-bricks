@@ -82,6 +82,7 @@ Or view the setup files directly:
 │   ├── SUPABASE_SETUP.md    # Supabase configuration
 │   ├── setup_supabase.py    # Supabase verification script
 │   └── setup_supabase_pgvector.sql  # Database schema
+├── credentials/              # 🔐 Secure credential management
 ├── memory/                   # 🧠 Memory service implementations
 ├── llm/                      # 🧠 LLM services (generation + conversation)
 ├── chat/                     # 💬 Enhanced conversation management
@@ -94,6 +95,7 @@ Or view the setup files directly:
 ├── test/                     # 🧪 Test utilities
 ├── claude-knowledge/         # 🤖 Claude-specific documentation
 ├── .env.example             # 📝 Environment template
+├── CREDENTIAL_MIGRATION_GUIDE.md  # 📖 Migration guide
 └── requirements.txt         # 📦 Python dependencies
 ```
 
@@ -101,15 +103,16 @@ Or view the setup files directly:
 
 This project provides:
 
-1. **Clean LLM Architecture** - Separated Generation (one-shot) and Conversation (multi-turn) services
-2. **Streaming Support** - Real-time LLM response streaming with native Ollama and Anthropic support
-3. **Text-to-Speech Integration** - Convert text to audio with streaming LLM → TTS pipelines
-4. **JSON-Driven Agent Orchestration** - Create sophisticated AI workflows through configuration
-5. **Intelligent Memory System** - Store and retrieve project knowledge using vector similarity search
-6. **Rich Conversation Management** - Full conversation state tracking with search and export
-7. **Structured LLM Responses** - Type-safe, validated outputs using Pydantic schemas
-8. **Multi-Modal Processing** - Text, vision, and document analysis capabilities
-9. **Prompt Management** - Externalized, versioned prompts with evaluation and A/B testing
+1. **🔐 Secure Credential Management** - Library-safe credential isolation with environment fallback
+2. **Clean LLM Architecture** - Separated Generation (one-shot) and Conversation (multi-turn) services
+3. **Streaming Support** - Real-time LLM response streaming with native Ollama and Anthropic support
+4. **Text-to-Speech Integration** - Convert text to audio with streaming LLM → TTS pipelines
+5. **JSON-Driven Agent Orchestration** - Create sophisticated AI workflows through configuration
+6. **Intelligent Memory System** - Store and retrieve project knowledge using vector similarity search
+7. **Rich Conversation Management** - Full conversation state tracking with search and export
+8. **Structured LLM Responses** - Type-safe, validated outputs using Pydantic schemas
+9. **Multi-Modal Processing** - Text, vision, and document analysis capabilities
+10. **Prompt Management** - Externalized, versioned prompts with evaluation and A/B testing
 
 ## 🏃‍♂️ Getting Started
 
@@ -137,6 +140,32 @@ This project provides:
 
 ## 🛠️ Configuration
 
+### 🔐 Credential Management
+
+AI Lego Bricks uses a **secure credential management system** that supports both environment variables and explicit credential injection:
+
+```python
+from credentials import CredentialManager
+
+# Option 1: Environment variables (default, backward compatible)
+from llm import create_text_client
+client = create_text_client("gemini")  # Uses .env file
+
+# Option 2: Explicit credentials (library-safe)
+creds = CredentialManager({"GOOGLE_AI_STUDIO_KEY": "your-key"}, load_env=False)
+client = create_text_client("gemini", credential_manager=creds)
+```
+
+**Key Benefits:**
+- ✅ **Library Safe**: No unwanted .env loading when used as dependency
+- ✅ **Credential Isolation**: Different services can have different credentials
+- ✅ **Backward Compatible**: Existing code continues to work
+- ✅ **Multi-Tenant Ready**: Support for tenant-specific credentials
+
+For complete migration guide, see **[CREDENTIAL_MIGRATION_GUIDE.md](CREDENTIAL_MIGRATION_GUIDE.md)**
+
+### 📋 Environment Setup
+
 See **[setup/README.md](setup/README.md)** for detailed configuration instructions covering:
 
 - Supabase setup with pgvector for memory storage
@@ -150,9 +179,17 @@ See **[setup/README.md](setup/README.md)** for detailed configuration instructio
 ### Memory Service
 ```python
 from memory import create_memory_service
+from credentials import CredentialManager
 
-# Auto-detects available services (Supabase/Neo4j)
+# Option 1: Environment variables (default)
 memory = create_memory_service("auto")
+
+# Option 2: Explicit credentials (library-safe)
+creds = CredentialManager({
+    "SUPABASE_URL": "your-url",
+    "SUPABASE_ANON_KEY": "your-key"
+}, load_env=False)
+memory = create_memory_service("supabase", credential_manager=creds)
 
 # Store project knowledge
 memory.store_memory(
@@ -204,9 +241,14 @@ summary = conv.get_conversation_summary()
 **Basic TTS**
 ```python
 from tts import create_tts_service
+from credentials import CredentialManager
 
-# Create TTS service (auto-detects available providers)
+# Option 1: Environment variables (auto-detects providers)
 tts = create_tts_service("auto")
+
+# Option 2: Explicit credentials for OpenAI TTS
+creds = CredentialManager({"OPENAI_API_KEY": "your-key"}, load_env=False)
+tts = create_tts_service("openai", credential_manager=creds)
 
 # Generate speech
 response = tts.text_to_speech(

@@ -1320,11 +1320,22 @@ class StepHandlerRegistry:
         # Create vision client
         if provider == "gemini":
             client = llm_factory.create_vision_client(VisionProvider.GEMINI_VISION, model)
+        elif provider == "ollama" or provider == "llava":
+            client = llm_factory.create_vision_client(VisionProvider.LLAVA, model)
         else:
             raise ValueError(f"Unsupported vision provider: {provider}")
         
-        # Analyze image
-        response = client.analyze_image(image_path, prompt)
+        # Process image - first we need to convert image to base64
+        if isinstance(image_path, str):
+            # If it's a file path, read and encode it
+            import base64
+            with open(image_path, "rb") as image_file:
+                image_data = base64.b64encode(image_file.read()).decode('utf-8')
+        else:
+            # If it's already image data, use it directly
+            image_data = image_path
+        
+        response = client.process_image(image_data, prompt)
         
         return {
             "analysis": response,

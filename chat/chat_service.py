@@ -1,12 +1,11 @@
 import os
-from typing import List, Optional, Dict, Any, Generator
-from dotenv import load_dotenv
+from typing import List, Optional, Dict, Any, Generator, TYPE_CHECKING
 from pydantic import BaseModel
 import httpx
 import json
 
-# Load environment variables
-load_dotenv()
+if TYPE_CHECKING:
+    from credentials import CredentialManager
 
 # Import LLM abstraction layer for new functionality
 try:

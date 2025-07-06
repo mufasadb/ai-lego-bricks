@@ -12,11 +12,8 @@ from .concept_eval_models import (
 )
 
 # Import LLM factory for judge model access
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'llm'))
-from llm_factory import LLMClientFactory
-from llm_types import LLMProvider
+from llm.llm_factory import LLMClientFactory
+from llm.llm_types import LLMProvider
 
 
 class ConceptJudgeService:

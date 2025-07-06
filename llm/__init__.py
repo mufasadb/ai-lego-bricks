@@ -16,15 +16,11 @@ from .generation_service import (
     create_generation_service,
 )
 
-from .text_clients import (
-    create_text_client,
-    get_available_text_clients,
-)
+# Note: direct text client classes available in .text_clients module
 
 from .llm_types import (
     LLMProvider,
     GenerationConfig,
-    StreamingConfig,
 )
 
 __all__ = [
@@ -33,9 +29,6 @@ __all__ = [
     "quick_generate_ollama",
     "quick_generate_ollama_stream",
     "create_generation_service",
-    "create_text_client",
-    "get_available_text_clients",
     "LLMProvider",
     "GenerationConfig",
-    "StreamingConfig",
 ]

@@ -234,9 +234,26 @@ class SupabasePromptStorage(PromptStorageBackend):
     
     def _ensure_tables(self):
         """Ensure required tables exist"""
-        # In a production setup, these tables would be created via migrations
-        # For now, we'll assume they exist or create them programmatically
-        pass
+        try:
+            # Create prompts table if it doesn't exist
+            self.client.table("prompts").select("id").limit(1).execute()
+        except Exception:
+            # Table doesn't exist, create it
+            try:
+                self.client.rpc("create_prompts_table").execute()
+            except Exception:
+                # If RPC doesn't exist, we need to create tables manually
+                print("Warning: prompts table doesn't exist. Please create it manually or use Supabase migrations.")
+                print("Required schema:")
+                print("- prompts table: id, name, content (jsonb), metadata (jsonb), version (jsonb), status, created_at, updated_at, parent_id")
+                print("- prompt_executions table: id, prompt_id, prompt_version, execution_context (jsonb), rendered_messages (jsonb), llm_provider, llm_model, llm_response, execution_time_ms, token_usage (jsonb), success, error_message, metadata (jsonb), created_at")
+        
+        try:
+            # Create prompt_executions table if it doesn't exist
+            self.client.table("prompt_executions").select("id").limit(1).execute()
+        except Exception:
+            # Table doesn't exist, warn user
+            print("Warning: prompt_executions table doesn't exist. Please create it manually or use Supabase migrations.")
     
     def save_prompt(self, prompt: Prompt) -> bool:
         """Save a prompt to Supabase"""
@@ -245,10 +262,11 @@ class SupabasePromptStorage(PromptStorageBackend):
             prompt.updated_at = datetime.now()
             
             # Convert to dict for storage
-            prompt_data = prompt.model_dump()
-            prompt_data['content'] = json.dumps(prompt_data['content'])
-            prompt_data['metadata'] = json.dumps(prompt_data['metadata'])
-            prompt_data['version'] = json.dumps(prompt_data['version'])
+            prompt_data = prompt.model_dump(mode='json')
+            # Keep JSON fields as objects for JSONB columns, don't double-encode
+            # prompt_data['content'] = json.dumps(prompt_data['content'])
+            # prompt_data['metadata'] = json.dumps(prompt_data['metadata'])
+            # prompt_data['version'] = json.dumps(prompt_data['version'])
             
             # Upsert the prompt
             result = self.client.table("prompts").upsert(prompt_data).execute()
@@ -273,10 +291,10 @@ class SupabasePromptStorage(PromptStorageBackend):
             
             if result.data:
                 data = result.data[0]
-                # Parse JSON fields back
-                data['content'] = json.loads(data['content'])
-                data['metadata'] = json.loads(data['metadata'])
-                data['version'] = json.loads(data['version'])
+                # JSON fields are already parsed by Supabase for JSONB columns
+                # data['content'] = json.loads(data['content'])
+                # data['metadata'] = json.loads(data['metadata'])
+                # data['version'] = json.loads(data['version'])
                 
                 return Prompt.model_validate(data)
             

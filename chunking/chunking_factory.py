@@ -183,3 +183,21 @@ class ChunkingServiceFactory:
             'cached_services': len(self._cached_services),
             'cache_keys': list(self._cached_services.keys())
         }
+
+
+# Factory function for creating ChunkingService instances
+def create_chunking_service(config: Optional[Dict[str, Any]] = None) -> ChunkingService:
+    """
+    Factory function to create a ChunkingService instance.
+    
+    Args:
+        config: Optional configuration dictionary
+        
+    Returns:
+        ChunkingService instance
+    """
+    factory = ChunkingServiceFactory()
+    if config is None:
+        return factory.get_default_service()
+    else:
+        return factory.get_or_create_service(config)

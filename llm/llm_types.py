@@ -37,6 +37,18 @@ class LLMConfig(BaseModel):
     extra_params: Dict[str, Any] = {}
 
 
+class GenerationConfig(BaseModel):
+    """Configuration for text generation"""
+    max_tokens: int = 1000
+    temperature: float = 0.7
+    top_p: float = 0.9
+    top_k: Optional[int] = None
+    frequency_penalty: float = 0.0
+    presence_penalty: float = 0.0
+    stop: Optional[List[str]] = None
+    seed: Optional[int] = None
+
+
 class VisionConfig(BaseModel):
     """Configuration for vision models"""
     provider: VisionProvider

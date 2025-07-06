@@ -18,11 +18,8 @@ from .concept_eval_storage import ConceptEvalStorageBackend
 from .concept_judge import ConceptJudgeService, create_concept_judge
 
 # Import LLM services
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'llm'))
-from llm_factory import LLMClientFactory
-from llm_types import LLMProvider
+from llm.llm_factory import LLMClientFactory
+from llm.llm_types import LLMProvider
 
 
 class ConceptEvaluationService:

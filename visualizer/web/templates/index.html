@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Workflow Visualizer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@9.4.3/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 Agent Workflow Visualizer</h1>
+            <p>Upload or paste your JSON agent workflow to visualize it as an interactive diagram</p>
+        </header>
+
+        <div class="upload-section">
+            <div class="upload-tabs">
+                <button class="tab-btn active" data-tab="upload">Upload File</button>
+                <button class="tab-btn" data-tab="paste">Paste JSON</button>
+                <button class="tab-btn" data-tab="examples">Examples</button>
+            </div>
+
+            <!-- Upload Tab -->
+            <div id="upload-tab" class="tab-content active">
+                <div class="upload-area" id="upload-area">
+                    <div class="upload-icon">📁</div>
+                    <h3>Drop JSON file here or click to browse</h3>
+                    <p>Supported format: .json (max 16MB)</p>
+                    <input type="file" id="file-input" accept=".json" hidden>
+                </div>
+            </div>
+
+            <!-- Paste Tab -->
+            <div id="paste-tab" class="tab-content">
+                <div class="paste-area">
+                    <h3>Paste JSON Workflow</h3>
+                    <textarea id="json-input" placeholder="Paste your JSON workflow here..."></textarea>
+                    <button id="paste-btn" class="btn-primary">Visualize</button>
+                </div>
+            </div>
+
+            <!-- Examples Tab -->
+            <div id="examples-tab" class="tab-content">
+                <div class="examples-area">
+                    <h3>Example Workflows</h3>
+                    <div id="examples-list">
+                        <div class="loading">Loading examples...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="results-section" id="results-section" style="display: none;">
+            <div class="results-header">
+                <h2 id="workflow-name"></h2>
+                <p id="workflow-description"></p>
+                <div class="results-actions">
+                    <button id="show-legend-btn" class="btn-secondary">Show Legend</button>
+                    <button id="download-btn" class="btn-secondary">Download PNG</button>
+                    <button id="reset-btn" class="btn-secondary">Reset</button>
+                </div>
+            </div>
+
+            <div class="results-tabs">
+                <button class="result-tab-btn active" data-tab="diagram">Diagram</button>
+                <button class="result-tab-btn" data-tab="statistics">Statistics</button>
+                <button class="result-tab-btn" data-tab="raw">Raw JSON</button>
+            </div>
+
+            <!-- Diagram Tab -->
+            <div id="diagram-tab" class="result-tab-content active">
+                <div class="diagram-container">
+                    <div id="diagram-content"></div>
+                </div>
+            </div>
+
+            <!-- Statistics Tab -->
+            <div id="statistics-tab" class="result-tab-content">
+                <div class="stats-container">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h4>Total Steps</h4>
+                            <span id="total-steps">-</span>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Connections</h4>
+                            <span id="total-connections">-</span>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Complexity Score</h4>
+                            <span id="complexity-score">-</span>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Entry Points</h4>
+                            <span id="entry-points">-</span>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Exit Points</h4>
+                            <span id="exit-points">-</span>
+                        </div>
+                    </div>
+                    <div class="step-types">
+                        <h4>Step Types</h4>
+                        <div id="step-types-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Raw JSON Tab -->
+            <div id="raw-tab" class="result-tab-content">
+                <div class="raw-json-container">
+                    <pre id="raw-json-content"></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Legend Modal -->
+        <div id="legend-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Diagram Legend</h3>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="legend-content"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay">
+            <div class="spinner"></div>
+            <p>Processing workflow...</p>
+        </div>
+
+        <!-- Error Messages -->
+        <div id="error-message" class="error-message"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        // Global flag to track Mermaid readiness
+        window.mermaidReady = false;
+        
+        // Initialize Mermaid with better error handling
+        function initializeMermaid() {
+            if (typeof mermaid !== 'undefined' && document.body) {
+                try {
+                    mermaid.initialize({ 
+                        startOnLoad: false,
+                        theme: 'default',
+                        flowchart: {
+                            useMaxWidth: true,
+                            htmlLabels: true
+                        },
+                        securityLevel: 'loose'
+                    });
+                    window.mermaidReady = true;
+                    console.log('Mermaid initialized successfully');
+                } catch (error) {
+                    console.error('Error initializing Mermaid:', error);
+                }
+            } else {
+                console.log('Waiting for Mermaid or DOM...');
+                setTimeout(initializeMermaid, 100);
+            }
+        }
+        
+        // Try to initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeMermaid);
+        } else {
+            initializeMermaid();
+        }
+        
+        // Also try when window loads as fallback
+        window.addEventListener('load', function() {
+            if (!window.mermaidReady) {
+                initializeMermaid();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -11,6 +11,9 @@ The codebase has been organized into logical folders for better maintainability 
 │   ├── SUPABASE_SETUP.md         # Detailed Supabase instructions
 │   ├── setup_supabase.py         # Supabase verification script
 │   └── setup_supabase_pgvector.sql # Database schema setup
+├── credentials/                   # 🔐 Secure credential management ⭐ NEW
+│   ├── __init__.py               # Package exports
+│   └── credential_manager.py     # Credential management with library safety
 ├── llm/                           # 🤖 LLM abstraction layer
 │   ├── __init__.py               # Package exports
 │   ├── llm_client_factory.py     # Factory for creating LLM clients

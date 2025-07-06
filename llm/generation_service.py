@@ -246,6 +246,40 @@ def quick_generate_anthropic_stream(prompt: str, model: Optional[str] = None, **
     return quick_generate_stream(prompt, LLMProvider.ANTHROPIC, model, **kwargs)
 
 
+# Factory function for creating GenerationService instances
+def create_generation_service(provider: str = "auto", model: Optional[str] = None, **kwargs) -> GenerationService:
+    """
+    Factory function to create a GenerationService instance.
+    
+    Args:
+        provider: Provider name ("auto", "anthropic", "openai", "google", "ollama")
+        model: Model name (optional)
+        **kwargs: Additional configuration parameters
+        
+    Returns:
+        GenerationService instance
+    """
+    # Map string provider to enum
+    from .llm_types import LLMProvider
+    
+    provider_map = {
+        "auto": LLMProvider.ANTHROPIC,  # Default to Anthropic
+        "anthropic": LLMProvider.ANTHROPIC,
+        "openai": LLMProvider.OPENAI,
+        "google": LLMProvider.GEMINI,
+        "gemini": LLMProvider.GEMINI,
+        "ollama": LLMProvider.OLLAMA,
+    }
+    
+    if provider in provider_map:
+        llm_provider = provider_map[provider]
+    else:
+        # Default to anthropic if unknown
+        llm_provider = LLMProvider.ANTHROPIC
+    
+    return GenerationService(llm_provider, model, **kwargs)
+
+
 # Example usage
 if __name__ == "__main__":
     # Example 1: Create a generation service and use it

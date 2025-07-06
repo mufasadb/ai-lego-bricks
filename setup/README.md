@@ -28,6 +28,33 @@ Complete setup instructions for configuring your LLM project assistant with memo
 
 ## 🔧 Environment Configuration
 
+### 🔐 Credential Management System
+
+AI Lego Bricks uses a **secure credential management system** that supports both traditional environment variables and explicit credential injection:
+
+**Traditional Setup (Recommended for Applications):**
+```bash
+cp .env.example .env
+# Edit .env with your credentials
+```
+
+**Library Integration (For when using as dependency):**
+```python
+from credentials import CredentialManager
+from llm import create_text_client
+
+# Explicit credentials (no .env dependency)
+creds = CredentialManager({
+    "GOOGLE_AI_STUDIO_KEY": "your-key"
+}, load_env=False)
+client = create_text_client("gemini", credential_manager=creds)
+```
+
+**Key Benefits:**
+- ✅ **Library Safe**: No unwanted .env loading when used as dependency
+- ✅ **Multi-Tenant**: Different credentials per service instance
+- ✅ **Backward Compatible**: Existing .env patterns continue to work
+
 ### 1. Copy Environment File
 
 ```bash

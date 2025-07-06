@@ -1,0 +1,136 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-lego-bricks"
+version = "0.1.0"
+description = "A modular LLM agent system providing building blocks for intelligent AI workflows"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Daniel Beach", email = "callmebeachy@gmail.com"},
+]
+maintainers = [
+    {name = "Daniel Beach", email = "callmebeachy@gmail.com"},
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+keywords = ["ai", "llm", "agents", "orchestration", "modular", "anthropic", "openai", "gemini"]
+requires-python = ">=3.8"
+dependencies = [
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.0.0",
+    "httpx>=0.25.0",
+    "anthropic>=0.25.0",
+    "requests>=2.28.0",
+    "jinja2>=3.0.0",
+    "semantic-version>=2.10.0",
+    "sentence-transformers>=2.0.0",
+    "numpy>=1.24.0",
+    "pymupdf>=1.24.0",
+    "click>=8.0.0",
+    "rich>=13.0.0",
+    "typer>=0.9.0",
+]
+
+[project.optional-dependencies]
+memory = [
+    "supabase>=2.0.0",
+    "neo4j>=5.0.0",
+]
+tts = [
+    "openai>=1.0.0",
+    "google-cloud-texttospeech>=2.14.0",
+    "pydub>=0.25.1",
+]
+performance = [
+    "faiss-cpu>=1.7.0",
+    "torch>=2.0.0",
+]
+all = [
+    "supabase>=2.0.0",
+    "neo4j>=5.0.0",
+    "openai>=1.0.0",
+    "google-cloud-texttospeech>=2.14.0",
+    "pydub>=0.25.1",
+    "faiss-cpu>=1.7.0",
+    "torch>=2.0.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+    "pre-commit>=3.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/callmebeachy/ai-lego-bricks"
+Repository = "https://github.com/callmebeachy/ai-lego-bricks"
+Documentation = "https://github.com/callmebeachy/ai-lego-bricks#readme"
+Issues = "https://github.com/callmebeachy/ai-lego-bricks/issues"
+
+[project.scripts]
+ailego = "ailego.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ailego*", "agent_orchestration*", "chat*", "chunking*", "llm*", "memory*", "pdf_to_text*", "prompt*", "tts*", "test*"]
+exclude = ["tests*", "examples*", "setup*", "claude-knowledge*"]
+
+[tool.setuptools.package-data]
+ailego = ["templates/**/*", "*.json", "*.md"]
+agent_orchestration = ["examples/*.json"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--cov=ailego --cov-report=html --cov-report=term-missing"
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true

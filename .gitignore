@@ -95,6 +95,9 @@ node_modules/
 # Jupyter Notebook
 .ipynb_checkpoints
 
+#TODOs
+IMPROVEMENT_TODOS.md
+
 # Test coverage
 htmlcov/
 .tox/

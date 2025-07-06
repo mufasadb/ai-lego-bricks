@@ -2,9 +2,68 @@
 
 A modular LLM agent system providing building blocks for intelligent AI workflows with advanced memory capabilities.
 
-## 🚀 Quick Start
+## 📦 Installation
 
-**New to this project?** Start with the comprehensive setup guide:
+### Install as a Library
+
+```bash
+# Install from PyPI (when published)
+pip install ai-lego-bricks
+
+# Or install from source
+git clone https://github.com/callmebeachy/ai-lego-bricks.git
+cd ai-lego-bricks
+pip install -e .
+```
+
+### Using the CLI
+
+After installation, you'll have access to the `ailego` command:
+
+```bash
+# Initialize a new project
+ailego init my-ai-project
+
+# Navigate to your project
+cd my-ai-project
+
+# Verify your setup
+ailego verify
+
+# Run an agent
+ailego run agents/simple_chat.json
+
+# Create new agents
+ailego create chat --name "customer-support"
+```
+
+### Quick Start with CLI
+
+1. **Create a new project:**
+   ```bash
+   ailego init my-project --template advanced
+   cd my-project
+   ```
+
+2. **Configure environment:**
+   ```bash
+   # Edit .env with your API keys
+   cp .env.example .env
+   ```
+
+3. **Verify setup:**
+   ```bash
+   ailego verify --verbose
+   ```
+
+4. **Run your first agent:**
+   ```bash
+   ailego run agents/simple_chat.json
+   ```
+
+## 🚀 Developer Setup
+
+**Contributing to this project?** Start with the comprehensive setup guide:
 
 ```bash
 cd setup
@@ -419,6 +478,61 @@ Agents can reference any part of conversation history:
 5. **Structure Output**: Define schemas for reliable data extraction
 
 For detailed documentation, see **[agent_orchestration/README.md](agent_orchestration/README.md)**
+
+## 🖥️ CLI Reference
+
+The `ailego` command-line tool provides a complete interface for managing AI agent projects:
+
+### Project Management
+```bash
+ailego init <project-name>              # Initialize new project
+ailego init <name> --template advanced  # Use specific template
+ailego verify                           # Verify setup
+ailego verify --verbose                 # Detailed verification
+ailego status                          # Show system status
+```
+
+### Agent Management
+```bash
+ailego create <type>                    # Create new agent interactively
+ailego create chat --name "support"    # Create named chat agent
+ailego list-templates                   # Show available templates
+```
+
+### Workflow Execution
+```bash
+ailego run <workflow.json>              # Execute agent workflow
+ailego run <workflow.json> --verbose    # Detailed execution logs
+ailego run <workflow.json> --output results.json  # Save results
+```
+
+### Available Agent Types
+- `chat` - Basic conversational agents
+- `document-analysis` - PDF and document processing
+- `research` - Multi-source research and synthesis
+- `vision` - Image analysis and description
+- `streaming` - Real-time conversation with TTS
+
+### Available Project Templates
+- `basic` - Simple chat and text processing
+- `advanced` - Full-featured with memory and multi-modal
+- `research` - Document analysis and research workflows
+
+### Examples
+```bash
+# Complete workflow
+ailego init research-project --template research
+cd research-project
+ailego verify
+ailego create document-analysis --name "pdf-analyzer"
+ailego run agents/pdf-analyzer.json
+
+# Quick prototyping
+ailego init demo --template basic
+cd demo
+ailego create chat --name "assistant"
+ailego run agents/assistant.json
+```
 
 ## 🤝 Contributing
 

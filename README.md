@@ -90,7 +90,7 @@ Or view the setup files directly:
 ├── tts/                      # 🎵 Text-to-speech with streaming support
 ├── stt/                      # 🎤 Speech-to-text with multiple providers
 ├── image_generation/         # 🎨 Image generation with multiple providers
-├── pdf_to_text/             # 📄 PDF processing and text extraction
+├── pdf_to_text/             # 📄 Visual content processing (PDFs, images) with bounding boxes
 ├── chunking/                # ✂️ Text chunking and semantic processing
 ├── agent_orchestration/      # 🤖 JSON-driven agent workflows
 ├── examples/                # 📋 Usage examples and demos
@@ -112,7 +112,7 @@ This project provides:
 6. **🤖 JSON-Driven Agents** - Create sophisticated AI workflows through configuration
 7. **🧠 Intelligent Memory** - Vector similarity search for project knowledge storage
 8. **💬 Rich Conversations** - Full conversation state tracking with search and export
-9. **📄 Multi-Modal Processing** - Text, vision, and document analysis capabilities
+9. **📄 Visual Content Processing** - Extract text from PDFs, images, and base64 data with precise bounding boxes
 10. **🎯 Prompt Management** - Externalized, versioned prompts with evaluation and A/B testing
 11. **📊 Concept Evaluation** - LLM-as-judge framework for testing prompt quality
 
@@ -389,6 +389,108 @@ for i, response in enumerate(responses):
         print(f"Variation {i+1}: {response.images[0]}")
 ```
 
+### Visual Content Processing
+
+**Basic PDF and Image Text Extraction**
+```python
+from pdf_to_text.visual_to_text_service import VisualToTextService, VisualExtractOptions
+
+# Create service
+service = VisualToTextService()
+
+# Basic text extraction from any visual content
+result = service.extract_text_from_file("document.pdf")
+print(f"Extracted text: {result.text}")
+print(f"Source type: {result.source_type}")  # "pdf", "image", or "base64_image"
+print(f"Page count: {result.page_count}")
+```
+
+**Advanced Processing with Bounding Boxes**
+```python
+# Configure for precise text location extraction
+options = VisualExtractOptions(
+    include_bounding_boxes=True,
+    vision_prompt="Extract text and provide precise coordinate locations",
+    extract_tables=True,
+    preserve_layout=True
+)
+
+result = service.extract_text_from_file("invoice.pdf", options)
+
+# Access bounding box data
+if result.bounding_boxes:
+    for bbox in result.bounding_boxes:
+        print(f"Text location: {bbox}")
+```
+
+**Base64 Image Processing**
+```python
+# Process base64 encoded images directly
+base64_result = service.extract_text_from_base64_image(
+    base64_image_string,
+    options=VisualExtractOptions(include_bounding_boxes=True)
+)
+```
+
+**PDF to Images Conversion**
+```python
+# Convert PDF pages to base64 images for further processing
+images = service.convert_pdf_to_base64_images("document.pdf", dpi=150)
+print(f"Generated {len(images)} images from PDF")
+
+# Process each page separately
+for i, image_b64 in enumerate(images):
+    page_result = service.extract_text_from_base64_image(image_b64)
+    print(f"Page {i+1} text: {page_result.text}")
+```
+
+**Specialized Use Cases**
+```python
+from pdf_to_text.visual_to_text_service import (
+    extract_text_from_visual,
+    extract_with_bounding_boxes,
+    extract_tables_from_visual,
+    convert_pdf_to_images
+)
+
+# Quick text extraction
+text = extract_text_from_visual("screenshot.png")
+
+# Extract with precise positioning
+result = extract_with_bounding_boxes("invoice.pdf")
+
+# Focus on table data
+table_result = extract_tables_from_visual("financial_report.pdf")
+
+# Convert for batch processing
+pdf_images = convert_pdf_to_images("presentation.pdf", dpi=200)
+```
+
+**Zoom Invoice Subscription Date Extraction Example**
+```python
+# Specialized configuration for invoice processing
+invoice_options = VisualExtractOptions(
+    include_bounding_boxes=True,
+    vision_prompt="""
+    Extract subscription dates from this invoice. 
+    Look for subscription periods, billing cycles, or service dates.
+    Provide bounding box coordinates for each date found.
+    """,
+    extract_tables=True
+)
+
+# Process Zoom invoice
+result = service.extract_text_from_file("zoom_invoice.pdf", invoice_options)
+
+# Parse subscription dates with regex patterns
+import re
+subscription_pattern = r'(\w{3}\s+\d{1,2},?\s+\d{4})\s*-\s*(\w{3}\s+\d{1,2},?\s+\d{4})'
+matches = re.findall(subscription_pattern, result.text)
+
+for start_date, end_date in matches:
+    print(f"Subscription period: {start_date} to {end_date}")
+```
+
 ### Prompt Management
 ```python
 from prompt import create_prompt_service, PromptStatus
@@ -522,8 +624,8 @@ result = orchestrator.execute_workflow(workflow, {"user_query": "Hello!"})
 - **`tts`** - Convert text to speech with multiple provider support
 - **`stt`** - Convert speech to text with word timestamps and speaker detection
 
-#### Document Processing
-- **`document_processing`** - Extract and enhance text from PDFs
+#### Visual Content Processing
+- **`document_processing`** - Extract text from PDFs, images, and base64 data with bounding boxes
 - **`chunk_text`** - Break text into semantic chunks
 
 #### Memory Operations  
@@ -555,6 +657,13 @@ Combines vision and text processing:
 ```
 Image Analysis → Text Generation → 
 Conditional Processing → Structured Output
+```
+
+#### Invoice Processing Agent
+Extracts structured data from invoices:
+```
+PDF/Image Input → Visual Text Extraction → 
+Date/Amount Parsing → Bounding Box Mapping → Structured Output
 ```
 
 ### 🚀 Key Architecture Features
@@ -621,6 +730,37 @@ Conditional Processing → Structured Output
     }
   }
 ]
+```
+
+**Visual Content Processing**
+```json
+{
+  "id": "extract_invoice_data",
+  "type": "document_processing",
+  "config": {
+    "include_bounding_boxes": true,
+    "vision_prompt": "Extract subscription dates and billing amounts with coordinates",
+    "extract_tables": true
+  },
+  "inputs": {
+    "file_path": "invoice.pdf"
+  }
+}
+```
+
+**Base64 Image Processing**
+```json
+{
+  "id": "process_screenshot",
+  "type": "document_processing",
+  "config": {
+    "include_bounding_boxes": true,
+    "vision_prompt": "Extract text from this screenshot"
+  },
+  "inputs": {
+    "base64_image": "$image_data"
+  }
+}
 ```
 
 **Prompt Management Integration**

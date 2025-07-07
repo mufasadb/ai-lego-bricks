@@ -8,8 +8,7 @@ import httpx
 from pydantic import BaseModel
 from .llm_types import (
     TextLLMClient, ChatMessage, LLMConfig, LLMProvider, 
-    StructuredLLMWrapper, StructuredResponseConfig,
-    create_function_calling_schema
+    StructuredLLMWrapper, StructuredResponseConfig
 )
 from credentials import CredentialManager, default_credential_manager
 
@@ -320,125 +319,11 @@ class GeminiTextClient(TextLLMClient):
     
     def chat_structured(self, message: str, schema: Union[Type[BaseModel], Dict[str, Any]], 
                        chat_history: Optional[List[ChatMessage]] = None) -> Union[BaseModel, Dict[str, Any]]:
-        """Chat with structured output using Gemini function calling"""
-        if isinstance(schema, type) and issubclass(schema, BaseModel):
-            # Use function calling for Pydantic models
-            return self._chat_with_function_calling(message, schema, chat_history)
-        else:
-            # Fallback to prompting for raw JSON schema
-            wrapper = StructuredLLMWrapper(self, schema if isinstance(schema, type) else type('DynamicSchema', (BaseModel,), {}))
-            return wrapper.chat(message, chat_history)
+        """Chat with structured output using prompting-based approach"""
+        # Use structured wrapper for both Pydantic models and raw schemas
+        wrapper = StructuredLLMWrapper(self, schema if isinstance(schema, type) else type('DynamicSchema', (BaseModel,), {}))
+        return wrapper.chat(message, chat_history)
     
-    def _chat_with_function_calling(self, message: str, schema: Type[BaseModel], 
-                                   chat_history: Optional[List[ChatMessage]] = None) -> BaseModel:
-        """Use Gemini's function calling for structured responses"""
-        # Create function declaration from Pydantic schema
-        function_schema = create_function_calling_schema(schema, "structured_response", 
-                                                        "Provide a structured response")
-        
-        messages = []
-        if chat_history:
-            messages.extend(chat_history)
-        messages.append(ChatMessage(role='user', content=message))
-        
-        # Convert to Gemini format
-        gemini_messages = []
-        for msg in messages:
-            role = "user" if msg.role == "user" else "model"
-            gemini_messages.append({
-                "role": role,
-                "parts": [{"text": msg.content}]
-            })
-        
-        payload = {
-            "contents": gemini_messages,
-            "tools": [{
-                "function_declarations": [function_schema]
-            }],
-            "generationConfig": {
-                "temperature": self.config.temperature,
-                "maxOutputTokens": self.config.max_tokens,
-                **self.config.extra_params
-            }
-        }
-        
-        max_retries = 3
-        base_delay = 1.0
-        
-        for attempt in range(max_retries):
-            try:
-                with httpx.Client(timeout=self.config.timeout) as client:
-                    response = client.post(
-                        f"{self.api_base_url}/models/{self.model}:generateContent",
-                        json=payload,
-                        headers={"x-goog-api-key": self.api_key}
-                    )
-                    
-                    if response.status_code == 503 and attempt < max_retries - 1:
-                        delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
-                        print(f"503 error on attempt {attempt + 1}/{max_retries}, retrying in {delay:.2f}s")
-                        time.sleep(delay)
-                        continue
-                    
-                    response.raise_for_status()
-                    response_data = response.json()
-                    
-                    # Extract function call from response
-                    candidates = response_data.get("candidates", [])
-                    if not candidates:
-                        raise ValueError("No candidates in Gemini response")
-                    
-                    candidate = candidates[0]
-                    content = candidate.get("content", {})
-                    parts = content.get("parts", [])
-                    
-                    # Look for function call
-                    for part in parts:
-                        if "functionCall" in part:
-                            function_call = part["functionCall"]
-                            if function_call.get("name") == "structured_response":
-                                args = function_call.get("args", {})
-                                # Validate and return as Pydantic model
-                                return schema.model_validate(args)
-                    
-                    # Fallback: if no function call, try to parse text response
-                    for part in parts:
-                        if "text" in part:
-                            text_response = part["text"]
-                            # Try to extract JSON and validate
-                            wrapper = StructuredLLMWrapper(self, schema)
-                            return wrapper._enforce_structured_response(message, chat_history)
-                    
-                    raise ValueError("No function call or text response found in Gemini response")
-                    
-            except httpx.HTTPStatusError as e:
-                if e.response.status_code == 503 and attempt < max_retries - 1:
-                    delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
-                    time.sleep(delay)
-                    continue
-                else:
-                    # Handle other HTTP errors as before
-                    if e.response.status_code == 429:
-                        # Re-use existing 429 error handling
-                        error_text = e.response.text
-                        print("=" * 80)
-                        print("🚨 CRITICAL: GEMINI API QUOTA/BILLING LIMIT EXCEEDED! 🚨")
-                        print("=" * 80)
-                        print(f"❌ HTTP 429 Error: {error_text}")
-                        # ... rest of existing error handling
-                        raise
-                    else:
-                        print(f"HTTP error {e.response.status_code}: {e.response.text}")
-                        raise
-            except Exception as e:
-                if attempt < max_retries - 1:
-                    delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
-                    time.sleep(delay)
-                    continue
-                else:
-                    raise
-        
-        raise RuntimeError("Max retries exceeded for Gemini structured API request")
     
     def with_structured_output(self, schema: Type[T]) -> StructuredLLMWrapper[T]:
         """Return a wrapper that ensures structured output of specified type"""

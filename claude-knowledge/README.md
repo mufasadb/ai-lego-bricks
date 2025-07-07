@@ -11,6 +11,7 @@ This folder contains documentation and instructions specifically for Claude Code
 - **`STRUCTURED_RESPONSES.md`** - Detailed implementation of structured LLM responses
 - **`CONDITIONAL_WORKFLOWS.md`** - Detailed implementation of conditional flow control
 - **`PROMPT_MANAGEMENT.md`** - Comprehensive guide to prompt management system ⭐ **NEW**
+- **`VISUAL_CONTENT_PROCESSING.md`** - Visual to text service with bounding box extraction ⭐ **NEW**
 - **`AGENT_ORCHESTRATION_GUIDE.md`** - Original orchestration system documentation
 
 ## 🎯 Purpose
@@ -58,6 +59,15 @@ Complete guide to the prompt management system:
 - **Storage & Caching**: File and Supabase backends with registry caching
 - **Workflow Integration**: Seamless integration with agent orchestration
 
+**VISUAL_CONTENT_PROCESSING.md** ⭐ **NEW**
+Comprehensive guide to visual content processing capabilities:
+- **Multi-Format Support**: PDFs, images (.jpg, .png, .bmp, .tiff, .webp), and base64 data
+- **Bounding Box Extraction**: Precise text coordinate positioning for layout analysis
+- **Vision AI Integration**: Custom prompts for specialized extraction tasks
+- **PDF to Images**: Convert PDF pages to base64 images for batch processing
+- **Agent Integration**: Document processing steps with visual content support
+- **Real-World Examples**: Invoice processing, form analysis, and document extraction
+
 **STRUCTURED_RESPONSES.md**
 Deep dive into the structured response implementation:
 - Provider-specific optimizations (Gemini function calling, JSON prompting)
@@ -92,6 +102,8 @@ This helps ensure Claude has current and accurate information about the project 
 
 ## 🎯 Recent Updates
 
-- **Removed test infrastructure**: Project has been cleaned up to focus on core functionality
+- **Visual Content Processing**: Added comprehensive visual to text service with bounding box extraction
+- **Multi-Format Support**: Now supports PDFs, images, and base64 data processing
+- **Invoice Processing**: Successfully tested with real Zoom invoices for subscription date extraction
 - **Enhanced agent orchestration**: Added structured responses, conditional workflows, and human-in-the-loop capabilities
 - **Improved documentation**: Updated all guides to reflect current project state

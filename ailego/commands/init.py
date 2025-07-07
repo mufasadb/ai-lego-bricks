@@ -381,7 +381,7 @@ This is an AI agent project built with AI Lego Bricks, focusing on modular and c
 - Test with minimal inputs first
 - Document complex workflows
 
-## Available Tools
+## Available Services
 - Memory services (Supabase, Neo4j)
 - LLM providers (Gemini, Anthropic, Ollama)
 - TTS services (OpenAI, Google)

@@ -335,11 +335,3 @@ def pydantic_to_json_schema(model: Type[BaseModel]) -> Dict[str, Any]:
     return model.model_json_schema()
 
 
-def create_function_calling_schema(model: Type[BaseModel], function_name: str = "structured_response", 
-                                 function_description: str = "Provide a structured response") -> Dict[str, Any]:
-    """Create a function calling schema from a Pydantic model"""
-    return {
-        "name": function_name,
-        "description": function_description,
-        "parameters": model.model_json_schema()
-    }

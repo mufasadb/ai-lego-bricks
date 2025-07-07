@@ -20,6 +20,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from llm.llm_types import LLMProvider, VisionProvider
 from chunking.chunking_service import ChunkingConfig
 from pdf_to_text.pdf_to_text_service import PDFExtractOptions
+from pdf_to_text.visual_to_text_service import VisualToTextService, VisualExtractOptions
 
 
 class StepHandlerRegistry:
@@ -721,10 +722,16 @@ class StepHandlerRegistry:
     
     def _handle_document_processing(self, step: StepConfig, inputs: Dict[str, Any], 
                                    context: ExecutionContext) -> Any:
-        """Handle document processing step"""
+        """Handle document processing step - now supports visual content (PDFs and images)"""
         file_path = inputs.get("file_path")
-        if not file_path:
-            raise ValueError("file_path required for document processing")
+        base64_image = inputs.get("base64_image")
+        
+        if not file_path and not base64_image:
+            raise ValueError("file_path or base64_image required for document processing")
+        
+        # Handle base64 image input
+        if base64_image:
+            return self._handle_base64_image_processing(base64_image, step.config)
         
         # Validate file path
         if not os.path.exists(file_path):
@@ -737,12 +744,13 @@ class StepHandlerRegistry:
         if file_ext == '.md':
             return self._handle_markdown_processing(file_path, step.config)
         
-        # Handle PDF files
-        elif file_ext == '.pdf':
-            return self._handle_pdf_processing(file_path, step.config)
+        # Handle visual content (PDFs and images) using the new visual to text service
+        elif file_ext in ['.pdf', '.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp']:
+            return self._handle_visual_processing(file_path, step.config)
         
         else:
-            raise ValueError(f"Unsupported file format: {file_ext}. Supported formats: ['.pdf', '.md']")
+            supported_formats = ['.pdf', '.md', '.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp']
+            raise ValueError(f"Unsupported file format: {file_ext}. Supported formats: {supported_formats}")
     
     def _handle_markdown_processing(self, file_path: str, config: Dict[str, Any]) -> Dict[str, Any]:
         """Handle markdown file processing"""
@@ -768,8 +776,80 @@ class StepHandlerRegistry:
             "processing_method": "markdown"
         }
     
+    def _handle_visual_processing(self, file_path: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle visual file processing (PDFs and images) using the new visual to text service"""
+        # Create visual to text service
+        visual_service = VisualToTextService()
+        
+        # Configure extraction options
+        options = VisualExtractOptions()
+        
+        # Map configuration options
+        if "enhance_with_llm" in config:
+            # For images, we always use vision processing
+            pass
+        if "semantic_analysis" in config:
+            options.create_semantic_chunks = config["semantic_analysis"]
+        if "extract_tables" in config:
+            options.extract_tables = config["extract_tables"]
+        if "include_bounding_boxes" in config:
+            options.include_bounding_boxes = config["include_bounding_boxes"]
+        if "vision_prompt" in config:
+            options.vision_prompt = config["vision_prompt"]
+        if "preserve_layout" in config:
+            options.preserve_layout = config["preserve_layout"]
+        if "page_range" in config:
+            options.page_range = tuple(config["page_range"])
+        
+        # Extract text from visual content
+        result = visual_service.extract_text_from_file(file_path, options)
+        
+        return {
+            "text": result.text,
+            "original_text": result.text,
+            "vision_text": result.text if result.vision_processing_used else None,
+            "semantic_chunks": result.semantic_chunks,
+            "page_count": result.page_count,
+            "processing_method": result.processing_method,
+            "source_type": result.source_type,
+            "converted_images": result.converted_images,
+            "bounding_boxes": result.bounding_boxes
+        }
+    
+    def _handle_base64_image_processing(self, base64_image: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle base64 image processing using the visual to text service"""
+        # Create visual to text service
+        visual_service = VisualToTextService()
+        
+        # Configure extraction options
+        options = VisualExtractOptions()
+        
+        # Map configuration options
+        if "semantic_analysis" in config:
+            options.create_semantic_chunks = config["semantic_analysis"]
+        if "extract_tables" in config:
+            options.extract_tables = config["extract_tables"]
+        if "include_bounding_boxes" in config:
+            options.include_bounding_boxes = config["include_bounding_boxes"]
+        if "vision_prompt" in config:
+            options.vision_prompt = config["vision_prompt"]
+        
+        # Extract text from base64 image
+        result = visual_service.extract_text_from_base64_image(base64_image, options)
+        
+        return {
+            "text": result.text,
+            "original_text": result.text,
+            "vision_text": result.text,
+            "semantic_chunks": result.semantic_chunks,
+            "page_count": 1,  # Base64 images are single-page
+            "processing_method": result.processing_method,
+            "source_type": result.source_type,
+            "bounding_boxes": result.bounding_boxes
+        }
+    
     def _handle_pdf_processing(self, file_path: str, config: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle PDF file processing"""
+        """Handle PDF file processing (legacy method - kept for backward compatibility)"""
         pdf_service = self.orchestrator.get_service("pdf_processor")
         if not pdf_service:
             raise RuntimeError("PDF processor service not available")

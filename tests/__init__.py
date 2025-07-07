@@ -1,1 +1,0 @@
-# Tests package for AI Lego Bricks

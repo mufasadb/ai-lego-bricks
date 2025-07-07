@@ -94,7 +94,6 @@ Or view the setup files directly:
 ├── chunking/                # ✂️ Text chunking and semantic processing
 ├── agent_orchestration/      # 🤖 JSON-driven agent workflows
 ├── examples/                # 📋 Usage examples and demos
-├── test/                     # 🧪 Test utilities
 ├── claude-knowledge/         # 🤖 Claude-specific documentation
 ├── .env.example             # 📝 Environment template
 ├── CREDENTIAL_MIGRATION_GUIDE.md  # 📖 Migration guide
@@ -106,17 +105,16 @@ Or view the setup files directly:
 This project provides:
 
 1. **🔐 Secure Credential Management** - Library-safe credential isolation with environment fallback
-2. **Clean LLM Architecture** - Separated Generation (one-shot) and Conversation (multi-turn) services
-3. **Streaming Support** - Real-time LLM response streaming with native Ollama and Anthropic support
-4. **Text-to-Speech Integration** - Convert text to audio with streaming LLM → TTS pipelines
-5. **Speech-to-Text Processing** - Convert audio to text with multiple providers (Faster Whisper, Google)
-6. **Image Generation** - Create images from text with OpenAI DALL-E, Stability AI, Google Imagen, and local models
-7. **JSON-Driven Agent Orchestration** - Create sophisticated AI workflows through configuration
-8. **Intelligent Memory System** - Store and retrieve project knowledge using vector similarity search
-9. **Rich Conversation Management** - Full conversation state tracking with search and export
-10. **Structured LLM Responses** - Type-safe, validated outputs using Pydantic schemas
-11. **Multi-Modal Processing** - Text, vision, and document analysis capabilities
-12. **Prompt Management** - Externalized, versioned prompts with evaluation and A/B testing
+2. **🧠 LLM Services** - Generation (one-shot) and Conversation (multi-turn) with streaming support
+3. **🌊 Real-time Streaming** - Native streaming for Ollama, Anthropic; simulated for others
+4. **🎵 Audio Processing** - Text-to-Speech and Speech-to-Text with streaming LLM → TTS pipelines
+5. **🎨 Image Generation** - Multi-provider support (OpenAI, Stability AI, Google Imagen, local models)
+6. **🤖 JSON-Driven Agents** - Create sophisticated AI workflows through configuration
+7. **🧠 Intelligent Memory** - Vector similarity search for project knowledge storage
+8. **💬 Rich Conversations** - Full conversation state tracking with search and export
+9. **📄 Multi-Modal Processing** - Text, vision, and document analysis capabilities
+10. **🎯 Prompt Management** - Externalized, versioned prompts with evaluation and A/B testing
+11. **📊 Concept Evaluation** - LLM-as-judge framework for testing prompt quality
 
 ## 🏃‍♂️ Getting Started
 
@@ -239,6 +237,21 @@ response2 = conv.send_message("How do I use it for web development?")
 # Rich conversation access
 first_prompt = conv.get_first_prompt()
 summary = conv.get_conversation_summary()
+```
+
+### Streaming LLM to TTS Pipeline
+```python
+from tts.streaming_tts_service import create_streaming_pipeline
+
+# Create streaming pipeline
+pipeline = create_streaming_pipeline(
+    llm_provider="ollama",
+    tts_provider="auto"
+)
+
+# Stream LLM response directly to audio files
+for progress in pipeline.stream_chat_to_audio("Explain quantum computing"):
+    print(f"Status: {progress['status']}, Audio files: {progress['audio_files_generated']}")
 ```
 
 ### Text-to-Speech
@@ -398,7 +411,55 @@ prompt = prompt_service.create_prompt(
     status=PromptStatus.ACTIVE
 )
 
-# Use in workflows for easy iteration and A/B testing
+# Render with context
+rendered = prompt_service.render_prompt(
+    "helpful_assistant", 
+    context={"user_question": "What is machine learning?"}
+)
+
+# A/B test versions
+from prompt.evaluation_service import EvaluationService
+eval_service = EvaluationService(prompt_service.storage)
+comparison = eval_service.compare_prompt_versions(
+    "helpful_assistant", "1.0.0", "helpful_assistant", "1.1.0"
+)
+```
+
+### Concept-Based Evaluation
+```python
+from prompt.eval_builder import EvaluationBuilder
+from prompt.concept_evaluation_service import ConceptEvaluationService
+
+# Create evaluation with concept checks
+builder = EvaluationBuilder("Document Summary Eval")
+builder.with_prompt_template("Summarize this {{doc_type}}: {{content}}")
+
+# Add concept verification
+builder.add_concept_check(
+    check_type="must_contain",
+    description="Contains key facts",
+    concept="specific facts and data from the source",
+    check_id="facts"
+)
+
+builder.add_concept_check(
+    check_type="must_not_contain",
+    description="Avoids opinions", 
+    concept="personal opinions or subjective judgments",
+    check_id="objective"
+)
+
+# Add test cases
+builder.add_test_case(
+    context={"doc_type": "report", "content": "Revenue grew 15% to $2.3B..."},
+    concept_check_refs=["facts", "objective"]
+)
+
+# Run evaluation
+eval_def = builder.build("summary_eval")
+service = ConceptEvaluationService(storage)
+results = service.run_evaluation(eval_def)
+print(f"Score: {results.overall_score:.1%}")
 ```
 
 ## 🤖 Creating Agents
@@ -536,40 +597,7 @@ Conditional Processing → Structured Output
 }
 ```
 
-**Text-to-Speech Integration**
-```json
-{
-  "id": "convert_to_speech",
-  "type": "tts",
-  "config": {
-    "provider": "auto",        // Auto-detect available TTS
-    "voice": "default",
-    "output_path": "output/response.wav"
-  },
-  "inputs": {
-    "text": {"from_step": "streaming_response", "field": "response"}
-  }
-}
-```
-
-**Speech-to-Text Integration**
-```json
-{
-  "id": "transcribe_audio",
-  "type": "stt",
-  "config": {
-    "provider": "faster_whisper",  // Local or Google Cloud
-    "language": "auto",
-    "enable_word_timestamps": true,
-    "enable_speaker_diarization": false
-  },
-  "inputs": {
-    "audio_file_path": {"from_step": "get_audio", "field": "file_path"}
-  }
-}
-```
-
-**Voice Assistant Pipeline**
+**Multi-Modal Voice Assistant**
 ```json
 [
   {
@@ -580,6 +608,7 @@ Conditional Processing → Structured Output
   {
     "id": "process",
     "type": "llm_chat",
+    "config": {"stream": true, "provider": "ollama"},
     "inputs": {
       "message": {"from_step": "transcribe", "field": "transcript"}
     }
@@ -594,67 +623,39 @@ Conditional Processing → Structured Output
 ]
 ```
 
-**Rich Conversation Access**
-Agents can reference any part of conversation history:
+**Prompt Management Integration**
 ```json
 {
-  "id": "conversation_summary",
-  "inputs": {
-    "message": "Summary: {conversation_summary}",
-    "first_question": "{first_prompt}",
-    "last_ai_response": "{last_response}"
-  }
+  "id": "managed_prompt",
+  "type": "llm_chat",
+  "prompt_ref": {
+    "prompt_id": "helpful_assistant",
+    "version": "1.0.0",
+    "context_variables": {"user_question": "$user_input"}
+  },
+  "config": {"provider": "gemini"}
 }
 ```
 
 ### Advanced Features
 
-**Conditional Logic**
+**Conditional Logic & Structured Responses**
 ```json
 {
   "id": "smart_routing",
   "type": "condition", 
-  "condition": {
-    "field": "document_type",
-    "operator": "==", 
-    "value": "technical_manual"
-  },
-  "routes": {
-    "true": "technical_processing",
-    "false": "general_processing"
-  }
+  "condition": {"field": "document_type", "operator": "==", "value": "technical_manual"},
+  "routes": {"true": "technical_processing", "false": "general_processing"}
 }
 ```
 
-**Structured Responses**
+**Concept-Based Evaluation**
 ```json
 {
-  "id": "extract_data",
-  "type": "llm_structured",
-  "config": {
-    "response_schema": {
-      "name": "DocumentAnalysis",
-      "fields": {
-        "summary": {"type": "string"},
-        "key_points": {"type": "list"},
-        "confidence": {"type": "float"}
-      }
-    }
-  }
-}
-```
-
-**Multi-Model Workflows**
-```json
-{
-  "id": "vision_analysis", 
-  "type": "llm_vision",
-  "config": {"provider": "gemini"}
-},
-{
-  "id": "text_summary",
-  "type": "llm_chat", 
-  "config": {"provider": "anthropic"}
+  "id": "evaluate_response",
+  "type": "concept_evaluation",
+  "config": {"eval_id": "my_evaluation", "llm_provider": "gemini"},
+  "inputs": {"context_variables": {"doc_type": "report", "content": "$document_text"}}
 }
 ```
 
@@ -663,7 +664,7 @@ Agents can reference any part of conversation history:
 1. **Study Examples**: Check `agent_orchestration/examples/` for templates
 2. **Start Simple**: Begin with basic input → LLM → output flows  
 3. **Add Memory**: Include storage and retrieval for context
-4. **Use Conditions**: Add branching logic for complex decisions
+4. **Use Streaming**: Enable real-time responses with Ollama
 5. **Structure Output**: Define schemas for reliable data extraction
 
 For detailed documentation, see **[agent_orchestration/README.md](agent_orchestration/README.md)**
@@ -675,40 +676,16 @@ The `ailego` command-line tool provides a complete interface for managing AI age
 ### Project Management
 ```bash
 ailego init <project-name>              # Initialize new project
-ailego init <name> --template advanced  # Use specific template
+ailego init <name> --template advanced  # Use specific template  
 ailego verify                           # Verify setup
-ailego verify --verbose                 # Detailed verification
-ailego status                          # Show system status
-```
-
-### Agent Management
-```bash
-ailego create <type>                    # Create new agent interactively
-ailego create chat --name "support"    # Create named chat agent
-ailego list-templates                   # Show available templates
-```
-
-### Workflow Execution
-```bash
 ailego run <workflow.json>              # Execute agent workflow
-ailego run <workflow.json> --verbose    # Detailed execution logs
-ailego run <workflow.json> --output results.json  # Save results
 ```
 
-### Available Agent Types
-- `chat` - Basic conversational agents
-- `document-analysis` - PDF and document processing
-- `research` - Multi-source research and synthesis
-- `vision` - Image analysis and description
-- `streaming` - Real-time conversation with TTS
-- `voice` - Voice-enabled agents with STT + TTS integration
+### Agent Types & Templates
+- **Agent Types**: `chat`, `document-analysis`, `research`, `vision`, `streaming`, `voice`
+- **Templates**: `basic`, `advanced`, `research`
 
-### Available Project Templates
-- `basic` - Simple chat and text processing
-- `advanced` - Full-featured with memory and multi-modal
-- `research` - Document analysis and research workflows
-
-### Examples
+### Quick Start
 ```bash
 # Complete workflow
 ailego init research-project --template research
@@ -716,12 +693,6 @@ cd research-project
 ailego verify
 ailego create document-analysis --name "pdf-analyzer"
 ailego run agents/pdf-analyzer.json
-
-# Quick prototyping
-ailego init demo --template basic
-cd demo
-ailego create chat --name "assistant"
-ailego run agents/assistant.json
 ```
 
 ## 🤝 Contributing

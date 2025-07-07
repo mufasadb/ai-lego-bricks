@@ -129,6 +129,14 @@ class PromptReference(BaseModel):
     context_variables: Dict[str, Any] = Field(default_factory=dict)  # Variables for template rendering
 
 
+class StepParallelizationConfig(BaseModel):
+    """Parallelization configuration for individual steps"""
+    can_parallelize: Optional[bool] = None  # Override auto-detection
+    resource_group: Optional[str] = None  # "llm", "tts", "memory", "document"
+    priority: int = 1  # Higher priority steps get resources first
+    timeout: Optional[int] = None  # Step-specific timeout in seconds
+
+
 class StepConfig(BaseModel):
     """Configuration for a single workflow step"""
     id: str
@@ -144,6 +152,20 @@ class StepConfig(BaseModel):
     preserve_previous_results: bool = False  # Whether to preserve results from previous iterations
     # Prompt management integration
     prompt_ref: Optional[PromptReference] = None  # Reference to managed prompt
+    # Parallelization configuration
+    parallelization: Optional[StepParallelizationConfig] = None
+
+
+class ParallelizationConfig(BaseModel):
+    """Configuration for parallel execution"""
+    mode: str = "selective"  # "disabled", "selective", "aggressive"
+    max_concurrent_steps: int = 5
+    max_concurrent_llm: int = 3
+    max_concurrent_tts: int = 1
+    max_concurrent_memory: int = 5
+    max_concurrent_document: int = 3
+    streaming_compatibility: str = "strict"  # "strict", "relaxed", "ignore"
+    resource_timeout: int = 30  # seconds to wait for resources
 
 
 class WorkflowGlobalConfig(BaseModel):
@@ -162,6 +184,8 @@ class WorkflowGlobalConfig(BaseModel):
         "**Thinking:**",
         "**Reasoning:**"
     ])
+    # Parallelization configuration
+    parallelization: ParallelizationConfig = Field(default_factory=ParallelizationConfig)
 
 
 class WorkflowConfig(BaseModel):

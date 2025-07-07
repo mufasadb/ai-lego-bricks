@@ -1,0 +1,276 @@
+{
+  "name": "parallel_workflow_example",
+  "description": "Example workflow demonstrating parallel execution capabilities",
+  "config": {
+    "memory_backend": "auto",
+    "default_llm_provider": "gemini",
+    "default_model": "gemini-1.5-flash",
+    "max_iterations": 10,
+    "parallelization": {
+      "mode": "selective",
+      "max_concurrent_steps": 5,
+      "max_concurrent_llm": 3,
+      "max_concurrent_tts": 1,
+      "max_concurrent_memory": 5,
+      "max_concurrent_document": 2,
+      "streaming_compatibility": "strict",
+      "resource_timeout": 30
+    }
+  },
+  "steps": [
+    {
+      "id": "get_user_query",
+      "type": "input",
+      "description": "Get user query for parallel processing",
+      "config": {
+        "prompt": "What would you like to research and analyze?"
+      },
+      "outputs": ["user_query"],
+      "parallelization": {
+        "can_parallelize": false,
+        "priority": 10
+      }
+    },
+    {
+      "id": "parallel_analysis_1",
+      "type": "llm_chat",
+      "description": "Analyze query from perspective 1",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "temperature": 0.7,
+        "stream": false
+      },
+      "inputs": {
+        "message": "Analyze this query from a technical perspective: {user_query}",
+        "user_query": {
+          "from_step": "get_user_query",
+          "field": "user_query"
+        }
+      },
+      "outputs": ["technical_analysis"],
+      "parallelization": {
+        "can_parallelize": true,
+        "resource_group": "llm",
+        "priority": 5
+      }
+    },
+    {
+      "id": "parallel_analysis_2",
+      "type": "llm_chat",
+      "description": "Analyze query from perspective 2",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "temperature": 0.7,
+        "stream": false
+      },
+      "inputs": {
+        "message": "Analyze this query from a business perspective: {user_query}",
+        "user_query": {
+          "from_step": "get_user_query",
+          "field": "user_query"
+        }
+      },
+      "outputs": ["business_analysis"],
+      "parallelization": {
+        "can_parallelize": true,
+        "resource_group": "llm",
+        "priority": 5
+      }
+    },
+    {
+      "id": "parallel_analysis_3",
+      "type": "llm_chat",
+      "description": "Analyze query from perspective 3",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "temperature": 0.7,
+        "stream": false
+      },
+      "inputs": {
+        "message": "Analyze this query from a user experience perspective: {user_query}",
+        "user_query": {
+          "from_step": "get_user_query",
+          "field": "user_query"
+        }
+      },
+      "outputs": ["ux_analysis"],
+      "parallelization": {
+        "can_parallelize": true,
+        "resource_group": "llm",
+        "priority": 5
+      }
+    },
+    {
+      "id": "memory_search_related",
+      "type": "memory_retrieve",
+      "description": "Search for related information in memory",
+      "config": {
+        "query_from_input": true,
+        "limit": 10
+      },
+      "inputs": {
+        "query": {
+          "from_step": "get_user_query",
+          "field": "user_query"
+        }
+      },
+      "outputs": ["related_memories"],
+      "parallelization": {
+        "can_parallelize": true,
+        "resource_group": "memory",
+        "priority": 4
+      }
+    },
+    {
+      "id": "parallel_document_chunk_1",
+      "type": "chunk_text",
+      "description": "Chunk technical analysis",
+      "config": {
+        "chunk_size": 500,
+        "overlap": 50
+      },
+      "inputs": {
+        "text": {
+          "from_step": "parallel_analysis_1",
+          "field": "technical_analysis"
+        }
+      },
+      "outputs": ["technical_chunks"],
+      "parallelization": {
+        "can_parallelize": true,
+        "resource_group": "document",
+        "priority": 3
+      }
+    },
+    {
+      "id": "parallel_document_chunk_2",
+      "type": "chunk_text",
+      "description": "Chunk business analysis",
+      "config": {
+        "chunk_size": 500,
+        "overlap": 50
+      },
+      "inputs": {
+        "text": {
+          "from_step": "parallel_analysis_2",
+          "field": "business_analysis"
+        }
+      },
+      "outputs": ["business_chunks"],
+      "parallelization": {
+        "can_parallelize": true,
+        "resource_group": "document",
+        "priority": 3
+      }
+    },
+    {
+      "id": "store_technical_analysis",
+      "type": "memory_store",
+      "description": "Store technical analysis in memory",
+      "config": {
+        "metadata": {
+          "analysis_type": "technical",
+          "source": "parallel_workflow"
+        }
+      },
+      "inputs": {
+        "content": {
+          "from_step": "parallel_document_chunk_1",
+          "field": "technical_chunks"
+        }
+      },
+      "outputs": ["technical_memory_ids"],
+      "parallelization": {
+        "can_parallelize": true,
+        "resource_group": "memory",
+        "priority": 2
+      }
+    },
+    {
+      "id": "store_business_analysis",
+      "type": "memory_store",
+      "description": "Store business analysis in memory",
+      "config": {
+        "metadata": {
+          "analysis_type": "business",
+          "source": "parallel_workflow"
+        }
+      },
+      "inputs": {
+        "content": {
+          "from_step": "parallel_document_chunk_2",
+          "field": "business_chunks"
+        }
+      },
+      "outputs": ["business_memory_ids"],
+      "parallelization": {
+        "can_parallelize": true,
+        "resource_group": "memory",
+        "priority": 2
+      }
+    },
+    {
+      "id": "synthesize_results",
+      "type": "llm_chat",
+      "description": "Synthesize all parallel analysis results",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-pro",
+        "temperature": 0.3,
+        "stream": false
+      },
+      "inputs": {
+        "message": "Synthesize these parallel analyses into a comprehensive response:\n\nTechnical Analysis: {technical_analysis}\n\nBusiness Analysis: {business_analysis}\n\nUX Analysis: {ux_analysis}\n\nRelated Memories: {related_memories}\n\nOriginal Query: {user_query}",
+        "technical_analysis": {
+          "from_step": "parallel_analysis_1",
+          "field": "technical_analysis"
+        },
+        "business_analysis": {
+          "from_step": "parallel_analysis_2",
+          "field": "business_analysis"
+        },
+        "ux_analysis": {
+          "from_step": "parallel_analysis_3",
+          "field": "ux_analysis"
+        },
+        "related_memories": {
+          "from_step": "memory_search_related",
+          "field": "related_memories"
+        },
+        "user_query": {
+          "from_step": "get_user_query",
+          "field": "user_query"
+        }
+      },
+      "outputs": ["synthesis"],
+      "parallelization": {
+        "can_parallelize": false,
+        "priority": 1
+      }
+    },
+    {
+      "id": "final_output",
+      "type": "output",
+      "description": "Present final synthesized analysis",
+      "inputs": {
+        "synthesis": {
+          "from_step": "synthesize_results",
+          "field": "synthesis"
+        },
+        "execution_metadata": {
+          "technical_memory_ids": {
+            "from_step": "store_technical_analysis",
+            "field": "technical_memory_ids"
+          },
+          "business_memory_ids": {
+            "from_step": "store_business_analysis",
+            "field": "business_memory_ids"
+          }
+        }
+      }
+    }
+  ]
+}

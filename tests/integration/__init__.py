@@ -1,1 +1,0 @@
-# Integration tests for AI Lego Bricks workflows

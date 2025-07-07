@@ -1,0 +1,350 @@
+{
+  "name": "gemini_ollama_parallel_agent",
+  "description": "Demonstrates concurrent execution with both Gemini and Ollama providers",
+  "config": {
+    "memory_backend": "auto",
+    "default_llm_provider": "gemini",
+    "default_model": "gemini-1.5-flash",
+    "max_iterations": 10,
+    "parallelization": {
+      "mode": "selective",
+      "max_concurrent_steps": 6,
+      "max_concurrent_llm": 4,
+      "max_concurrent_tts": 1,
+      "max_concurrent_memory": 3,
+      "max_concurrent_document": 2,
+      "streaming_compatibility": "strict",
+      "resource_timeout": 60
+    }
+  },
+  "steps": [
+    {
+      "id": "get_analysis_topic",
+      "type": "input",
+      "description": "Get topic for multi-provider analysis",
+      "config": {
+        "prompt": "What topic would you like analyzed by both Gemini and Ollama in parallel?"
+      },
+      "outputs": ["topic"],
+      "parallelization": {
+        "can_parallelize": false,
+        "priority": 10
+      }
+    },
+    {
+      "id": "gemini_flash_analysis",
+      "type": "llm_chat",
+      "description": "Analyze topic with Gemini Flash (fast model)",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "temperature": 0.7,
+        "stream": false,
+        "max_tokens": 500
+      },
+      "inputs": {
+        "message": "Provide a quick analysis of this topic from a technical perspective. Focus on current state and immediate implications: {topic}",
+        "topic": {
+          "from_step": "get_analysis_topic",
+          "field": "topic"
+        }
+      },
+      "outputs": ["gemini_flash_response"],
+      "parallelization": {
+        "can_parallelize": true,
+        "resource_group": "llm",
+        "priority": 8,
+        "timeout": 30
+      }
+    },
+    {
+      "id": "gemini_pro_analysis",
+      "type": "llm_chat",
+      "description": "Analyze topic with Gemini Pro (detailed model)",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-pro",
+        "temperature": 0.5,
+        "stream": false,
+        "max_tokens": 800
+      },
+      "inputs": {
+        "message": "Provide a comprehensive analysis of this topic from a strategic perspective. Include future implications, risks, and opportunities: {topic}",
+        "topic": {
+          "from_step": "get_analysis_topic",
+          "field": "topic"
+        }
+      },
+      "outputs": ["gemini_pro_response"],
+      "parallelization": {
+        "can_parallelize": true,
+        "resource_group": "llm",
+        "priority": 8,
+        "timeout": 45
+      }
+    },
+    {
+      "id": "ollama_llama_analysis",
+      "type": "llm_chat",
+      "description": "Analyze topic with Ollama Llama model",
+      "config": {
+        "provider": "ollama",
+        "model": "llama3.2",
+        "temperature": 0.6,
+        "stream": false,
+        "max_tokens": 600
+      },
+      "inputs": {
+        "message": "Analyze this topic from a practical implementation perspective. What are the real-world applications and challenges? {topic}",
+        "topic": {
+          "from_step": "get_analysis_topic",
+          "field": "topic"
+        }
+      },
+      "outputs": ["ollama_llama_response"],
+      "parallelization": {
+        "can_parallelize": true,
+        "resource_group": "llm",
+        "priority": 8,
+        "timeout": 40
+      }
+    },
+    {
+      "id": "ollama_mistral_analysis",
+      "type": "llm_chat",
+      "description": "Analyze topic with Ollama Mistral model",
+      "config": {
+        "provider": "ollama",
+        "model": "mistral",
+        "temperature": 0.8,
+        "stream": false,
+        "max_tokens": 500
+      },
+      "inputs": {
+        "message": "Provide a creative and innovative perspective on this topic. Think outside the box about potential applications: {topic}",
+        "topic": {
+          "from_step": "get_analysis_topic",
+          "field": "topic"
+        }
+      },
+      "outputs": ["ollama_mistral_response"],
+      "parallelization": {
+        "can_parallelize": true,
+        "resource_group": "llm",
+        "priority": 8,
+        "timeout": 35
+      }
+    },
+    {
+      "id": "memory_context_search",
+      "type": "memory_retrieve",
+      "description": "Search for related context in memory",
+      "config": {
+        "query_from_input": true,
+        "limit": 8
+      },
+      "inputs": {
+        "query": {
+          "from_step": "get_analysis_topic",
+          "field": "topic"
+        }
+      },
+      "outputs": ["memory_context"],
+      "parallelization": {
+        "can_parallelize": true,
+        "resource_group": "memory",
+        "priority": 7,
+        "timeout": 20
+      }
+    },
+    {
+      "id": "parallel_chunk_gemini_responses",
+      "type": "chunk_text",
+      "description": "Chunk combined Gemini responses for storage",
+      "config": {
+        "chunk_size": 400,
+        "overlap": 50
+      },
+      "inputs": {
+        "text": "Gemini Flash Analysis:\n{gemini_flash_response}\n\nGemini Pro Analysis:\n{gemini_pro_response}",
+        "gemini_flash_response": {
+          "from_step": "gemini_flash_analysis",
+          "field": "gemini_flash_response"
+        },
+        "gemini_pro_response": {
+          "from_step": "gemini_pro_analysis",
+          "field": "gemini_pro_response"
+        }
+      },
+      "outputs": ["gemini_chunks"],
+      "parallelization": {
+        "can_parallelize": true,
+        "resource_group": "document",
+        "priority": 6
+      }
+    },
+    {
+      "id": "parallel_chunk_ollama_responses",
+      "type": "chunk_text",
+      "description": "Chunk combined Ollama responses for storage",
+      "config": {
+        "chunk_size": 400,
+        "overlap": 50
+      },
+      "inputs": {
+        "text": "Ollama Llama Analysis:\n{ollama_llama_response}\n\nOllama Mistral Analysis:\n{ollama_mistral_response}",
+        "ollama_llama_response": {
+          "from_step": "ollama_llama_analysis",
+          "field": "ollama_llama_response"
+        },
+        "ollama_mistral_response": {
+          "from_step": "ollama_mistral_analysis",
+          "field": "ollama_mistral_response"
+        }
+      },
+      "outputs": ["ollama_chunks"],
+      "parallelization": {
+        "can_parallelize": true,
+        "resource_group": "document",
+        "priority": 6
+      }
+    },
+    {
+      "id": "store_gemini_analysis",
+      "type": "memory_store",
+      "description": "Store Gemini analysis results",
+      "config": {
+        "metadata": {
+          "provider": "gemini",
+          "analysis_type": "multi_model",
+          "source": "parallel_comparison"
+        }
+      },
+      "inputs": {
+        "content": {
+          "from_step": "parallel_chunk_gemini_responses",
+          "field": "gemini_chunks"
+        }
+      },
+      "outputs": ["gemini_memory_ids"],
+      "parallelization": {
+        "can_parallelize": true,
+        "resource_group": "memory",
+        "priority": 5
+      }
+    },
+    {
+      "id": "store_ollama_analysis",
+      "type": "memory_store",
+      "description": "Store Ollama analysis results",
+      "config": {
+        "metadata": {
+          "provider": "ollama",
+          "analysis_type": "multi_model",
+          "source": "parallel_comparison"
+        }
+      },
+      "inputs": {
+        "content": {
+          "from_step": "parallel_chunk_ollama_responses",
+          "field": "ollama_chunks"
+        }
+      },
+      "outputs": ["ollama_memory_ids"],
+      "parallelization": {
+        "can_parallelize": true,
+        "resource_group": "memory",
+        "priority": 5
+      }
+    },
+    {
+      "id": "cross_provider_synthesis",
+      "type": "llm_chat",
+      "description": "Synthesize insights from both providers",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-pro",
+        "temperature": 0.3,
+        "stream": false,
+        "max_tokens": 1200
+      },
+      "inputs": {
+        "message": "Synthesize and compare these parallel analyses from different AI providers:\n\n**GEMINI ANALYSES:**\nFlash Model: {gemini_flash_response}\n\nPro Model: {gemini_pro_response}\n\n**OLLAMA ANALYSES:**\nLlama Model: {ollama_llama_response}\n\nMistral Model: {ollama_mistral_response}\n\n**MEMORY CONTEXT:**\n{memory_context}\n\n**ORIGINAL TOPIC:** {topic}\n\nProvide a comprehensive synthesis highlighting:\n1. Common insights across providers\n2. Unique perspectives from each provider\n3. Contrasting viewpoints\n4. Overall conclusions\n5. Provider-specific strengths observed",
+        "gemini_flash_response": {
+          "from_step": "gemini_flash_analysis",
+          "field": "gemini_flash_response"
+        },
+        "gemini_pro_response": {
+          "from_step": "gemini_pro_analysis",
+          "field": "gemini_pro_response"
+        },
+        "ollama_llama_response": {
+          "from_step": "ollama_llama_analysis",
+          "field": "ollama_llama_response"
+        },
+        "ollama_mistral_response": {
+          "from_step": "ollama_mistral_analysis",
+          "field": "ollama_mistral_response"
+        },
+        "memory_context": {
+          "from_step": "memory_context_search",
+          "field": "memory_context"
+        },
+        "topic": {
+          "from_step": "get_analysis_topic",
+          "field": "topic"
+        }
+      },
+      "outputs": ["final_synthesis"],
+      "parallelization": {
+        "can_parallelize": false,
+        "priority": 1
+      }
+    },
+    {
+      "id": "execution_report",
+      "type": "output",
+      "description": "Present final results with execution metadata",
+      "inputs": {
+        "analysis_results": {
+          "topic": {
+            "from_step": "get_analysis_topic",
+            "field": "topic"
+          },
+          "synthesis": {
+            "from_step": "cross_provider_synthesis",
+            "field": "final_synthesis"
+          },
+          "provider_responses": {
+            "gemini_flash": {
+              "from_step": "gemini_flash_analysis",
+              "field": "gemini_flash_response"
+            },
+            "gemini_pro": {
+              "from_step": "gemini_pro_analysis",
+              "field": "gemini_pro_response"
+            },
+            "ollama_llama": {
+              "from_step": "ollama_llama_analysis",
+              "field": "ollama_llama_response"
+            },
+            "ollama_mistral": {
+              "from_step": "ollama_mistral_analysis",
+              "field": "ollama_mistral_response"
+            }
+          },
+          "memory_storage": {
+            "gemini_memory_ids": {
+              "from_step": "store_gemini_analysis",
+              "field": "gemini_memory_ids"
+            },
+            "ollama_memory_ids": {
+              "from_step": "store_ollama_analysis",
+              "field": "ollama_memory_ids"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -12,6 +12,7 @@ This folder contains documentation and instructions specifically for Claude Code
 - **`CONDITIONAL_WORKFLOWS.md`** - Detailed implementation of conditional flow control
 - **`PROMPT_MANAGEMENT.md`** - Comprehensive guide to prompt management system ⭐ **NEW**
 - **`VISUAL_CONTENT_PROCESSING.md`** - Visual to text service with bounding box extraction ⭐ **NEW**
+- **`UNIVERSAL_TOOL_SERVICE.md`** - Complete tool service implementation with secure credential management ⭐ **NEW**
 - **`AGENT_ORCHESTRATION_GUIDE.md`** - Original orchestration system documentation
 
 ## 🎯 Purpose
@@ -68,6 +69,15 @@ Comprehensive guide to visual content processing capabilities:
 - **Agent Integration**: Document processing steps with visual content support
 - **Real-World Examples**: Invoice processing, form analysis, and document extraction
 
+**UNIVERSAL_TOOL_SERVICE.md** ⭐ **NEW**
+Complete guide to the universal tool service implementation:
+- **Provider Abstraction**: Define tools once, use with OpenAI, Anthropic, Gemini, Ollama
+- **Secure Credential Management**: Integrated with CredentialManager for safe API key handling
+- **Workflow Integration**: New `tool_call` step type in agent orchestration
+- **Performance**: Async execution, concurrent tool calls, registry caching
+- **Security Patterns**: Early validation, credential isolation, safe error handling
+- **Examples**: Weather, calculator, GitHub API, Slack webhooks, database tools
+
 **STRUCTURED_RESPONSES.md**
 Deep dive into the structured response implementation:
 - Provider-specific optimizations (Gemini function calling, JSON prompting)
@@ -102,6 +112,9 @@ This helps ensure Claude has current and accurate information about the project 
 
 ## 🎯 Recent Updates
 
+- **Universal Tool Service**: Complete tool calling implementation with provider abstraction and secure credential management
+- **Tool Integration**: New `tool_call` step type added to agent orchestration
+- **Security Enhancements**: Comprehensive credential validation and safe error handling
 - **Visual Content Processing**: Added comprehensive visual to text service with bounding box extraction
 - **Multi-Format Support**: Now supports PDFs, images, and base64 data processing
 - **Invoice Processing**: Successfully tested with real Zoom invoices for subscription date extraction

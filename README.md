@@ -107,14 +107,15 @@ This project provides:
 1. **🔐 Secure Credential Management** - Library-safe credential isolation with environment fallback
 2. **🧠 LLM Services** - Generation (one-shot) and Conversation (multi-turn) with streaming support
 3. **🌊 Real-time Streaming** - Native streaming for Ollama, Anthropic; simulated for others
-4. **🎵 Audio Processing** - Text-to-Speech and Speech-to-Text with streaming LLM → TTS pipelines
-5. **🎨 Image Generation** - Multi-provider support (OpenAI, Stability AI, Google Imagen, local models)
-6. **🤖 JSON-Driven Agents** - Create sophisticated AI workflows through configuration
-7. **🧠 Intelligent Memory** - Vector similarity search for project knowledge storage
-8. **💬 Rich Conversations** - Full conversation state tracking with search and export
-9. **📄 Visual Content Processing** - Extract text from PDFs, images, and base64 data with precise bounding boxes
-10. **🎯 Prompt Management** - Externalized, versioned prompts with evaluation and A/B testing
-11. **📊 Concept Evaluation** - LLM-as-judge framework for testing prompt quality
+4. **🔧 Universal Tool Service** - Register tools once, use with any LLM provider (OpenAI, Anthropic, Gemini, Ollama)
+5. **🎵 Audio Processing** - Text-to-Speech and Speech-to-Text with streaming LLM → TTS pipelines
+6. **🎨 Image Generation** - Multi-provider support (OpenAI, Stability AI, Google Imagen, local models)
+7. **🤖 JSON-Driven Agents** - Create sophisticated AI workflows through configuration
+8. **🧠 Intelligent Memory** - Vector similarity search for project knowledge storage
+9. **💬 Rich Conversations** - Full conversation state tracking with search and export
+10. **📄 Visual Content Processing** - Extract text from PDFs, images, and base64 data with precise bounding boxes
+11. **🎯 Prompt Management** - Externalized, versioned prompts with evaluation and A/B testing
+12. **📊 Concept Evaluation** - LLM-as-judge framework for testing prompt quality
 
 ## 🏃‍♂️ Getting Started
 
@@ -564,6 +565,139 @@ results = service.run_evaluation(eval_def)
 print(f"Score: {results.overall_score:.1%}")
 ```
 
+## 🔧 Universal Tool Service
+
+AI Lego Bricks includes a powerful **Universal Tool Service** that allows you to register tools once and use them with any LLM provider. Tools are defined with a universal schema and automatically adapted for OpenAI, Anthropic, Google Gemini, and Ollama.
+
+### Key Features
+
+- **🔄 Provider Abstraction**: Define tools once, use with any LLM provider
+- **🔐 Secure Credential Management**: Integrated with CredentialManager for API keys
+- **⚡ Async Execution**: Concurrent tool execution for performance
+- **🏗️ Workflow Integration**: Seamless integration with agent orchestration
+- **🛡️ Early Validation**: Credential validation at registration time
+
+### Quick Start
+
+**1. Register a Tool**
+```python
+from tools import ToolSchema, ToolParameter, ParameterType, Tool, ToolExecutor
+from tools import register_tool_globally
+
+class WeatherExecutor(ToolExecutor):
+    async def execute(self, tool_call):
+        location = tool_call.parameters.get("location")
+        # Your weather API logic here
+        return ToolResult(
+            tool_call_id=tool_call.id,
+            name=tool_call.name,
+            result={"weather": "sunny", "temp": "22°C", "location": location}
+        )
+
+# Define tool schema
+weather_schema = ToolSchema(
+    name="get_weather",
+    description="Get current weather for a location",
+    parameters=ToolParameter(
+        type=ParameterType.OBJECT,
+        properties={
+            "location": ToolParameter(
+                type=ParameterType.STRING,
+                description="City name"
+            )
+        },
+        required=["location"]
+    )
+)
+
+# Create and register tool
+weather_tool = Tool(schema=weather_schema, executor=WeatherExecutor())
+await register_tool_globally(weather_tool, category="utilities")
+```
+
+**2. Use in Workflows**
+```json
+{
+  "id": "weather_assistant",
+  "type": "tool_call",
+  "config": {
+    "provider": "ollama",
+    "model": "llama3.1:8b",
+    "tools": ["get_weather"],
+    "tool_choice": "auto",
+    "auto_execute": true,
+    "prompt": "You are a weather assistant with access to weather tools."
+  },
+  "inputs": {
+    "message": "What's the weather in London?"
+  }
+}
+```
+
+### Secure Tools with API Keys
+
+**Create Secure API Tool**
+```python
+from tools import APIToolExecutor, SecureToolExecutor
+from credentials import CredentialManager
+
+class GitHubTool(APIToolExecutor):
+    def __init__(self, credential_manager=None):
+        super().__init__(
+            base_url="https://api.github.com",
+            api_key_name="GITHUB_TOKEN",
+            credential_manager=credential_manager
+        )
+    
+    async def execute(self, tool_call):
+        repo = tool_call.parameters.get("repo")
+        response = await self.make_api_request(f"repos/{repo}")
+        return ToolResult(
+            tool_call_id=tool_call.id,
+            name=tool_call.name,
+            result={
+                "repo": repo,
+                "stars": response["stargazers_count"],
+                "description": response["description"]
+            }
+        )
+```
+
+**Use with Credential Management**
+```python
+# Environment-based (production)
+creds = CredentialManager(load_env=True)
+tool_service = ToolService(credential_manager=creds)
+
+# Explicit credentials (library/multi-tenant)
+creds = CredentialManager({
+    "GITHUB_TOKEN": user_provided_token,
+    "OPENAI_API_KEY": user_api_key
+}, load_env=False)
+
+# Validate credentials
+validation = await tool_service.validate_tool_credentials()
+print(f"Available tools: {validation['available_tools']}")
+```
+
+### Provider Support
+
+| Provider | Tool Format | Choice Options | Status |
+|----------|-------------|----------------|---------|
+| **OpenAI** | `tools` parameter | auto, none, specific | ✅ Full Support |
+| **Anthropic** | `tools` parameter | auto, any, none, specific | ✅ Full Support |
+| **Google Gemini** | `functionDeclarations` | AUTO, ANY, NONE | ✅ Full Support |
+| **Ollama** | `tools` parameter | auto, none, specific | ✅ Full Support |
+
+### Complete Documentation
+
+See **[TOOLS_README.md](TOOLS_README.md)** for comprehensive documentation including:
+- Secure credential patterns
+- Provider-specific behavior
+- Error handling best practices
+- Performance considerations
+- Testing with mock credentials
+
 ## 🤖 Creating Agents
 
 This project uses a **JSON-driven agent orchestration system** that lets you create sophisticated AI agents by combining building blocks through configuration rather than code.
@@ -621,6 +755,7 @@ result = orchestrator.execute_workflow(workflow, {"user_query": "Hello!"})
 - **`llm_chat`** - Generate text using LLM (auto-selects Generation/Conversation service)
 - **`llm_vision`** - Analyze images with vision models
 - **`llm_structured`** - Generate type-safe, validated JSON responses
+- **`tool_call`** - 🆕 Call external tools/APIs with automatic credential management
 - **`tts`** - Convert text to speech with multiple provider support
 - **`stt`** - Convert speech to text with word timestamps and speaker detection
 

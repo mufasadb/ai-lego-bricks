@@ -5,6 +5,7 @@ This is a comprehensive collection of building blocks for creating sophisticated
 
 ### Core Building Blocks
 - **LLM Abstraction Layer**: Unified interface for multiple LLM providers (Gemini, Ollama) with text, vision, and embedding clients
+- **Universal Tool Service**: Register tools once, use with any LLM provider (OpenAI, Anthropic, Gemini, Ollama)
 - **Memory Management**: Persistent storage with semantic search (Supabase pgvector, Neo4j)
 - **Document Processing**: PDF extraction with LLM enhancement and semantic analysis
 - **Text Chunking**: Intelligent text segmentation preserving semantic boundaries
@@ -42,6 +43,27 @@ The JSON-driven agent orchestration system has been significantly enhanced with 
 - Handle data flow between steps with structured validation
 - Support conditional logic, branching, and dynamic routing
 - Provide comprehensive error handling and execution tracking 
+
+### Universal Tool Service ⭐ **LATEST ADDITION**
+A comprehensive tool calling system that provides unified interface across all LLM providers:
+
+**Key Features:**
+- **Provider Abstraction**: Define tools once, use with OpenAI, Anthropic, Gemini, Ollama
+- **Secure Credential Management**: Integrated with CredentialManager for safe API key handling
+- **Workflow Integration**: New `tool_call` step type in agent orchestration
+- **Performance**: Async execution, concurrent tool calls, registry caching
+- **Security**: Early validation, credential isolation, safe error handling
+
+**New Step Type: `tool_call`**
+- Execute tools/APIs with LLM guidance
+- Support for all provider tool calling formats
+- Automatic credential management and validation
+- Rich conversation tracking and error handling
+
+**Examples Provided:**
+- Weather, calculator, file management tools
+- Secure API tools (GitHub, OpenAI, Slack, Supabase)
+- Comprehensive testing and demonstration scripts
 
 ## Development Style
 The goal here is to have Claude assist the user in learning how to utilise the tools in this project, so each task should be broken down and steppe through so that the user has an opportunity to learn whats going on and could feasibly continue development themselves without Claude afterward

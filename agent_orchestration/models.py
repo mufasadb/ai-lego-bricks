@@ -43,6 +43,8 @@ class StepType(str, Enum):
     PYTHON_FUNCTION = "python_function"
     # Graph memory formatting step types
     GRAPH_MEMORY_FORMAT = "graph_memory_format"
+    # Tool calling step types
+    TOOL_CALL = "tool_call"
 
 
 class InputReference(BaseModel):
@@ -135,6 +137,20 @@ class StepParallelizationConfig(BaseModel):
     resource_group: Optional[str] = None  # "llm", "tts", "memory", "document"
     priority: int = 1  # Higher priority steps get resources first
     timeout: Optional[int] = None  # Step-specific timeout in seconds
+
+
+class ToolCallConfig(BaseModel):
+    """Configuration for tool calling steps"""
+    provider: str = Field(description="LLM provider (openai, anthropic, gemini, ollama)")
+    model: str = Field(description="Model name to use for tool calling")
+    tools: Optional[List[str]] = Field(default=None, description="Specific tool names to use")
+    tool_category: Optional[str] = Field(default=None, description="Tool category to use")
+    tool_choice: Optional[str] = Field(default="auto", description="Tool choice strategy (auto, any, none, or specific tool name)")
+    max_iterations: int = Field(default=5, description="Maximum tool call iterations")
+    auto_execute: bool = Field(default=True, description="Automatically execute tool calls")
+    prompt: Optional[str] = Field(default=None, description="System prompt for tool calling")
+    temperature: float = Field(default=0.1, description="Temperature for tool calling")
+    thinking_tokens_mode: ThinkingTokensMode = Field(default=ThinkingTokensMode.HIDE, description="How to handle thinking tokens")
 
 
 class StepConfig(BaseModel):

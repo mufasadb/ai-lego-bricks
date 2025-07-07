@@ -1,7 +1,14 @@
 from typing import Dict, Any, Optional
 import os
 from .memory_service import MemoryService
-from ..credentials import CredentialManager, default_credential_manager
+try:
+    from ..credentials import CredentialManager, default_credential_manager
+except ImportError:
+    # Fallback for when running as standalone
+    import sys
+    import os
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from credentials import CredentialManager, default_credential_manager
 
 class MemoryServiceFactory:
     """Factory for creating memory service instances"""

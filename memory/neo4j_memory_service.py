@@ -10,6 +10,7 @@ from neo4j import GraphDatabase
 import numpy as np
 import logging
 from .memory_service import MemoryService, Memory
+from .graph_formatter_service import GraphMemoryFormat, GraphEntity, GraphRelationship
 
 # Import shared embedding service
 try:
@@ -38,7 +39,14 @@ class Neo4jMemoryService(MemoryService):
             password: Neo4j password (optional, uses no-auth if not provided)
             credential_manager: Optional credential manager for explicit credential handling
         """
-        from ..credentials import default_credential_manager
+        try:
+            from ..credentials import default_credential_manager
+        except ImportError:
+            # Fallback for when running as standalone
+            import sys
+            import os
+            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from credentials import default_credential_manager
         
         self.credential_manager = credential_manager or default_credential_manager
         self.uri = uri or self.credential_manager.get_credential("NEO4J_URI", "bolt://localhost:7687")
@@ -402,6 +410,220 @@ class Neo4jMemoryService(MemoryService):
                 
             except Exception as e:
                 logger.error(f"Failed to get related memories: {e}")
+                return []
+    
+    def store_graph_memory(self, graph_format: GraphMemoryFormat, additional_metadata: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Store a graph-formatted memory with enhanced entity and relationship data
+        
+        Args:
+            graph_format: GraphMemoryFormat object with entities and relationships
+            additional_metadata: Optional additional metadata to merge
+            
+        Returns:
+            Memory ID of the stored memory
+        """
+        memory_id = str(uuid.uuid4())
+        
+        # Combine metadata
+        metadata = graph_format.extraction_metadata.copy()
+        if additional_metadata:
+            metadata.update(additional_metadata)
+        
+        # Add graph-specific metadata
+        metadata.update({
+            'graph_formatted': True,
+            'entity_count': len(graph_format.entities),
+            'relationship_count': len(graph_format.relationships),
+            'summary': graph_format.summary
+        })
+        
+        # Generate embedding for the original content
+        content_embedding = self._generate_embedding(graph_format.original_content)
+        
+        with self.driver.session() as session:
+            try:
+                # Store the memory node
+                memory_query = """
+                CREATE (m:Memory {
+                    id: $id,
+                    content: $content,
+                    embedding: $embedding,
+                    metadata: $metadata,
+                    timestamp: $timestamp,
+                    summary: $summary,
+                    graph_formatted: true
+                })
+                """
+                
+                session.run(memory_query, {
+                    'id': memory_id,
+                    'content': graph_format.original_content,
+                    'embedding': content_embedding,
+                    'metadata': json.dumps(metadata),
+                    'timestamp': graph_format.timestamp.isoformat(),
+                    'summary': graph_format.summary
+                })
+                
+                # Create enhanced entities and relationships
+                self._create_graph_entities_and_relationships(session, memory_id, graph_format)
+                
+                logger.info(f"Stored graph-formatted memory with ID: {memory_id}")
+                return memory_id
+                
+            except Exception as e:
+                logger.error(f"Failed to store graph memory: {e}")
+                raise RuntimeError(f"Failed to store graph memory: {e}")
+    
+    def _create_graph_entities_and_relationships(self, session, memory_id: str, graph_format: GraphMemoryFormat):
+        """Create enhanced entities and relationships from graph format"""
+        
+        # Create entity nodes with properties
+        for entity in graph_format.entities:
+            entity_query = """
+            MERGE (e:Entity {name: $name, type: $type})
+            SET e.properties = $properties,
+                e.last_updated = $timestamp
+            WITH e
+            MATCH (m:Memory {id: $memory_id})
+            MERGE (m)-[:CONTAINS_ENTITY {
+                confidence: 1.0,
+                extraction_method: $extraction_method
+            }]->(e)
+            """
+            
+            session.run(entity_query, {
+                'name': entity.name,
+                'type': entity.type,
+                'properties': json.dumps(entity.properties),
+                'timestamp': datetime.now().isoformat(),
+                'memory_id': memory_id,
+                'extraction_method': graph_format.extraction_metadata.get('extraction_method', 'unknown')
+            })
+        
+        # Create relationships between entities
+        for relationship in graph_format.relationships:
+            relationship_query = """
+            MATCH (source:Entity {name: $source_name})
+            MATCH (target:Entity {name: $target_name})
+            MATCH (m:Memory {id: $memory_id})
+            MERGE (source)-[r:GRAPH_RELATIONSHIP {
+                type: $rel_type,
+                confidence: $confidence,
+                properties: $properties,
+                memory_id: $memory_id,
+                created_at: $timestamp
+            }]->(target)
+            MERGE (m)-[:CAPTURES_RELATIONSHIP]->(r)
+            """
+            
+            session.run(relationship_query, {
+                'source_name': relationship.source_entity,
+                'target_name': relationship.target_entity,
+                'rel_type': relationship.relationship_type,
+                'confidence': relationship.confidence,
+                'properties': json.dumps(relationship.properties),
+                'memory_id': memory_id,
+                'timestamp': datetime.now().isoformat()
+            })
+    
+    def retrieve_memories_by_entity(self, entity_name: str, limit: int = 10) -> List[Memory]:
+        """Retrieve memories that contain a specific entity"""
+        with self.driver.session() as session:
+            try:
+                query = """
+                MATCH (e:Entity {name: $entity_name})<-[:CONTAINS_ENTITY]-(m:Memory)
+                RETURN DISTINCT m.id as id, m.content as content, m.metadata as metadata, 
+                       m.timestamp as timestamp, m.summary as summary
+                ORDER BY m.timestamp DESC
+                LIMIT $limit
+                """
+                
+                result = session.run(query, {'entity_name': entity_name, 'limit': limit})
+                
+                memories = []
+                for record in result:
+                    metadata = json.loads(record['metadata']) if record['metadata'] else {}
+                    memory = Memory(
+                        content=record['content'],
+                        metadata=metadata,
+                        timestamp=datetime.fromisoformat(record['timestamp']),
+                        memory_id=record['id']
+                    )
+                    memories.append(memory)
+                
+                return memories
+                
+            except Exception as e:
+                logger.error(f"Failed to retrieve memories by entity: {e}")
+                return []
+    
+    def retrieve_memories_by_relationship_type(self, relationship_type: str, limit: int = 10) -> List[Memory]:
+        """Retrieve memories that contain a specific type of relationship"""
+        with self.driver.session() as session:
+            try:
+                query = """
+                MATCH (m:Memory)-[:CAPTURES_RELATIONSHIP]->(r:GRAPH_RELATIONSHIP {type: $rel_type})
+                RETURN DISTINCT m.id as id, m.content as content, m.metadata as metadata, 
+                       m.timestamp as timestamp, m.summary as summary
+                ORDER BY m.timestamp DESC
+                LIMIT $limit
+                """
+                
+                result = session.run(query, {'rel_type': relationship_type, 'limit': limit})
+                
+                memories = []
+                for record in result:
+                    metadata = json.loads(record['metadata']) if record['metadata'] else {}
+                    memory = Memory(
+                        content=record['content'],
+                        metadata=metadata,
+                        timestamp=datetime.fromisoformat(record['timestamp']),
+                        memory_id=record['id']
+                    )
+                    memories.append(memory)
+                
+                return memories
+                
+            except Exception as e:
+                logger.error(f"Failed to retrieve memories by relationship type: {e}")
+                return []
+    
+    def get_entity_relationships(self, entity_name: str, limit: int = 20) -> List[Dict[str, Any]]:
+        """Get all relationships for a specific entity"""
+        with self.driver.session() as session:
+            try:
+                query = """
+                MATCH (source:Entity {name: $entity_name})-[r:GRAPH_RELATIONSHIP]->(target:Entity)
+                RETURN source.name as source_entity,
+                       target.name as target_entity,
+                       r.type as relationship_type,
+                       r.confidence as confidence,
+                       r.properties as properties,
+                       r.memory_id as memory_id
+                ORDER BY r.confidence DESC
+                LIMIT $limit
+                """
+                
+                result = session.run(query, {'entity_name': entity_name, 'limit': limit})
+                
+                relationships = []
+                for record in result:
+                    properties = json.loads(record['properties']) if record['properties'] else {}
+                    relationship = {
+                        'source_entity': record['source_entity'],
+                        'target_entity': record['target_entity'],
+                        'relationship_type': record['relationship_type'],
+                        'confidence': record['confidence'],
+                        'properties': properties,
+                        'memory_id': record['memory_id']
+                    }
+                    relationships.append(relationship)
+                
+                return relationships
+                
+            except Exception as e:
+                logger.error(f"Failed to get entity relationships: {e}")
                 return []
     
     def close(self):

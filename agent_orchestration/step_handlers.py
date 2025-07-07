@@ -4,12 +4,13 @@ Step handlers for different workflow step types
 
 from typing import Any, Dict, Callable, Type, List
 try:
-    from .models import StepConfig, StepType, ExecutionContext, ConversationThread, ConversationMessage
+    from .models import StepConfig, StepType, ExecutionContext, ConversationThread, ConversationMessage, ThinkingTokensMode
 except ImportError:
-    from models import StepConfig, StepType, ExecutionContext, ConversationThread, ConversationMessage
+    from models import StepConfig, StepType, ExecutionContext, ConversationThread, ConversationMessage, ThinkingTokensMode
 from pydantic import BaseModel
 import importlib
 import json
+import pathlib
 
 # Import LLM providers
 import sys
@@ -40,6 +41,7 @@ class StepHandlerRegistry:
         self.handlers[StepType.LLM_VISION] = self._handle_llm_vision
         self.handlers[StepType.CHUNK_TEXT] = self._handle_chunk_text
         self.handlers[StepType.CONDITION] = self._handle_condition
+        self.handlers[StepType.LOOP] = self._handle_loop
         self.handlers[StepType.OUTPUT] = self._handle_output
         self.handlers[StepType.FILE_OUTPUT] = self._handle_file_output
         self.handlers[StepType.HUMAN_APPROVAL] = self._handle_human_approval
@@ -53,6 +55,8 @@ class StepHandlerRegistry:
         self.handlers[StepType.STT] = self._handle_stt
         # Python function execution handlers
         self.handlers[StepType.PYTHON_FUNCTION] = self._handle_python_function
+        # Graph memory formatting handlers
+        self.handlers[StepType.GRAPH_MEMORY_FORMAT] = self._handle_graph_memory_format
     
     def get_handler(self, step_type: StepType) -> Callable:
         """Get handler for a specific step type"""
@@ -718,22 +722,66 @@ class StepHandlerRegistry:
     def _handle_document_processing(self, step: StepConfig, inputs: Dict[str, Any], 
                                    context: ExecutionContext) -> Any:
         """Handle document processing step"""
-        pdf_service = self.orchestrator.get_service("pdf_processor")
-        if not pdf_service:
-            raise RuntimeError("PDF processor service not available")
-        
         file_path = inputs.get("file_path")
         if not file_path:
             raise ValueError("file_path required for document processing")
         
+        # Validate file path
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File not found: {file_path}")
+        
+        # Check file extension
+        file_ext = pathlib.Path(file_path).suffix.lower()
+        
+        # Handle markdown files
+        if file_ext == '.md':
+            return self._handle_markdown_processing(file_path, step.config)
+        
+        # Handle PDF files
+        elif file_ext == '.pdf':
+            return self._handle_pdf_processing(file_path, step.config)
+        
+        else:
+            raise ValueError(f"Unsupported file format: {file_ext}. Supported formats: ['.pdf', '.md']")
+    
+    def _handle_markdown_processing(self, file_path: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle markdown file processing"""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                content = file.read()
+        except Exception as e:
+            raise RuntimeError(f"Error reading markdown file: {str(e)}")
+        
+        # Create semantic chunks if requested
+        semantic_chunks = None
+        if config.get("semantic_analysis", False):
+            # Split markdown content into logical chunks (by headers, paragraphs, etc.)
+            chunks = self._create_markdown_chunks(content)
+            semantic_chunks = [{"content": chunk, "metadata": {}} for chunk in chunks]
+        
+        return {
+            "text": content,
+            "original_text": content,
+            "vision_text": None,
+            "semantic_chunks": semantic_chunks,
+            "page_count": 1,  # Markdown files are considered single-page documents
+            "processing_method": "markdown"
+        }
+    
+    def _handle_pdf_processing(self, file_path: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle PDF file processing"""
+        pdf_service = self.orchestrator.get_service("pdf_processor")
+        if not pdf_service:
+            raise RuntimeError("PDF processor service not available")
+        
         # Configure extraction options
         options = PDFExtractOptions()
-        if "enhance_with_llm" in step.config:
+        if "enhance_with_llm" in config:
             # Map enhance_with_llm to available vision processing options
-            options.use_vision_fallback = step.config["enhance_with_llm"]
-        if "semantic_analysis" in step.config:
+            options.use_vision_fallback = config["enhance_with_llm"]
+        if "semantic_analysis" in config:
             # Map semantic_analysis to semantic chunking
-            options.create_semantic_chunks = step.config["semantic_analysis"]
+            options.create_semantic_chunks = config["semantic_analysis"]
         
         # Extract text from PDF
         result = pdf_service.extract_text_from_file(file_path, options)
@@ -746,6 +794,29 @@ class StepHandlerRegistry:
             "page_count": result.page_count,
             "processing_method": result.processing_method
         }
+    
+    def _create_markdown_chunks(self, content: str) -> List[str]:
+        """Create logical chunks from markdown content"""
+        chunks = []
+        lines = content.split('\n')
+        current_chunk = []
+        
+        for line in lines:
+            # Start new chunk on headers (# ## ###)
+            if line.strip().startswith('#') and current_chunk:
+                chunks.append('\n'.join(current_chunk))
+                current_chunk = [line]
+            else:
+                current_chunk.append(line)
+        
+        # Add final chunk
+        if current_chunk:
+            chunks.append('\n'.join(current_chunk))
+        
+        # Filter out empty chunks
+        chunks = [chunk.strip() for chunk in chunks if chunk.strip()]
+        
+        return chunks
     
     def _handle_memory_store(self, step: StepConfig, inputs: Dict[str, Any], 
                             context: ExecutionContext) -> Any:
@@ -785,8 +856,8 @@ class StepHandlerRegistry:
         limit = step.config.get("limit", 5)
         threshold = step.config.get("threshold", 0.7)
         
-        # Retrieve memories
-        memories = memory_service.retrieve_memories(query, limit=limit, threshold=threshold)
+        # Retrieve memories (note: threshold filtering is handled internally by the memory service)
+        memories = memory_service.retrieve_memories(query, limit=limit)
         
         return {
             "memories": [
@@ -823,6 +894,21 @@ class StepHandlerRegistry:
         # Check if we should use conversation context
         use_conversation = step.config.get("use_conversation", False)
         conversation_id = step.config.get("conversation_id")
+        
+        # Configure thinking tokens handling
+        thinking_tokens_mode = step.config.get("thinking_tokens_mode")
+        preserve_thinking = step.config.get("preserve_thinking", False)
+        
+        # Get global thinking tokens config if not specified at step level
+        global_config = getattr(context, 'global_config', None)
+        if thinking_tokens_mode is None and global_config:
+            thinking_tokens_mode = global_config.thinking_tokens_mode
+        
+        # Convert string to enum if needed
+        if isinstance(thinking_tokens_mode, str):
+            thinking_tokens_mode = ThinkingTokensMode(thinking_tokens_mode)
+        elif thinking_tokens_mode is None:
+            thinking_tokens_mode = ThinkingTokensMode.AUTO
         
         if use_conversation:
             # Use conversation service for multi-turn conversations
@@ -881,7 +967,13 @@ class StepHandlerRegistry:
             # Create generation service with specific config for this call
             from llm.llm_types import LLMProvider
             provider_enum = LLMProvider(provider)
-            gen_service = type(generation_service)(provider_enum, model, temperature, max_tokens)
+            gen_service = type(generation_service)(
+                provider_enum, 
+                model, 
+                temperature, 
+                max_tokens,
+                thinking_tokens_mode=thinking_tokens_mode
+            )
             
             # Check for system prompt and handle streaming
             system_prompt = step.config.get("system_message")
@@ -902,20 +994,46 @@ class StepHandlerRegistry:
             else:
                 # Use regular generation methods
                 if system_prompt:
-                    response = gen_service.generate_with_system_prompt(message, system_prompt)
+                    response = gen_service.generate_with_system_prompt(
+                        message, 
+                        system_prompt, 
+                        thinking_tokens_mode=thinking_tokens_mode,
+                        preserve_for_structured=preserve_thinking
+                    )
                 else:
-                    response = gen_service.generate(message)
+                    response = gen_service.generate(
+                        message, 
+                        thinking_tokens_mode=thinking_tokens_mode,
+                        preserve_for_structured=preserve_thinking
+                    )
                 streaming_info = {"streamed": False}
             
-            return {
+            # Check if we should return thinking tokens information
+            result = {
                 "response": response,
                 "message": message,
                 "provider": provider,
                 "model": model,
                 "system_prompt": system_prompt,
                 "service_type": "generation",
+                "thinking_tokens_mode": thinking_tokens_mode.value if thinking_tokens_mode else None,
                 **streaming_info
             }
+            
+            # If extract mode is requested, get detailed thinking tokens info
+            if thinking_tokens_mode == ThinkingTokensMode.EXTRACT and not use_streaming:
+                if system_prompt:
+                    thinking_info = gen_service.generate_with_thinking_tokens(message, system_prompt)
+                else:
+                    thinking_info = gen_service.generate_with_thinking_tokens(message)
+                
+                result.update({
+                    "thinking_content": thinking_info.get("thinking_content"),
+                    "has_thinking_tokens": thinking_info.get("has_thinking_tokens", False),
+                    "original_response": thinking_info.get("original_response")
+                })
+            
+            return result
     
     def _handle_llm_chat_with_prompt(self, step: StepConfig, inputs: Dict[str, Any], 
                                    context: ExecutionContext) -> Any:
@@ -1708,6 +1826,159 @@ class StepHandlerRegistry:
             elif var_name in inputs:
                 return inputs
     
+    def _handle_loop(self, step: StepConfig, inputs: Dict[str, Any], 
+                    context: ExecutionContext) -> Any:
+        """Handle loop step - execute loop body for each item in a list"""
+        loop_type = step.config.get("loop_type", "iterate_list")
+        max_iterations = step.config.get("max_iterations", 10)
+        
+        if loop_type != "iterate_list":
+            raise ValueError(f"Unsupported loop type: {loop_type}")
+        
+        # Get items to process
+        items_to_process = inputs.get("items_to_process", [])
+        if not isinstance(items_to_process, list):
+            # If it's a string, try to parse it as JSON or split by lines
+            if isinstance(items_to_process, str):
+                try:
+                    items_to_process = json.loads(items_to_process)
+                except json.JSONDecodeError:
+                    # Try splitting by newlines and filtering empty lines
+                    items_to_process = [line.strip() for line in items_to_process.split('\n') if line.strip()]
+            else:
+                items_to_process = [items_to_process]
+        
+        # Limit iterations
+        if len(items_to_process) > max_iterations:
+            items_to_process = items_to_process[:max_iterations]
+        
+        # Get loop body steps
+        loop_body = step.config.get("loop_body", [])
+        if not loop_body:
+            raise ValueError("loop_body is required for loop step")
+        
+        # Execute loop body for each item
+        all_results = []
+        successful_steps = []
+        
+        for iteration_count, current_item in enumerate(items_to_process, 1):
+            # Create iteration context
+            iteration_context = {
+                "iteration_count": iteration_count,
+                "total_items": len(items_to_process),
+                "current_item": current_item
+            }
+            
+            # Create new context for this iteration
+            loop_context = ExecutionContext(
+                global_variables=context.global_variables.copy(),
+                conversation_threads=context.conversation_threads.copy(),
+                step_outputs=context.step_outputs.copy()
+            )
+            
+            # Add loop context variables
+            loop_context.global_variables["current_item"] = current_item
+            loop_context.global_variables["iteration_context"] = iteration_context
+            
+            # Execute loop body steps
+            iteration_results = {}
+            try:
+                for loop_step_config in loop_body:
+                    # Convert dict to StepConfig if needed
+                    if isinstance(loop_step_config, dict):
+                        loop_step = StepConfig(**loop_step_config)
+                    else:
+                        loop_step = loop_step_config
+                    
+                    # Resolve inputs for this step
+                    resolved_inputs = self._resolve_loop_inputs(loop_step, loop_context, current_item, iteration_context)
+                    
+                    # Get handler for this step type
+                    handler = self.orchestrator.step_handlers.get_handler(StepType(loop_step.type))
+                    if not handler:
+                        raise ValueError(f"No handler found for step type: {loop_step.type}")
+                    
+                    # Execute the step
+                    result = handler(loop_step, resolved_inputs, loop_context)
+                    
+                    # Store result in context
+                    loop_context.step_outputs[loop_step.id] = result
+                    iteration_results[loop_step.id] = result
+                
+                all_results.append(iteration_results)
+                successful_steps.append(current_item)
+                
+            except Exception as e:
+                # Handle step failure
+                error_result = {
+                    "error": str(e),
+                    "failed_item": current_item,
+                    "iteration_count": iteration_count
+                }
+                all_results.append(error_result)
+                # Continue with next iteration unless we want to stop on error
+                continue
+        
+        # Aggregate results
+        return {
+            "all_step_results": all_results,
+            "successful_steps": successful_steps,
+            "total_iterations": len(items_to_process),
+            "successful_iterations": len(successful_steps)
+        }
+    
+    def _resolve_loop_inputs(self, step: StepConfig, context: ExecutionContext, 
+                           current_item: Any, iteration_context: Dict[str, Any]) -> Dict[str, Any]:
+        """Resolve inputs for a loop step, handling special loop variables"""
+        resolved_inputs = {}
+        
+        if not step.inputs:
+            return resolved_inputs
+        
+        for input_key, input_value in step.inputs.items():
+            # Handle special loop variables
+            if input_value == "$current_item":
+                resolved_inputs[input_key] = current_item
+            elif isinstance(input_value, str) and input_value.startswith("$iteration_context."):
+                # Extract the context field
+                context_field = input_value[len("$iteration_context."):]
+                resolved_inputs[input_key] = iteration_context.get(context_field)
+            else:
+                # Use standard input resolution
+                resolved_inputs[input_key] = self._resolve_input_value(input_value, context)
+        
+        return resolved_inputs
+    
+    def _resolve_input_value(self, input_value: Any, context: ExecutionContext) -> Any:
+        """Resolve input value from context, handling references and variables"""
+        if isinstance(input_value, dict) and "from_step" in input_value:
+            # Reference to another step's output
+            step_id = input_value["from_step"]
+            field = input_value["field"]
+            
+            if step_id in context.step_outputs:
+                step_output = context.step_outputs[step_id]
+                if isinstance(step_output, dict) and field in step_output:
+                    return step_output[field]
+                elif hasattr(step_output, field):
+                    return getattr(step_output, field)
+                else:
+                    return step_output
+            else:
+                raise ValueError(f"Step {step_id} output not found in context")
+        
+        elif isinstance(input_value, str) and input_value.startswith("$"):
+            # Global variable reference
+            var_name = input_value[1:]
+            if var_name in context.global_variables:
+                return context.global_variables[var_name]
+            else:
+                raise ValueError(f"Global variable {var_name} not found")
+        
+        else:
+            # Direct value
+            return input_value
+
     def _handle_concept_evaluation(self, step: StepConfig, inputs: Dict[str, Any], 
                                   context: ExecutionContext) -> Any:
         """Handle concept evaluation step - run prompt evaluation using LLM judge"""
@@ -2499,3 +2770,60 @@ class StepHandlerRegistry:
                     raise ValueError(f"Required parameter '{param_name}' not found in inputs")
         
         return function_args
+    
+    def _handle_graph_memory_format(self, step: StepConfig, inputs: Dict[str, Any], 
+                                   context: ExecutionContext) -> Any:
+        """Handle graph memory formatting step"""
+        try:
+            # Get required services
+            generation_service = self.orchestrator.get_service("generation")
+            prompt_service = self.orchestrator.get_service("prompt")
+            
+            if not generation_service:
+                raise RuntimeError("Generation service not available for graph formatting")
+            if not prompt_service:
+                raise RuntimeError("Prompt service not available for graph formatting")
+            
+            # Import the graph formatter service
+            from memory.graph_formatter_service import GraphFormatterService
+            
+            # Create formatter instance
+            formatter = GraphFormatterService(generation_service, prompt_service)
+            
+            # Get content to format
+            content = inputs.get("content")
+            if not content:
+                raise ValueError("content required for graph memory formatting")
+            
+            # Get optional configuration
+            context_info = inputs.get("context", step.config.get("context"))
+            extraction_mode = step.config.get("extraction_mode", "comprehensive")
+            
+            # Format the memory as graph
+            graph_format = formatter.format_memory_as_graph(
+                content=content,
+                context=context_info,
+                extraction_mode=extraction_mode
+            )
+            
+            # Return structured result
+            return {
+                "success": True,
+                "graph_format": graph_format.dict(),
+                "entity_count": len(graph_format.entities),
+                "relationship_count": len(graph_format.relationships),
+                "extraction_method": graph_format.extraction_metadata.get("extraction_method"),
+                "summary": graph_format.summary,
+                "original_content": content,
+                "extraction_mode": extraction_mode
+            }
+            
+        except Exception as e:
+            # Return error information for debugging
+            return {
+                "success": False,
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "content": inputs.get("content", ""),
+                "extraction_mode": step.config.get("extraction_mode", "comprehensive")
+            }

@@ -15,7 +15,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
-    from memory.memory_service import create_memory_service
+    from memory import create_memory_service
 except ImportError:
     create_memory_service = None
 
@@ -233,6 +233,9 @@ class WorkflowExecutor:
         try:
             # Initialize context with initial inputs
             self.context.global_variables.update(initial_inputs)
+            
+            # Set global configuration in context for step handlers
+            self.context.global_config = workflow.config
             
             # Create a mapping of step IDs to steps for easy lookup
             step_map = {step.id: step for step in workflow.steps}

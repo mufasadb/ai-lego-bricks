@@ -1,0 +1,227 @@
+{
+  "name": "json_props_demo_agent",
+  "description": "Demonstrates the new JSON props functionality for natural JSON structure definitions",
+  "config": {
+    "default_llm_provider": "gemini",
+    "default_model": "gemini-1.5-flash"
+  },
+  "steps": [
+    {
+      "id": "get_user_info",
+      "type": "input",
+      "description": "Get user information for analysis",
+      "config": {
+        "prompt": "Please provide some information about yourself (name, age, interests, etc.):"
+      },
+      "outputs": ["user_input"]
+    },
+    {
+      "id": "analyze_user_profile",
+      "type": "llm_chat",
+      "description": "Analyze user profile and generate structured response using JSON props",
+      "json_props": {
+        "user_profile": {
+          "description": "Structure for user profile analysis",
+          "structure": {
+            "name": "{{user_name}}",
+            "age_category": "young/adult/senior",
+            "interests": ["interest1", "interest2", "interest3"],
+            "personality_traits": {
+              "openness": "1-10 scale",
+              "extraversion": "1-10 scale",
+              "agreeableness": "1-10 scale"
+            },
+            "recommendations": [
+              {
+                "category": "hobby/career/lifestyle",
+                "suggestion": "specific recommendation",
+                "reason": "why this recommendation fits"
+              }
+            ]
+          },
+          "variables": {
+            "user_name": "Unknown User"
+          },
+          "required_variables": []
+        },
+        "response_format": {
+          "description": "Expected response format for the analysis",
+          "structure": {
+            "analysis_summary": "Brief summary of the user",
+            "structured_data": "{{json_user_profile}}",
+            "confidence_score": "0.0-1.0",
+            "notes": "Any additional observations"
+          }
+        }
+      },
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "temperature": 0.3
+      },
+      "inputs": {
+        "message": "Analyze this user information and provide insights: {{user_input}}\n\nPlease structure your response as follows:\n{{json_response_format}}\n\nFor the structured_data field, use this format:\n{{json_user_profile}}",
+        "user_input": {
+          "from_step": "get_user_info",
+          "field": "user_input"
+        }
+      },
+      "outputs": ["analysis_response"]
+    },
+    {
+      "id": "generate_recommendations",
+      "type": "llm_structured",
+      "description": "Generate structured recommendations using JSON props for schema definition",
+      "json_props": {
+        "recommendation_schema": {
+          "description": "Schema for recommendation output",
+          "structure": {
+            "recommendations": [
+              {
+                "id": "unique_id",
+                "title": "recommendation title",
+                "description": "detailed description",
+                "category": "{{category_type}}",
+                "priority": "high/medium/low",
+                "estimated_time": "time to implement",
+                "resources_needed": ["resource1", "resource2"],
+                "success_metrics": ["metric1", "metric2"]
+              }
+            ],
+            "summary": {
+              "total_recommendations": "number",
+              "categories_covered": ["category1", "category2"],
+              "implementation_timeline": "suggested timeframe"
+            }
+          },
+          "variables": {
+            "category_type": "personal_development"
+          }
+        }
+      },
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-pro",
+        "temperature": 0.4,
+        "response_schema": "{{json_recommendation_schema_dict}}"
+      },
+      "inputs": {
+        "message": "Based on this user analysis, generate personalized recommendations: {{analysis_response}}\n\nUse the following JSON structure for your response:\n{{json_recommendation_schema}}",
+        "analysis_response": {
+          "from_step": "analyze_user_profile",
+          "field": "analysis_response"
+        }
+      },
+      "outputs": ["structured_recommendations"]
+    },
+    {
+      "id": "format_final_output",
+      "type": "llm_chat",
+      "description": "Format the final output with both analysis and recommendations",
+      "json_props": {
+        "final_report": {
+          "description": "Complete user analysis report format",
+          "structure": {
+            "report_header": {
+              "title": "Personal Analysis Report",
+              "generated_date": "{{current_date}}",
+              "report_id": "{{report_id}}"
+            },
+            "user_analysis": "{{user_analysis_content}}",
+            "recommendations": "{{recommendations_content}}",
+            "next_steps": [
+              "Step 1: Review recommendations",
+              "Step 2: Prioritize based on personal goals",
+              "Step 3: Create implementation plan"
+            ],
+            "report_footer": {
+              "disclaimer": "This analysis is for informational purposes only",
+              "contact": "For questions, please reach out to support"
+            }
+          },
+          "variables": {
+            "current_date": "2024-01-01",
+            "report_id": "RPT-001"
+          }
+        }
+      },
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "temperature": 0.2
+      },
+      "inputs": {
+        "message": "Create a comprehensive final report combining the user analysis and recommendations.\n\nUser Analysis: {{user_analysis}}\nRecommendations: {{recommendations}}\n\nFormat the report using this structure:\n{{json_final_report}}\n\nMake it professional and actionable.",
+        "user_analysis": {
+          "from_step": "analyze_user_profile",
+          "field": "analysis_response"
+        },
+        "recommendations": {
+          "from_step": "generate_recommendations",
+          "field": "structured_recommendations"
+        }
+      },
+      "outputs": ["final_report"]
+    },
+    {
+      "id": "save_report",
+      "type": "file_output",
+      "description": "Save the complete analysis report",
+      "config": {
+        "file_path": "output/user_analysis_report.json",
+        "format": "json",
+        "create_dirs": true
+      },
+      "inputs": {
+        "content": {
+          "user_input": {
+            "from_step": "get_user_info",
+            "field": "user_input"
+          },
+          "analysis": {
+            "from_step": "analyze_user_profile",
+            "field": "analysis_response"
+          },
+          "recommendations": {
+            "from_step": "generate_recommendations",
+            "field": "structured_recommendations"
+          },
+          "final_report": {
+            "from_step": "format_final_output",
+            "field": "final_report"
+          },
+          "metadata": {
+            "generated_timestamp": "auto",
+            "agent_name": "json_props_demo_agent",
+            "json_props_used": true
+          }
+        }
+      },
+      "outputs": ["report_path"]
+    },
+    {
+      "id": "output_results",
+      "type": "output",
+      "description": "Return the complete analysis results",
+      "config": {
+        "format": "json"
+      },
+      "inputs": {
+        "final_report": {
+          "from_step": "format_final_output",
+          "field": "final_report"
+        },
+        "structured_recommendations": {
+          "from_step": "generate_recommendations",
+          "field": "structured_recommendations"
+        },
+        "report_file": {
+          "from_step": "save_report",
+          "field": "report_path"
+        },
+        "success": true,
+        "message": "User analysis completed successfully using JSON props for clean structure definitions"
+      }
+    }
+  ]
+}

@@ -168,6 +168,8 @@ class StepConfig(BaseModel):
     preserve_previous_results: bool = False  # Whether to preserve results from previous iterations
     # Prompt management integration
     prompt_ref: Optional[PromptReference] = None  # Reference to managed prompt
+    # JSON props for inline JSON structure definitions
+    json_props: Optional[Dict[str, Dict[str, Any]]] = Field(default_factory=dict)
     # Parallelization configuration
     parallelization: Optional[StepParallelizationConfig] = None
 

@@ -69,6 +69,44 @@ class StepHandlerRegistry:
         """Register a custom handler for a step type"""
         self.handlers[step_type] = handler
     
+    def _process_json_props(self, step: StepConfig, inputs: Dict[str, Any], 
+                           context: ExecutionContext) -> Dict[str, Any]:
+        """Process JSON props and add them to the inputs context"""
+        if not step.json_props:
+            return inputs
+        
+        # Import JsonStructure class for processing
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'prompt'))
+        from prompt_models import JsonStructure
+        
+        # Build template context for JSON prop rendering
+        template_context = {}
+        template_context.update(inputs)  # Step inputs
+        template_context.update(context.global_variables)  # Global variables
+        
+        # Process each JSON prop
+        enhanced_inputs = inputs.copy()
+        for prop_name, prop_config in step.json_props.items():
+            try:
+                # Create JsonStructure instance from config
+                json_structure = JsonStructure(
+                    structure=prop_config.get("structure", {}),
+                    description=prop_config.get("description"),
+                    variables=prop_config.get("variables", {}),
+                    required_variables=prop_config.get("required_variables", [])
+                )
+                
+                # Render JSON prop and add to inputs
+                enhanced_inputs[f"json_{prop_name}"] = json_structure.render(template_context)
+                enhanced_inputs[f"json_{prop_name}_dict"] = json_structure.render_as_dict(template_context)
+                
+            except Exception as e:
+                raise ValueError(f"Failed to process JSON prop '{prop_name}': {e}")
+        
+        return enhanced_inputs
+    
     def _handle_input(self, step: StepConfig, inputs: Dict[str, Any], 
                      context: ExecutionContext) -> Any:
         """Handle input step - typically collects user input or external data"""
@@ -981,7 +1019,10 @@ class StepHandlerRegistry:
         if step.prompt_ref:
             return self._handle_llm_chat_with_prompt(step, inputs, context)
         
-        message = inputs.get("message")
+        # Process JSON props first
+        enhanced_inputs = self._process_json_props(step, inputs, context)
+        
+        message = enhanced_inputs.get("message")
         if not message:
             raise ValueError("message required for LLM chat")
         
@@ -1309,7 +1350,10 @@ class StepHandlerRegistry:
         if not llm_factory:
             raise RuntimeError("LLM factory not available")
         
-        message = inputs.get("message")
+        # Process JSON props first
+        enhanced_inputs = self._process_json_props(step, inputs, context)
+        
+        message = enhanced_inputs.get("message")
         if not message:
             raise ValueError("message required for LLM structured response")
         

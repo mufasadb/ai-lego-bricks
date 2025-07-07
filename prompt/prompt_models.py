@@ -36,12 +36,54 @@ class PromptMetadata(BaseModel):
     custom_fields: Dict[str, Any] = Field(default_factory=dict)
 
 
+class JsonStructure(BaseModel):
+    """JSON structure definition with variable support"""
+    structure: Dict[str, Any]
+    description: Optional[str] = None
+    variables: Dict[str, Any] = Field(default_factory=dict)
+    required_variables: List[str] = Field(default_factory=list)
+    
+    def render(self, context: Dict[str, Any]) -> str:
+        """Render JSON structure as formatted string with variable substitution"""
+        import json
+        import jinja2
+        
+        # Check required variables
+        missing_vars = [var for var in self.required_variables if var not in context]
+        if missing_vars:
+            raise ValueError(f"Missing required variables: {missing_vars}")
+        
+        # Merge default variables with context
+        render_context = {**self.variables, **context}
+        
+        # Convert structure to JSON string for template processing
+        structure_json = json.dumps(self.structure, indent=2)
+        
+        # Apply Jinja2 templating to the JSON string
+        template = jinja2.Template(structure_json)
+        rendered_json = template.render(**render_context)
+        
+        # Parse back to validate JSON and reformat
+        try:
+            parsed = json.loads(rendered_json)
+            return json.dumps(parsed, indent=2)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON after variable substitution: {e}")
+    
+    def render_as_dict(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Render JSON structure as dictionary with variable substitution"""
+        import json
+        rendered_json = self.render(context)
+        return json.loads(rendered_json)
+
+
 class PromptTemplate(BaseModel):
     """Template configuration for prompt variable substitution"""
     template: str
     variables: Dict[str, Any] = Field(default_factory=dict)
     required_variables: List[str] = Field(default_factory=list)
     template_engine: str = "jinja2"  # Support for different engines
+    json_props: Dict[str, JsonStructure] = Field(default_factory=dict)  # JSON structures
     
     def render(self, context: Dict[str, Any]) -> str:
         """Render template with provided context"""
@@ -55,11 +97,35 @@ class PromptTemplate(BaseModel):
         # Merge default variables with context
         render_context = {**self.variables, **context}
         
+        # Add rendered JSON props to context
+        json_context = {}
+        for prop_name, json_structure in self.json_props.items():
+            try:
+                json_context[f"json_{prop_name}"] = json_structure.render(render_context)
+                json_context[f"json_{prop_name}_dict"] = json_structure.render_as_dict(render_context)
+            except Exception as e:
+                raise ValueError(f"Failed to render JSON prop '{prop_name}': {e}")
+        
+        # Merge JSON context into render context
+        render_context.update(json_context)
+        
         if self.template_engine == "jinja2":
             template = jinja2.Template(self.template)
             return template.render(**render_context)
         else:
             raise ValueError(f"Unsupported template engine: {self.template_engine}")
+    
+    def get_json_prop(self, prop_name: str, context: Dict[str, Any] = None) -> str:
+        """Get a specific JSON prop rendered as a string"""
+        if prop_name not in self.json_props:
+            raise ValueError(f"JSON prop '{prop_name}' not found")
+        return self.json_props[prop_name].render(context or {})
+    
+    def get_json_prop_dict(self, prop_name: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Get a specific JSON prop rendered as a dictionary"""
+        if prop_name not in self.json_props:
+            raise ValueError(f"JSON prop '{prop_name}' not found")
+        return self.json_props[prop_name].render_as_dict(context or {})
 
 
 class PromptContent(BaseModel):

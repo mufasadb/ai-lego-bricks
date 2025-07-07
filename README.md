@@ -118,6 +118,7 @@ This project provides:
 11. **📄 Visual Content Processing** - Extract text from PDFs, images, and base64 data with precise bounding boxes
 12. **🎯 Prompt Management** - Externalized, versioned prompts with evaluation and A/B testing
 13. **📊 Concept Evaluation** - LLM-as-judge framework for testing prompt quality
+14. **🔧 JSON Props Extension** - Natural JSON structure definitions with variable substitution for cleaner agent configurations
 
 ## 🏃‍♂️ Getting Started
 
@@ -1036,6 +1037,45 @@ Date/Amount Parsing → Bounding Box Mapping → Structured Output
 }
 ```
 
+### JSON Props Extension 🆕
+
+The **JSON Props Extension** makes it much easier to work with structured JSON in agent configurations:
+
+**Before** (awkward inline JSON):
+```json
+{
+  "inputs": {
+    "message": "Respond using: {\"name\": \"{{user_name}}\", \"score\": 0.95, \"items\": [\"item1\"]}"
+  }
+}
+```
+
+**After** (clean with JSON props):
+```json
+{
+  "json_props": {
+    "response_format": {
+      "structure": {
+        "name": "{{user_name}}",
+        "score": 0.95,
+        "items": ["item1", "item2"]
+      }
+    }
+  },
+  "inputs": {
+    "message": "Respond using this format: {{json_response_format}}"
+  }
+}
+```
+
+**Key Benefits:**
+- ✅ **Natural Structure Definition**: Define JSON separately from prompt text
+- ✅ **Variable Substitution**: Full Jinja2 templating support within JSON
+- ✅ **Clean Prompts**: Keep prompts readable and maintainable
+- ✅ **Reusable Templates**: Define once, reference multiple times
+
+See `agent_orchestration/examples/json_props_demo_agent.json` for a complete example and `agent_orchestration/examples/JSON_PROPS_README.md` for detailed documentation.
+
 ### Getting Started with Agents
 
 1. **Study Examples**: Check `agent_orchestration/examples/` for templates
@@ -1043,6 +1083,7 @@ Date/Amount Parsing → Bounding Box Mapping → Structured Output
 3. **Add Memory**: Include storage and retrieval for context
 4. **Use Streaming**: Enable real-time responses with Ollama
 5. **Structure Output**: Define schemas for reliable data extraction
+6. **🆕 Use JSON Props**: Leverage clean JSON structure definitions for better maintainability
 
 For detailed documentation, see **[agent_orchestration/README.md](agent_orchestration/README.md)**
 

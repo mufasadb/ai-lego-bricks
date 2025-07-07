@@ -8,6 +8,14 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 
 
+class ThinkingTokensMode(str, Enum):
+    """Modes for handling thinking tokens in LLM responses"""
+    SHOW = "show"      # Return complete response with thinking tokens
+    HIDE = "hide"      # Strip thinking tokens, return clean response
+    EXTRACT = "extract" # Return both thinking and clean response separately
+    AUTO = "auto"      # Intelligent mode based on response type
+
+
 class StepType(str, Enum):
     """Available step types for workflow execution"""
     INPUT = "input"
@@ -33,6 +41,8 @@ class StepType(str, Enum):
     STT = "stt"
     # Python function execution step types
     PYTHON_FUNCTION = "python_function"
+    # Graph memory formatting step types
+    GRAPH_MEMORY_FORMAT = "graph_memory_format"
 
 
 class InputReference(BaseModel):
@@ -142,6 +152,16 @@ class WorkflowGlobalConfig(BaseModel):
     default_llm_provider: str = "gemini"
     default_model: Optional[str] = None
     max_iterations: int = 10  # Default maximum iterations per step for loop-back protection
+    # Thinking tokens configuration
+    thinking_tokens_mode: ThinkingTokensMode = ThinkingTokensMode.AUTO
+    thinking_tokens_delimiters: List[str] = Field(default_factory=lambda: [
+        "<thinking>",
+        "<think>",
+        "<reasoning>",
+        "<reflection>",
+        "**Thinking:**",
+        "**Reasoning:**"
+    ])
 
 
 class WorkflowConfig(BaseModel):
@@ -163,6 +183,8 @@ class ExecutionContext(BaseModel):
     # Iteration tracking for loop-back support
     step_iteration_counts: Dict[str, int] = Field(default_factory=dict)  # step_id -> iteration count
     step_iteration_history: Dict[str, List[Any]] = Field(default_factory=dict)  # step_id -> list of previous results
+    # Global configuration for thinking tokens and other settings
+    global_config: Optional["WorkflowGlobalConfig"] = None
     
     def get_active_conversation(self) -> Optional[ConversationThread]:
         """Get the currently active conversation thread"""

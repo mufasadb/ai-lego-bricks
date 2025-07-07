@@ -1,18 +1,23 @@
-STT implimentation Plan
-We should implement speech to text by hitting either google's speech to text or the local version I have on the unread server which is faster whisperer and is on the same IP address as the TTS with port 10300. Let's make this our service and make it something that an agent orchestra can utilise as a note..
-
-
 Let's make sure they read me is up-to-date. We should especially try to make sure that an AI might reasonably be able to read the docs for this when this project is used as a library so that it might quickly be able to implement something as instructed.
-
-Let's review the way that credentials are handled, especially when considering the use of this project as a library in another project
 
 
 Bounding Box Plan
 One of the goals of using a vision model was in the hope that we would be able to identify where a specific piece of information would be. Can we please see if we can make a test agent that asks the old llama vision model where the dollar amount is for GST in the zoom invoice and then see if it gives us something like a bounding box which we could then use in a front end to identify the specific position in the PDF
 
+An AI Coordinator Workflow example
+Can we pelase make an ai coordinator test that takes a given request and decides if it should go to our japanese expert, our home assistant expert or our general tool. the coordinator and each of the nodes will be ollama with the r1 abliterated model, the first query lets make a prompt that sorts them into their categories, then a customised prompt for each of the "experts" then for our purposes lets just hand over the request to a streaming version of ollama who will respond to the question in streaming mode. lets make prompts for each. and then lets make an eval setup for each with some examples to make sure our pompt works as expected.
 
-Can you please run each of the agents 
+
+Eval
+Lets make sure our eval provides feedback (from the LLM as a judge based on which of the criteria it didnt meet) so that a prompt could try to zero in on the correct answer.
+
+Prompt stuff
+how does our prompt and prompts setup work now and how does it interface with our eval system? how can i use it if iwanted to make a prompt for an agent and iterate over it, or write evals for it to check its working
 
 
-plan: fix neo4j storing plain graph stuff
-so our model stores content in neo4j, and theidea ofusing that for memory retreival is so that we can store complex ideas and their relationships to each other. But if my understanding is correct, then you have to record the information and how these notes interact with each other with the specific format and I don't think that our system currently does that. Should we implement a system which takes information gives it to an LLM to format it in graph notation noting the relationships based on modern approach for graph memories for context.
+Thinking Tokens
+Some of the models that get used will have thinking tokens in them, we need to be able to allow user sto either view or not view thinking tokens, or to take advantage of the advanced erasoning of thinking models without letting the thinking tokens muddy the response in a structued answer.
+
+
+Model selection for ollama
+does the agent orchestrator model selection actually affect the model for ollama? what does it do when there are no models by that name

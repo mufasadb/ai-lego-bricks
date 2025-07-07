@@ -1,6 +1,6 @@
 {
   "name": "voice_assistant_agent",
-  "description": "Complete voice interaction pipeline: STT → LLM → TTS with conversation memory",
+  "description": "Simplified voice assistant: Text input → LLM → TTS with conversation memory",
   "config": {
     "default_stt_provider": "faster_whisper",
     "default_llm_provider": "anthropic",
@@ -9,32 +9,13 @@
   },
   "steps": [
     {
-      "id": "get_voice_input",
+      "id": "get_user_input",
       "type": "input",
-      "description": "Get voice input file path",
+      "description": "Get user message",
       "config": {
-        "prompt": "Enter path to voice input file (.wav, .mp3, etc.):"
+        "prompt": "What would you like to say?"
       },
-      "outputs": ["voice_input_path"]
-    },
-    {
-      "id": "transcribe_speech",
-      "type": "stt",
-      "description": "Convert speech to text",
-      "config": {
-        "provider": "faster_whisper",
-        "language": "auto",
-        "model": "base",
-        "enable_word_timestamps": true,
-        "temperature": 0.0
-      },
-      "inputs": {
-        "audio_file_path": {
-          "from_step": "get_voice_input",
-          "field": "voice_input_path"
-        }
-      },
-      "outputs": ["transcript", "success", "language_detected", "confidence"]
+      "outputs": ["user_message"]
     },
     {
       "id": "process_with_llm",
@@ -50,31 +31,11 @@
       },
       "inputs": {
         "message": {
-          "from_step": "transcribe_speech",
-          "field": "transcript"
+          "from_step": "get_user_input",
+          "field": "user_message"
         }
       },
       "outputs": ["response", "conversation_id"]
-    },
-    {
-      "id": "convert_to_speech",
-      "type": "tts",
-      "description": "Convert response to natural speech",
-      "config": {
-        "provider": "coqui_xtts",
-        "voice": "default",
-        "output_format": "wav",
-        "output_path": "output/voice_assistant_response.wav",
-        "speed": 1.0,
-        "create_dirs": true
-      },
-      "inputs": {
-        "text": {
-          "from_step": "process_with_llm",
-          "field": "response"
-        }
-      },
-      "outputs": ["audio_file_path", "success", "duration_ms"]
     },
     {
       "id": "save_conversation",
@@ -93,35 +54,15 @@
             "field": "conversation_id"
           },
           "user_input": {
-            "audio_file": {
-              "from_step": "get_voice_input",
-              "field": "voice_input_path"
-            },
-            "transcript": {
-              "from_step": "transcribe_speech",
-              "field": "transcript"
-            },
-            "language_detected": {
-              "from_step": "transcribe_speech",
-              "field": "language_detected"
-            },
-            "confidence": {
-              "from_step": "transcribe_speech",
-              "field": "confidence"
+            "message": {
+              "from_step": "get_user_input",
+              "field": "user_message"
             }
           },
           "assistant_response": {
             "text": {
               "from_step": "process_with_llm",
               "field": "response"
-            },
-            "audio_file": {
-              "from_step": "convert_to_speech",
-              "field": "audio_file_path"
-            },
-            "duration_ms": {
-              "from_step": "convert_to_speech",
-              "field": "duration_ms"
             }
           }
         }
@@ -136,25 +77,13 @@
         "format": "json"
       },
       "inputs": {
-        "user_transcript": {
-          "from_step": "transcribe_speech",
-          "field": "transcript"
-        },
-        "language_detected": {
-          "from_step": "transcribe_speech",
-          "field": "language_detected"
+        "user_message": {
+          "from_step": "get_user_input",
+          "field": "user_message"
         },
         "assistant_response": {
           "from_step": "process_with_llm",
           "field": "response"
-        },
-        "response_audio_file": {
-          "from_step": "convert_to_speech",
-          "field": "audio_file_path"
-        },
-        "response_duration_ms": {
-          "from_step": "convert_to_speech",
-          "field": "duration_ms"
         },
         "conversation_log": {
           "from_step": "save_conversation",

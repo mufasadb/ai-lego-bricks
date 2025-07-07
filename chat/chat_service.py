@@ -320,6 +320,11 @@ def create_chat_service(provider: str, model: str = None, **kwargs):
         # Fallback to legacy implementation
         return ChatService(provider, model, **kwargs)
 
+# Service discovery functions
+def get_available_chat_services() -> List[str]:
+    """Get list of available chat services"""
+    return ["ollama", "gemini"]
+
 # Convenience functions for quick usage
 def quick_chat_ollama(message: str, model: str = None) -> str:
     """Quick one-off chat with Ollama"""

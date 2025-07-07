@@ -832,14 +832,35 @@ class StepHandlerRegistry:
         metadata = inputs.get("metadata", {})
         metadata.update(step.config.get("metadata", {}))
         
-        # Store memory
-        memory_id = memory_service.store_memory(content, metadata)
-        
-        return {
-            "memory_id": memory_id,
-            "stored_content": content,
-            "metadata": metadata
-        }
+        # Handle case where content is a list of chunks (from chunking step)
+        if isinstance(content, list):
+            # Store each chunk as a separate memory
+            memory_ids = []
+            for i, chunk in enumerate(content):
+                if isinstance(chunk, str) and chunk.strip():
+                    # Add chunk index to metadata
+                    chunk_metadata = metadata.copy()
+                    chunk_metadata["chunk_index"] = i
+                    chunk_metadata["total_chunks"] = len(content)
+                    
+                    memory_id = memory_service.store_memory(chunk, chunk_metadata)
+                    memory_ids.append(memory_id)
+            
+            return {
+                "memory_ids": memory_ids,
+                "stored_count": len(memory_ids),
+                "total_chunks": len(content),
+                "metadata": metadata
+            }
+        else:
+            # Single content item - original behavior
+            memory_id = memory_service.store_memory(content, metadata)
+            
+            return {
+                "memory_id": memory_id,
+                "stored_content": content,
+                "metadata": metadata
+            }
     
     def _handle_memory_retrieve(self, step: StepConfig, inputs: Dict[str, Any], 
                                context: ExecutionContext) -> Any:
@@ -1872,7 +1893,7 @@ class StepHandlerRegistry:
             # Create new context for this iteration
             loop_context = ExecutionContext(
                 global_variables=context.global_variables.copy(),
-                conversation_threads=context.conversation_threads.copy(),
+                conversations=context.conversations.copy(),
                 step_outputs=context.step_outputs.copy()
             )
             

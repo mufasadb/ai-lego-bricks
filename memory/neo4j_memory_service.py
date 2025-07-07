@@ -130,17 +130,20 @@ class Neo4jMemoryService(MemoryService):
                     id: $id,
                     content: $content,
                     embedding: $embedding,
-                    metadata: $metadata,
+                    metadata_json: $metadata,
                     timestamp: $timestamp
                 })
                 RETURN m.id as id
                 """
                 
+                # Serialize metadata to JSON string
+                metadata_json = json.dumps(metadata or {})
+                
                 result = session.run(query, {
                     'id': memory_id,
                     'content': content,
                     'embedding': embedding,
-                    'metadata': json.dumps(metadata or {}),
+                    'metadata': metadata_json,
                     'timestamp': timestamp
                 })
                 
@@ -183,7 +186,7 @@ class Neo4jMemoryService(MemoryService):
                 fetch_query = """
                 MATCH (m:Memory)
                 RETURN m.id as id, m.content as content, m.embedding as embedding, 
-                       m.metadata as metadata, m.timestamp as timestamp
+                       COALESCE(m.metadata_json, m.metadata) as metadata, m.timestamp as timestamp
                 """
                 
                 result = session.run(fetch_query)
@@ -193,7 +196,13 @@ class Neo4jMemoryService(MemoryService):
                     memory_embedding = record['embedding']
                     similarity = self._calculate_similarity(query_embedding, memory_embedding)
                     
-                    metadata = json.loads(record['metadata']) if record['metadata'] else {}
+                    # Handle both old and new metadata formats
+                    metadata_raw = record['metadata']
+                    if isinstance(metadata_raw, str):
+                        metadata = json.loads(metadata_raw) if metadata_raw else {}
+                    else:
+                        metadata = metadata_raw if metadata_raw else {}
+                    
                     memory = Memory(
                         content=record['content'],
                         metadata=metadata,
@@ -219,7 +228,7 @@ class Neo4jMemoryService(MemoryService):
             text_query = """
             MATCH (m:Memory)
             WHERE m.content CONTAINS $query
-            RETURN m.id as id, m.content as content, m.metadata as metadata, 
+            RETURN m.id as id, m.content as content, COALESCE(m.metadata_json, m.metadata) as metadata, 
                    m.timestamp as timestamp
             ORDER BY m.timestamp DESC
             LIMIT $limit
@@ -229,7 +238,13 @@ class Neo4jMemoryService(MemoryService):
             
             memories = []
             for record in result:
-                metadata = json.loads(record['metadata']) if record['metadata'] else {}
+                # Handle both old and new metadata formats
+                metadata_raw = record['metadata']
+                if isinstance(metadata_raw, str):
+                    metadata = json.loads(metadata_raw) if metadata_raw else {}
+                else:
+                    metadata = metadata_raw if metadata_raw else {}
+                
                 memory = Memory(
                     content=record['content'],
                     metadata=metadata,
@@ -250,14 +265,20 @@ class Neo4jMemoryService(MemoryService):
             try:
                 query = """
                 MATCH (m:Memory {id: $id})
-                RETURN m.content as content, m.metadata as metadata, m.timestamp as timestamp
+                RETURN m.content as content, COALESCE(m.metadata_json, m.metadata) as metadata, m.timestamp as timestamp
                 """
                 
                 result = session.run(query, {'id': memory_id})
                 record = result.single()
                 
                 if record:
-                    metadata = json.loads(record['metadata']) if record['metadata'] else {}
+                    # Handle both old and new metadata formats
+                    metadata_raw = record['metadata']
+                    if isinstance(metadata_raw, str):
+                        metadata = json.loads(metadata_raw) if metadata_raw else {}
+                    else:
+                        metadata = metadata_raw if metadata_raw else {}
+                    
                     return Memory(
                         content=record['content'],
                         metadata=metadata,
@@ -359,7 +380,7 @@ class Neo4jMemoryService(MemoryService):
                 }
                 
                 if metadata is not None:
-                    update_query += ", m.metadata = $metadata"
+                    update_query += ", m.metadata_json = $metadata"
                     params['metadata'] = json.dumps(metadata)
                 
                 update_query += " RETURN count(m) as updated_count"
@@ -387,7 +408,7 @@ class Neo4jMemoryService(MemoryService):
                 query = """
                 MATCH (m1:Memory {id: $id})-[:MENTIONS]->(e:Entity)<-[:MENTIONS]-(m2:Memory)
                 WHERE m1 <> m2
-                RETURN DISTINCT m2.id as id, m2.content as content, m2.metadata as metadata, 
+                RETURN DISTINCT m2.id as id, m2.content as content, COALESCE(m2.metadata_json, m2.metadata) as metadata, 
                        m2.timestamp as timestamp
                 ORDER BY m2.timestamp DESC
                 LIMIT $limit
@@ -397,7 +418,13 @@ class Neo4jMemoryService(MemoryService):
                 
                 memories = []
                 for record in result:
-                    metadata = json.loads(record['metadata']) if record['metadata'] else {}
+                    # Handle both old and new metadata formats
+                    metadata_raw = record['metadata']
+                    if isinstance(metadata_raw, str):
+                        metadata = json.loads(metadata_raw) if metadata_raw else {}
+                    else:
+                        metadata = metadata_raw if metadata_raw else {}
+                    
                     memory = Memory(
                         content=record['content'],
                         metadata=metadata,
@@ -449,18 +476,21 @@ class Neo4jMemoryService(MemoryService):
                     id: $id,
                     content: $content,
                     embedding: $embedding,
-                    metadata: $metadata,
+                    metadata_json: $metadata,
                     timestamp: $timestamp,
                     summary: $summary,
                     graph_formatted: true
                 })
                 """
                 
+                # Serialize metadata to JSON string
+                metadata_json = json.dumps(metadata)
+                
                 session.run(memory_query, {
                     'id': memory_id,
                     'content': graph_format.original_content,
                     'embedding': content_embedding,
-                    'metadata': json.dumps(metadata),
+                    'metadata': metadata_json,
                     'timestamp': graph_format.timestamp.isoformat(),
                     'summary': graph_format.summary
                 })
@@ -482,7 +512,7 @@ class Neo4jMemoryService(MemoryService):
         for entity in graph_format.entities:
             entity_query = """
             MERGE (e:Entity {name: $name, type: $type})
-            SET e.properties = $properties,
+            SET e.properties_json = $properties,
                 e.last_updated = $timestamp
             WITH e
             MATCH (m:Memory {id: $memory_id})
@@ -492,10 +522,13 @@ class Neo4jMemoryService(MemoryService):
             }]->(e)
             """
             
+            # Serialize properties to JSON string
+            properties_json = json.dumps(entity.properties) if entity.properties else "{}"
+            
             session.run(entity_query, {
                 'name': entity.name,
                 'type': entity.type,
-                'properties': json.dumps(entity.properties),
+                'properties': properties_json,
                 'timestamp': datetime.now().isoformat(),
                 'memory_id': memory_id,
                 'extraction_method': graph_format.extraction_metadata.get('extraction_method', 'unknown')
@@ -510,19 +543,22 @@ class Neo4jMemoryService(MemoryService):
             MERGE (source)-[r:GRAPH_RELATIONSHIP {
                 type: $rel_type,
                 confidence: $confidence,
-                properties: $properties,
+                properties_json: $properties,
                 memory_id: $memory_id,
                 created_at: $timestamp
             }]->(target)
-            MERGE (m)-[:CAPTURES_RELATIONSHIP]->(r)
+            SET r.from_memory = $memory_id
             """
+            
+            # Serialize properties to JSON string
+            properties_json = json.dumps(relationship.properties) if relationship.properties else "{}"
             
             session.run(relationship_query, {
                 'source_name': relationship.source_entity,
                 'target_name': relationship.target_entity,
                 'rel_type': relationship.relationship_type,
                 'confidence': relationship.confidence,
-                'properties': json.dumps(relationship.properties),
+                'properties': properties_json,
                 'memory_id': memory_id,
                 'timestamp': datetime.now().isoformat()
             })
@@ -533,7 +569,7 @@ class Neo4jMemoryService(MemoryService):
             try:
                 query = """
                 MATCH (e:Entity {name: $entity_name})<-[:CONTAINS_ENTITY]-(m:Memory)
-                RETURN DISTINCT m.id as id, m.content as content, m.metadata as metadata, 
+                RETURN DISTINCT m.id as id, m.content as content, COALESCE(m.metadata_json, m.metadata) as metadata, 
                        m.timestamp as timestamp, m.summary as summary
                 ORDER BY m.timestamp DESC
                 LIMIT $limit
@@ -543,7 +579,13 @@ class Neo4jMemoryService(MemoryService):
                 
                 memories = []
                 for record in result:
-                    metadata = json.loads(record['metadata']) if record['metadata'] else {}
+                    # Handle both old and new metadata formats
+                    metadata_raw = record['metadata']
+                    if isinstance(metadata_raw, str):
+                        metadata = json.loads(metadata_raw) if metadata_raw else {}
+                    else:
+                        metadata = metadata_raw if metadata_raw else {}
+                    
                     memory = Memory(
                         content=record['content'],
                         metadata=metadata,
@@ -563,8 +605,9 @@ class Neo4jMemoryService(MemoryService):
         with self.driver.session() as session:
             try:
                 query = """
-                MATCH (m:Memory)-[:CAPTURES_RELATIONSHIP]->(r:GRAPH_RELATIONSHIP {type: $rel_type})
-                RETURN DISTINCT m.id as id, m.content as content, m.metadata as metadata, 
+                MATCH (source)-[r:GRAPH_RELATIONSHIP {type: $rel_type}]->(target)
+                MATCH (m:Memory {id: r.memory_id})
+                RETURN DISTINCT m.id as id, m.content as content, COALESCE(m.metadata_json, m.metadata) as metadata, 
                        m.timestamp as timestamp, m.summary as summary
                 ORDER BY m.timestamp DESC
                 LIMIT $limit
@@ -574,7 +617,13 @@ class Neo4jMemoryService(MemoryService):
                 
                 memories = []
                 for record in result:
-                    metadata = json.loads(record['metadata']) if record['metadata'] else {}
+                    # Handle both old and new metadata formats
+                    metadata_raw = record['metadata']
+                    if isinstance(metadata_raw, str):
+                        metadata = json.loads(metadata_raw) if metadata_raw else {}
+                    else:
+                        metadata = metadata_raw if metadata_raw else {}
+                    
                     memory = Memory(
                         content=record['content'],
                         metadata=metadata,
@@ -599,7 +648,7 @@ class Neo4jMemoryService(MemoryService):
                        target.name as target_entity,
                        r.type as relationship_type,
                        r.confidence as confidence,
-                       r.properties as properties,
+                       COALESCE(r.properties_json, r.properties) as properties,
                        r.memory_id as memory_id
                 ORDER BY r.confidence DESC
                 LIMIT $limit
@@ -609,7 +658,13 @@ class Neo4jMemoryService(MemoryService):
                 
                 relationships = []
                 for record in result:
-                    properties = json.loads(record['properties']) if record['properties'] else {}
+                    # Handle both old and new properties formats
+                    properties_raw = record['properties']
+                    if isinstance(properties_raw, str):
+                        properties = json.loads(properties_raw) if properties_raw else {}
+                    else:
+                        properties = properties_raw if properties_raw else {}
+                    
                     relationship = {
                         'source_entity': record['source_entity'],
                         'target_entity': record['target_entity'],

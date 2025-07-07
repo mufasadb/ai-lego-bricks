@@ -28,4 +28,4 @@ Claude Code should act as a thoughtful development partner, not just executing i
 - Check MCP/tools available and make use of them when need be
 
 ## Debugging
-When debugging generating .py files for testing is fine, but dont leave them laying about remove them after testing.
+When debugging requires generating .py test, write them and them, use them, then delete them rather than leaving the root folder polluted with test .pys

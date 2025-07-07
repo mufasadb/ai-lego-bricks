@@ -8,6 +8,15 @@
   },
   "steps": [
     {
+      "id": "get_document_path",
+      "type": "input",
+      "description": "Get the document path to analyze",
+      "config": {
+        "prompt": "Please provide the path to the document you want to analyze:"
+      },
+      "outputs": ["document_path"]
+    },
+    {
       "id": "process_document",
       "type": "document_processing",
       "description": "Extract and enhance text from PDF",
@@ -17,7 +26,10 @@
         "use_vision_fallback": true
       },
       "inputs": {
-        "file_path": "$document_path"
+        "file_path": {
+          "from_step": "get_document_path",
+          "field": "document_path"
+        }
       },
       "outputs": ["text", "semantic_analysis", "page_count"]
     },
@@ -54,7 +66,10 @@
           "field": "chunks"
         },
         "metadata": {
-          "source_file": "$document_path",
+          "source_file": {
+            "from_step": "get_document_path",
+            "field": "document_path"
+          },
           "page_count": {
             "from_step": "process_document",
             "field": "page_count"
@@ -123,7 +138,10 @@
       },
       "inputs": {
         "content": {
-          "document_path": "$document_path",
+          "document_path": {
+            "from_step": "get_document_path",
+            "field": "document_path"
+          },
           "question": {
             "from_step": "get_user_question",
             "field": "question"

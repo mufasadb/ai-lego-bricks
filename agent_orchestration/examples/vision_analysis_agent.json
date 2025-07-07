@@ -7,6 +7,15 @@
   },
   "steps": [
     {
+      "id": "get_document_path",
+      "type": "input",
+      "description": "Get the document path to analyze",
+      "config": {
+        "prompt": "Please provide the path to the document you want to analyze with vision processing:"
+      },
+      "outputs": ["document_path"]
+    },
+    {
       "id": "process_traditional",
       "type": "document_processing",
       "description": "Extract text using traditional OCR methods",
@@ -15,7 +24,10 @@
         "force_vision_processing": false
       },
       "inputs": {
-        "file_path": "$document_path"
+        "file_path": {
+          "from_step": "get_document_path",
+          "field": "document_path"
+        }
       },
       "outputs": ["text", "page_count", "processing_method"]
     },
@@ -29,7 +41,10 @@
         "vision_prompt": "Analyze this document comprehensively. Extract all text, identify key information, and describe any visual elements like charts, tables, or diagrams."
       },
       "inputs": {
-        "file_path": "$document_path"
+        "file_path": {
+          "from_step": "get_document_path",
+          "field": "document_path"
+        }
       },
       "outputs": ["vision_text", "processing_method"]
     },
@@ -44,7 +59,10 @@
         "vision_prompt": "Focus on extracting structured data from this document. Identify and format any tables, lists, financial data, dates, and other structured information clearly."
       },
       "inputs": {
-        "file_path": "$document_path"
+        "file_path": {
+          "from_step": "get_document_path",
+          "field": "document_path"
+        }
       },
       "outputs": ["vision_text", "processing_method"]
     },
@@ -87,7 +105,10 @@
       },
       "inputs": {
         "content": {
-          "document_path": "$document_path",
+          "document_path": {
+            "from_step": "get_document_path",
+            "field": "document_path"
+          },
           "traditional_extraction": {
             "text": {
               "from_step": "process_traditional",
@@ -134,7 +155,10 @@
         "format": "json"
       },
       "inputs": {
-        "document_analyzed": "$document_path",
+        "document_analyzed": {
+          "from_step": "get_document_path",
+          "field": "document_path"
+        },
         "comparison_analysis": {
           "from_step": "compare_results",
           "field": "comparison_analysis"

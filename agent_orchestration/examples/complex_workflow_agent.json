@@ -123,7 +123,46 @@
       "description": "Execute each task step iteratively",
       "config": {
         "loop_type": "iterate_list",
-        "max_iterations": 5
+        "max_iterations": 5,
+        "loop_body": [
+          {
+            "id": "execute_single_step",
+            "type": "llm_chat",
+            "description": "Execute individual task step",
+            "config": {
+              "provider": "gemini",
+              "model": "gemini-1.5-flash"
+            },
+            "inputs": {
+              "message": "Execute this step: {current_item}. Step {iteration_count} of {total_items}.",
+              "current_item": "$current_item",
+              "iteration_count": "$iteration_context.iteration_count",
+              "total_items": "$iteration_context.total_items"
+            },
+            "outputs": ["step_result"]
+          },
+          {
+            "id": "validate_step_result",
+            "type": "condition",
+            "description": "Check if step was successful",
+            "config": {
+              "condition_type": "llm_decision",
+              "condition_prompt": "Was this step completed successfully?",
+              "route_options": ["success", "retry", "fail"]
+            },
+            "inputs": {
+              "step_result": {
+                "from_step": "execute_single_step",
+                "field": "step_result"
+              }
+            },
+            "routes": {
+              "success": "continue",
+              "retry": "execute_single_step",
+              "fail": "handle_step_failure"
+            }
+          }
+        ]
       },
       "inputs": {
         "items_to_process": {
@@ -131,45 +170,6 @@
           "field": "task_steps"
         }
       },
-      "loop_body": [
-        {
-          "id": "execute_single_step",
-          "type": "llm_chat",
-          "description": "Execute individual task step",
-          "config": {
-            "provider": "gemini",
-            "model": "gemini-1.5-flash"
-          },
-          "inputs": {
-            "message": "Execute this step: {current_item}. Step {iteration_count} of {total_items}.",
-            "current_item": "$current_item",
-            "iteration_count": "$iteration_context.iteration_count",
-            "total_items": "$iteration_context.total_items"
-          },
-          "outputs": ["step_result"]
-        },
-        {
-          "id": "validate_step_result",
-          "type": "condition",
-          "description": "Check if step was successful",
-          "config": {
-            "condition_type": "llm_decision",
-            "condition_prompt": "Was this step completed successfully?",
-            "route_options": ["success", "retry", "fail"]
-          },
-          "inputs": {
-            "step_result": {
-              "from_step": "execute_single_step",
-              "field": "step_result"
-            }
-          },
-          "routes": {
-            "success": "continue",
-            "retry": "execute_single_step",
-            "fail": "handle_step_failure"
-          }
-        }
-      ],
       "outputs": ["all_step_results", "successful_steps"],
       "next_step": "compile_results"
     },
@@ -178,8 +178,8 @@
       "type": "output",
       "description": "Handle step execution failure",
       "inputs": {
-        "error": "Step execution failed",
-        "failed_step": "$current_item"
+        "error": "Step execution failed during workflow",
+        "failed_step": "Unknown step"
       }
     },
     {

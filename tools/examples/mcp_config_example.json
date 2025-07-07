@@ -1,0 +1,87 @@
+{
+  "servers": {
+    "filesystem": {
+      "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem"],
+      "args": ["/path/to/allowed/directory"],
+      "env": {},
+      "transport": "stdio",
+      "timeout": 30,
+      "auto_restart": true,
+      "required_credentials": []
+    },
+    "brave_search": {
+      "command": ["npx", "-y", "@modelcontextprotocol/server-brave-search"],
+      "env_credentials": {
+        "BRAVE_API_KEY": "BRAVE_API_KEY"
+      },
+      "transport": "stdio",
+      "timeout": 30,
+      "auto_restart": true,
+      "required_credentials": ["BRAVE_API_KEY"]
+    },
+    "git": {
+      "command": ["npx", "-y", "@modelcontextprotocol/server-git"],
+      "args": ["--repository", "/path/to/git/repository"],
+      "transport": "stdio",
+      "timeout": 30,
+      "auto_restart": true,
+      "required_credentials": []
+    },
+    "postgres": {
+      "command": ["npx", "-y", "@modelcontextprotocol/server-postgres"],
+      "env_credentials": {
+        "POSTGRES_CONNECTION_STRING": "POSTGRES_CONNECTION_STRING"
+      },
+      "transport": "stdio",
+      "timeout": 60,
+      "auto_restart": true,
+      "required_credentials": ["POSTGRES_CONNECTION_STRING"]
+    },
+    "github": {
+      "command": ["npx", "-y", "@modelcontextprotocol/server-github"],
+      "env_credentials": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "GITHUB_TOKEN"
+      },
+      "transport": "stdio",
+      "timeout": 30,
+      "auto_restart": true,
+      "required_credentials": ["GITHUB_TOKEN"]
+    },
+    "sqlite": {
+      "command": ["npx", "-y", "@modelcontextprotocol/server-sqlite"],
+      "args": ["--db-path", "/path/to/database.db"],
+      "transport": "stdio",
+      "timeout": 30,
+      "auto_restart": true,
+      "required_credentials": []
+    },
+    "puppeteer": {
+      "command": ["npx", "-y", "@modelcontextprotocol/server-puppeteer"],
+      "transport": "stdio",
+      "timeout": 60,
+      "auto_restart": true,
+      "required_credentials": []
+    },
+    "memory": {
+      "command": ["npx", "-y", "@modelcontextprotocol/server-memory"],
+      "transport": "stdio",
+      "timeout": 30,
+      "auto_restart": true,
+      "required_credentials": []
+    },
+    "custom_python_server": {
+      "command": ["python", "/path/to/your/custom_mcp_server.py"],
+      "env_credentials": {
+        "API_KEY": "CUSTOM_SERVER_API_KEY"
+      },
+      "env": {
+        "LOG_LEVEL": "INFO"
+      },
+      "working_directory": "/path/to/server/directory",
+      "transport": "stdio",
+      "timeout": 30,
+      "auto_restart": true,
+      "required_credentials": ["CUSTOM_SERVER_API_KEY"]
+    }
+  }
+}

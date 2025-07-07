@@ -15,6 +15,20 @@ from .secure_tool_executor import (
     SecureToolExecutor, APIToolExecutor, DatabaseToolExecutor, WebhookToolExecutor,
     create_tool_with_credentials
 )
+from .mcp_types import (
+    MCPServerConfig, MCPTransport, JSONRPCRequest, JSONRPCResponse,
+    MCPToolInfo, MCPMethods, MCPErrorCodes
+)
+from .mcp_server_manager import (
+    MCPServerProcess, MCPServerManager, get_global_mcp_manager
+)
+from .mcp_tool_executor import (
+    MCPToolExecutor, MCPToolDiscovery, register_mcp_tools_globally
+)
+from .mcp_config import (
+    MCPConfigManager, initialize_mcp_servers_from_config, 
+    get_global_mcp_config_manager, create_example_config
+)
 
 __all__ = [
     # Core types
@@ -52,4 +66,23 @@ __all__ = [
     "DatabaseToolExecutor", 
     "WebhookToolExecutor",
     "create_tool_with_credentials",
+    
+    # MCP integration
+    "MCPServerConfig",
+    "MCPTransport", 
+    "JSONRPCRequest",
+    "JSONRPCResponse",
+    "MCPToolInfo",
+    "MCPMethods",
+    "MCPErrorCodes",
+    "MCPServerProcess",
+    "MCPServerManager",
+    "get_global_mcp_manager",
+    "MCPToolExecutor",
+    "MCPToolDiscovery", 
+    "register_mcp_tools_globally",
+    "MCPConfigManager",
+    "initialize_mcp_servers_from_config",
+    "get_global_mcp_config_manager",
+    "create_example_config",
 ]

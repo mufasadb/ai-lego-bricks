@@ -92,6 +92,7 @@ Or view the setup files directly:
 ├── image_generation/         # 🎨 Image generation with multiple providers
 ├── pdf_to_text/             # 📄 Visual content processing (PDFs, images) with bounding boxes
 ├── chunking/                # ✂️ Text chunking and semantic processing
+├── tools/                   # 🔧 Universal tool service + MCP integration
 ├── agent_orchestration/      # 🤖 JSON-driven agent workflows
 ├── examples/                # 📋 Usage examples and demos
 ├── claude-knowledge/         # 🤖 Claude-specific documentation
@@ -108,14 +109,15 @@ This project provides:
 2. **🧠 LLM Services** - Generation (one-shot) and Conversation (multi-turn) with streaming support
 3. **🌊 Real-time Streaming** - Native streaming for Ollama, Anthropic; simulated for others
 4. **🔧 Universal Tool Service** - Register tools once, use with any LLM provider (OpenAI, Anthropic, Gemini, Ollama)
-5. **🎵 Audio Processing** - Text-to-Speech and Speech-to-Text with streaming LLM → TTS pipelines
-6. **🎨 Image Generation** - Multi-provider support (OpenAI, Stability AI, Google Imagen, local models)
-7. **🤖 JSON-Driven Agents** - Create sophisticated AI workflows through configuration
-8. **🧠 Intelligent Memory** - Vector similarity search for project knowledge storage
-9. **💬 Rich Conversations** - Full conversation state tracking with search and export
-10. **📄 Visual Content Processing** - Extract text from PDFs, images, and base64 data with precise bounding boxes
-11. **🎯 Prompt Management** - Externalized, versioned prompts with evaluation and A/B testing
-12. **📊 Concept Evaluation** - LLM-as-judge framework for testing prompt quality
+5. **🛠️ MCP Integration** - Full Model Context Protocol support with secure credential management
+6. **🎵 Audio Processing** - Text-to-Speech and Speech-to-Text with streaming LLM → TTS pipelines
+7. **🎨 Image Generation** - Multi-provider support (OpenAI, Stability AI, Google Imagen, local models)
+8. **🤖 JSON-Driven Agents** - Create sophisticated AI workflows through configuration
+9. **🧠 Intelligent Memory** - Vector similarity search for project knowledge storage
+10. **💬 Rich Conversations** - Full conversation state tracking with search and export
+11. **📄 Visual Content Processing** - Extract text from PDFs, images, and base64 data with precise bounding boxes
+12. **🎯 Prompt Management** - Externalized, versioned prompts with evaluation and A/B testing
+13. **📊 Concept Evaluation** - LLM-as-judge framework for testing prompt quality
 
 ## 🏃‍♂️ Getting Started
 
@@ -697,6 +699,106 @@ See **[TOOLS_README.md](TOOLS_README.md)** for comprehensive documentation inclu
 - Error handling best practices
 - Performance considerations
 - Testing with mock credentials
+
+## 🛠️ MCP (Model Context Protocol) Integration
+
+AI Lego Bricks includes full **Model Context Protocol** support, allowing you to integrate external MCP servers and use their tools seamlessly in agent workflows.
+
+### Key Features
+
+- **🔄 Server Management**: Automatic MCP server lifecycle management with process monitoring
+- **🔍 Tool Discovery**: Automatic discovery and conversion of MCP tools to universal format
+- **🔐 Secure Credentials**: Integration with CredentialManager for secure API key handling
+- **🌐 Multi-Provider**: MCP tools work with all LLM providers (OpenAI, Anthropic, Gemini, Ollama)
+- **⚡ Agent Integration**: MCP tools automatically available in JSON-driven workflows
+
+### Quick Start
+
+**1. Install MCP Servers**
+```bash
+# Install common MCP servers
+npm install -g @modelcontextprotocol/server-filesystem
+npm install -g @modelcontextprotocol/server-brave-search
+npm install -g @modelcontextprotocol/server-github
+```
+
+**2. Configure with Credentials**
+```json
+{
+  "servers": {
+    "github": {
+      "command": ["npx", "-y", "@modelcontextprotocol/server-github"],
+      "env_credentials": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "GITHUB_TOKEN"
+      },
+      "required_credentials": ["GITHUB_TOKEN"]
+    },
+    "filesystem": {
+      "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem"],
+      "args": ["/allowed/directory"]
+    }
+  }
+}
+```
+
+**3. Initialize and Use**
+```python
+from tools import initialize_mcp_servers_from_config, register_mcp_tools_globally
+from credentials import CredentialManager
+
+# Setup credentials
+creds = CredentialManager()  # Loads from .env
+
+# Initialize MCP servers with secure credential handling
+await initialize_mcp_servers_from_config(credential_manager=creds)
+await register_mcp_tools_globally()
+
+# Tools now available in agent workflows
+```
+
+**4. Use in Agent Workflows**
+```json
+{
+  "id": "github_agent",
+  "type": "tool_call",
+  "config": {
+    "provider": "ollama",
+    "tools": ["mcp_github_get_repository"],
+    "tool_choice": "auto"
+  },
+  "inputs": {
+    "message": "Get information about the pytorch/pytorch repository"
+  }
+}
+```
+
+### Available MCP Servers
+
+- **@modelcontextprotocol/server-filesystem**: File system operations
+- **@modelcontextprotocol/server-git**: Git repository operations  
+- **@modelcontextprotocol/server-brave-search**: Web search via Brave API
+- **@modelcontextprotocol/server-github**: GitHub API operations
+- **@modelcontextprotocol/server-postgres**: PostgreSQL database operations
+- **@modelcontextprotocol/server-sqlite**: SQLite database operations
+- **@modelcontextprotocol/server-puppeteer**: Web browser automation
+- **@modelcontextprotocol/server-memory**: Persistent memory/knowledge
+
+### Security & Credentials
+
+MCP integration follows the same secure credential patterns:
+
+- **No hardcoded secrets** in configuration files
+- **Credential validation** before server startup  
+- **Environment injection** at runtime
+- **CredentialManager integration** for multi-tenant support
+
+### Complete Documentation
+
+See **[tools/examples/README_MCP.md](tools/examples/README_MCP.md)** for comprehensive MCP documentation including:
+- Configuration examples
+- Credential management patterns
+- Custom server integration
+- Troubleshooting guide
 
 ## 🤖 Creating Agents
 

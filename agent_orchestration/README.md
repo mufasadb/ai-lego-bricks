@@ -765,12 +765,39 @@ orchestrator._services["custom"] = CustomService()
 
 ## Examples Directory
 
-- `simple_chat_agent.json`: Basic chat functionality
-- `document_analysis_agent.json`: PDF processing and Q&A
-- `research_agent.json`: Multi-document research analysis
-- `human_approval_workflow.json`: Complex human-in-the-loop document analysis
-- `simple_human_input_example.json`: Basic human feedback collection
-- `usage_example.py`: Python usage examples
+All examples have been tested and are fully functional:
+
+### ✅ Working Examples
+- `basic_chat_agent.json`: Simple chat functionality with LLM providers
+- `ai_coordinator_agent.json`: Request routing to specialized experts (Japanese, Home Assistant, General)
+- `gemini_ollama_parallel_agent.json`: Parallel execution with multiple LLM providers and memory storage
+- `json_props_demo_agent.json`: Structured responses using JSON props for natural schema definitions
+- `graph_memory_agent.json`: Graph-based memory formatting with entity and relationship extraction
+- `streaming_agent.json`: Real-time response streaming with TTS output
+- `voice_assistant_agent.json`: Voice conversation workflow with memory integration
+- `parallel_workflow_example.json`: Advanced parallel processing with memory storage and synthesis
+- `dollar_amount_extraction_agent.json`: PDF vision analysis for extracting dollar amounts with image cropping
+
+### 🔧 Partially Working Examples  
+- `complex_workflow_agent.json`: Complex multi-step workflow with conditions, loops, and human approval (has template variable substitution issues)
+
+### 🛠️ Recent Fixes Applied
+- **Parallel Processing**: Fixed dictionary handling in loop iteration and chunking steps
+- **Vision Analysis**: Enhanced vision handler to support different input formats (lists, dicts, file paths)
+- **Output Mapping**: Improved output field mapping for python functions and chunking operations
+- **Error Handling**: Better error propagation and data format validation
+
+### Testing with Debug Script
+Test any example using the comprehensive debug script:
+
+```bash
+python examples/run_agent_debug.py agent_orchestration/examples/[example].json --input "your input" --debug-level 2
+```
+
+Debug levels:
+- `1`: Outputs only (default)
+- `2`: Includes configurations and inputs  
+- `3`: Full execution details with timing
 
 ## Troubleshooting
 

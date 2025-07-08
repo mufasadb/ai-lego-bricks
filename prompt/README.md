@@ -244,6 +244,40 @@ csv_data = prompt_service.export_training_data(
 )
 ```
 
+### Concept Evaluation Framework
+
+Advanced concept-based evaluation for comprehensive prompt testing:
+
+```python
+from prompt.concept_evaluation_service import ConceptEvaluationService
+from prompt.concept_eval_storage import create_concept_eval_storage
+
+# Create evaluation service
+storage = create_concept_eval_storage('auto')
+eval_service = ConceptEvaluationService(storage)
+
+# Run evaluation with test cases
+evaluation_definition = {
+    "id": "routing_accuracy",
+    "name": "Coordinator Routing Accuracy",
+    "description": "Tests if coordinator routes queries to correct experts",
+    "test_cases": [
+        {
+            "input": "How do I optimize database queries?",
+            "expected_concepts": ["technical", "database"],
+            "expected_expert": "technical_expert"
+        }
+    ],
+    "evaluation_criteria": {
+        "routing_accuracy": 0.9,
+        "response_quality": 0.8
+    }
+}
+
+results = eval_service.run_evaluation(evaluation_definition)
+print(f"Overall Score: {results.overall_score:.1%}")
+```
+
 ## 🛠️ Advanced Usage
 
 ### Prompt Versioning
@@ -304,14 +338,20 @@ Use different prompts based on context:
 
 ```
 prompt/
-├── __init__.py                 # Package exports
-├── prompt_service.py          # Main service
-├── prompt_models.py           # Pydantic models
-├── prompt_storage.py          # Storage backends
-├── prompt_registry.py         # Registry with caching
-├── evaluation_service.py      # Evaluation and A/B testing
-├── example_usage.py           # Usage examples
-└── README.md                  # This file
+├── __init__.py                    # Package exports
+├── prompt_service.py             # Main service
+├── prompt_models.py              # Pydantic models
+├── prompt_storage.py             # Storage backends
+├── prompt_registry.py            # Registry with caching
+├── evaluation_service.py         # Evaluation and A/B testing
+├── concept_evaluation_service.py # Concept-based evaluation framework
+├── concept_eval_models.py        # Concept evaluation data models
+├── concept_eval_storage.py       # Concept evaluation storage
+├── concept_judge.py              # Concept evaluation judge
+├── eval_builder.py               # Evaluation builder utilities
+├── coordinator_expert_evaluation.json   # Expert evaluation definitions
+├── coordinator_routing_evaluation.json  # Routing evaluation definitions
+└── prompt-readme.md              # This file
 ```
 
 ## 🔧 Configuration
@@ -461,4 +501,4 @@ support_prompt = prompt_service.create_prompt(
 
 ---
 
-For more examples and detailed API documentation, see the `example_usage.py` file and explore the agent orchestration examples that demonstrate prompt management integration.
+For more examples and detailed API documentation, explore the agent orchestration examples that demonstrate prompt management integration and the concept evaluation framework for testing prompt effectiveness.

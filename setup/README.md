@@ -1,334 +1,427 @@
-# 🚀 Beachy's Project Assistant - Setup Guide
+# 🚀 AI Lego Bricks - Complete Setup Guide
 
-Complete setup instructions for configuring your LLM project assistant with memory capabilities.
+Welcome to the comprehensive setup guide for AI Lego Bricks! This guide will walk you through everything you need to get started with your modular AI agent system.
 
-## 📋 Quick Start
+## 🎯 Overview
 
-1. **Copy Environment File**
-   ```bash
-   cp .env.example .env
-   ```
+AI Lego Bricks is designed to be **easy to set up** and **production-ready** from day one. This guide covers:
 
-2. **Choose Your Setup**
-   - **Supabase** (Recommended): Cloud-hosted PostgreSQL with pgvector
-   - **Neo4j**: Graph database for complex relationships
-   - **Both**: Use both for maximum capabilities
+- **Quick Start**: Get running in 5 minutes
+- **Complete Installation**: Full feature setup with all services
+- **Platform-Specific Instructions**: Windows, macOS, Linux
+- **Troubleshooting**: Common issues and solutions
+- **Production Deployment**: Security and performance considerations
 
-3. **Run Verification**
-   ```bash
-   python setup/setup_supabase.py  # For Supabase
-   ```
+## ⚡ Quick Start (5 minutes)
 
-## 🗂️ Setup Files
+### Prerequisites
+- Python 3.8+ (`python --version`)
+- Git (`git --version`)
+- At least one AI service API key (Google AI Studio recommended)
 
-- **`setup_supabase_pgvector.sql`** - SQL script to setup pgvector in Supabase
-- **`setup_supabase.py`** - Python script to verify Supabase setup
-- **`SUPABASE_SETUP.md`** - Detailed Supabase setup instructions
-- **`README.md`** - This file
-
-## 🔧 Environment Configuration
-
-### 🔐 Credential Management System
-
-AI Lego Bricks uses a **secure credential management system** that supports both traditional environment variables and explicit credential injection:
-
-**Traditional Setup (Recommended for Applications):**
+### 1. Clone and Install
 ```bash
-cp .env.example .env
-# Edit .env with your credentials
+git clone https://github.com/callmebeachy/ai-lego-bricks.git
+cd ai-lego-bricks
+pip install -e .
 ```
 
-**Library Integration (For when using as dependency):**
-```python
-from credentials import CredentialManager
-from llm import create_text_client
-
-# Explicit credentials (no .env dependency)
-creds = CredentialManager({
-    "GOOGLE_AI_STUDIO_KEY": "your-key"
-}, load_env=False)
-client = create_text_client("gemini", credential_manager=creds)
-```
-
-**Key Benefits:**
-- ✅ **Library Safe**: No unwanted .env loading when used as dependency
-- ✅ **Multi-Tenant**: Different credentials per service instance
-- ✅ **Backward Compatible**: Existing .env patterns continue to work
-
-### 1. Copy Environment File
-
+### 2. Environment Setup
 ```bash
+# Copy environment template
 cp .env.example .env
+
+# Edit .env with your API keys (minimum required)
+nano .env  # or use your preferred editor
 ```
 
-**Important**: Never commit the `.env` file to version control - it contains secrets!
-
-### 2. Configure Required Services
-
-Fill in your `.env` file with the appropriate values for the services you want to use:
-
-#### Supabase (Recommended for Memory Storage)
-```env
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your_supabase_anon_key_here
-```
-
-#### Ollama (Local LLM Processing)
-```env
-OLLAMA_URL=http://localhost:11434
-OLLAMA_DEFAULT_MODEL=llama2
-```
-
-#### Google AI Studio (Gemini Integration)
+**Minimum required for Quick Start:**
 ```env
 GOOGLE_AI_STUDIO_KEY=your_google_ai_studio_key_here
 ```
 
-## 🗄️ Database Setup
+### 3. Verify Installation
+```bash
+ailego verify
+```
 
-### Option A: Supabase (Recommended)
+### 4. Run Your First Agent
+```bash
+ailego run agent_orchestration/examples/basic_chat_agent.json
+```
 
-Supabase provides a cloud-hosted PostgreSQL database with pgvector extensions for advanced vector similarity search.
+**🎉 Success!** You now have a working AI agent. Continue below for advanced features.
 
-#### Step 1: Create Supabase Project
+## 🛠️ Complete Installation
 
-1. Go to [supabase.com](https://supabase.com)
-2. Click "New Project"
-3. Choose your organization
-4. Enter project name (e.g., "project-assistant-memory")
-5. Enter a strong database password
-6. Select region (choose closest to you)
-7. Click "Create new project"
+### Platform-Specific Setup
 
-#### Step 2: Get Your Credentials
+#### Windows
+```cmd
+# Install Python and Git (if not already installed)
+# Download from python.org and git-scm.com
 
-1. **Get Project URL:**
-   - In your project dashboard, scroll down to "API Settings"
-   - Copy the "Project URL" (looks like: `https://abc123.supabase.co`)
+# Clone repository
+git clone https://github.com/callmebeachy/ai-lego-bricks.git
+cd ai-lego-bricks
 
-2. **Get API Key:**
-   - In your project dashboard, go to "Settings" → "API"
-   - Copy the "anon" key (starts with `eyJ...`)
-   - **Important**: Use the "anon" key, NOT the "service_role" key
+# Create virtual environment (recommended)
+python -m venv venv
+venv\Scripts\activate
 
-#### Step 3: Update Environment File
+# Install
+pip install -e .
+```
 
+#### macOS
+```bash
+# Install dependencies (if needed)
+brew install python3 git
+
+# Clone repository
+git clone https://github.com/callmebeachy/ai-lego-bricks.git
+cd ai-lego-bricks
+
+# Create virtual environment (recommended)
+python3 -m venv venv
+source venv/bin/activate
+
+# Install
+pip install -e .
+```
+
+#### Linux (Ubuntu/Debian)
+```bash
+# Install dependencies
+sudo apt update
+sudo apt install python3 python3-pip python3-venv git
+
+# Clone repository
+git clone https://github.com/callmebeachy/ai-lego-bricks.git
+cd ai-lego-bricks
+
+# Create virtual environment (recommended)
+python3 -m venv venv
+source venv/bin/activate
+
+# Install
+pip install -e .
+```
+
+### Environment Configuration
+
+Copy the example environment file:
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your service credentials:
+
+#### 🔑 Essential API Keys
+
+**Google AI Studio (Recommended first choice):**
+1. Go to [makersuite.google.com/app/apikey](https://makersuite.google.com/app/apikey)
+2. Create API key
+3. Add to `.env`:
+```env
+GOOGLE_AI_STUDIO_KEY=your_api_key_here
+```
+
+**OpenAI (Alternative):**
+1. Go to [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+2. Create API key
+3. Add to `.env`:
+```env
+OPENAI_API_KEY=your_api_key_here
+```
+
+**Anthropic (Alternative):**
+1. Go to [console.anthropic.com](https://console.anthropic.com)
+2. Create API key
+3. Add to `.env`:
+```env
+ANTHROPIC_API_KEY=your_api_key_here
+```
+
+#### 🎯 Memory & Storage Services
+
+**Supabase (Vector Database - Recommended):**
+1. Create project at [supabase.com](https://supabase.com)
+2. Get Project URL and anon key
+3. Add to `.env`:
 ```env
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_ANON_KEY=your_anon_key_here
 ```
 
-#### Step 4: Setup Database Schema
-
-1. In your Supabase project, go to "SQL Editor"
-2. Copy the contents of `setup/setup_supabase_pgvector.sql`
-3. Paste into the SQL Editor
-4. Click "Run" to execute
-
-#### Step 5: Verify Setup
-
-```bash
-cd setup
-python setup_supabase.py
-```
-
-You should see all checks pass with ✅ symbols.
-
-### Option B: Neo4j (Advanced Users)
-
-Neo4j provides graph database capabilities for complex memory relationships.
-
-#### Step 1: Install Neo4j
-
-**Option A - Neo4j Desktop:**
-1. Download from [neo4j.com/download](https://neo4j.com/download/)
-2. Install and create a new database
-3. Set a password
-
-**Option B - Docker:**
-```bash
-docker run --name neo4j \
-  -p 7474:7474 -p 7687:7687 \
-  -e NEO4J_AUTH=neo4j/your_password \
-  neo4j:latest
-```
-
-#### Step 2: Configure Environment
-
+**Neo4j (Graph Database - Optional):**
 ```env
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USERNAME=neo4j
-NEO4J_PASSWORD=your_neo4j_password_here
+NEO4J_PASSWORD=your_password
 ```
 
-## 🤖 AI Service Setup
+#### 🗣️ Speech Services
 
-### Google AI Studio (Gemini)
-
-1. Go to [makersuite.google.com/app/apikey](https://makersuite.google.com/app/apikey)
-2. Sign in with your Google account
-3. Click "Create API key"
-4. Copy the API key
-5. Update your `.env`:
-   ```env
-   GOOGLE_AI_STUDIO_KEY=your_api_key_here
-   ```
-
-### Ollama (Local LLM)
-
-1. Install Ollama from [ollama.ai](https://ollama.ai/)
-2. Pull a model:
-   ```bash
-   ollama pull llama2
-   ```
-3. Update your `.env`:
-   ```env
-   OLLAMA_URL=http://localhost:11434
-   OLLAMA_DEFAULT_MODEL=llama2
-   ```
-
-## 🎯 Prompt Management Setup
-
-The system includes a comprehensive prompt management system for versioning, evaluation, and A/B testing.
-
-### Configuration Options
-
-Add these to your `.env` file:
-
+**Text-to-Speech:**
 ```env
-# Prompt Management Configuration
-PROMPT_STORAGE_BACKEND=auto      # auto, file, or supabase
-PROMPT_STORAGE_PATH=./prompts    # for file backend (development)
-PROMPT_CACHE_TTL=3600           # cache timeout in seconds
-PROMPT_EVALUATION_ENABLED=true  # enable execution logging
+# Already covered: GOOGLE_AI_STUDIO_KEY, OPENAI_API_KEY
+# For local TTS (optional):
+COQUI_MODEL_PATH=./models/tts
 ```
 
-### Storage Backend Options
+**Speech-to-Text:**
+```env
+# For local STT (optional):
+WHISPER_MODEL_SIZE=base
+```
 
-**1. Auto Detection (Recommended)**
-- Uses Supabase if available, falls back to file storage
-- Perfect for seamless dev-to-production workflow
+#### 🎨 Image Generation
 
-**2. File Storage (Development)**
-- JSON files stored locally
-- Great for development and testing
-- No external dependencies
+**DALL-E (OpenAI):**
+```env
+OPENAI_API_KEY=your_openai_key  # Same as above
+```
 
-**3. Supabase Storage (Production)**
-- Uses same Supabase instance as memory storage
-- Enables advanced evaluation and analytics
-- Requires Supabase setup (see above)
+**Imagen (Google):**
+```env
+GOOGLE_AI_STUDIO_KEY=your_google_key  # Same as above
+```
 
-### First-Time Setup
+## 🗄️ Database Setup
 
-1. **Create sample prompts:**
-   ```bash
-   python prompt/example_usage.py
-   ```
+### Supabase Setup (Recommended)
 
-2. **Verify prompt system:**
-   ```bash
-   python -c "from prompt import create_prompt_service; print('✅ Prompt system working!')"
-   ```
+#### 1. Create Supabase Project
+1. Go to [supabase.com](https://supabase.com)
+2. Click "New Project"
+3. Choose organization and enter project details
+4. Wait for project creation (2-3 minutes)
 
-## 🔍 Verification
+#### 2. Get Credentials
+1. **Project URL**: Found in project settings
+2. **Anon Key**: Settings → API → "anon" key (NOT service_role)
 
-### Supabase Setup Verification
+#### 3. Setup Database Schema
+1. Go to SQL Editor in Supabase
+2. Copy contents of `setup/setup_supabase_pgvector.sql`
+3. Paste and run the script
+4. Verify tables and functions were created
 
+#### 4. Verify Setup
 ```bash
-cd setup
-python setup_supabase.py
+python setup/setup_supabase.py
 ```
 
-**Expected Output:**
+Expected output:
 ```
-🚀 Supabase pgvector Setup Verification
-==================================================
 ✅ PASS - Connection
 ✅ PASS - pgvector Extension
 ✅ PASS - memories Table
 ✅ PASS - match_memories Function
 ✅ PASS - Vector Operations
-
-🎉 All checks passed! Your Supabase instance is ready for pgvector.
 ```
 
-### Test Memory Operations
+### Neo4j Setup (Optional)
 
+#### Docker Installation
+```bash
+docker run --name neo4j \
+  -p 7474:7474 -p 7687:7687 \
+  -e NEO4J_AUTH=neo4j/yourpassword \
+  neo4j:latest
+```
+
+#### Desktop Installation
+1. Download from [neo4j.com/download](https://neo4j.com/download/)
+2. Install and create database
+3. Set password and start database
+
+## 🔍 Verification & Testing
+
+### System Verification
+```bash
+# Basic verification
+ailego verify
+
+# Detailed verification
+ailego verify --verbose
+
+# Check system status
+ailego status
+```
+
+### Component Testing
+
+**Test LLM Connection:**
+```python
+from llm import create_text_client
+client = create_text_client("gemini")
+response = client.generate_text("Hello, world!")
+print(response)
+```
+
+**Test Memory Service:**
 ```python
 from memory import create_memory_service
-
-# Auto-detects and uses available services
-memory_service = create_memory_service("auto")
-
-# Store a memory
-memory_id = memory_service.store_memory(
-    "Machine learning is transforming software development",
-    {"category": "AI", "importance": "high"}
-)
-
-# Search for similar memories
-results = memory_service.retrieve_memories("AI development", limit=5)
-for memory in results:
-    print(f"- {memory.content}")
+memory = create_memory_service("auto")
+memory_id = memory.store_memory("Test memory", {"type": "test"})
+print(f"Stored memory: {memory_id}")
 ```
 
-## 🔐 Security Best Practices
-
-1. **Never commit `.env` files** - Add `.env` to your `.gitignore`
-2. **Use strong passwords** for all database services
-3. **Rotate API keys regularly** - especially for production use
-4. **Use environment-specific configs** - separate dev/staging/prod
-5. **Monitor API usage** - watch for unexpected usage patterns
+**Test Agent Execution:**
+```bash
+ailego run agent_orchestration/examples/basic_chat_agent.json
+```
 
 ## 🚨 Troubleshooting
+
+### Platform-Specific Issues
+
+#### Windows
+- **Path Issues**: Use forward slashes or raw strings: `r"C:\path\to\file"`
+- **Environment Variables**: Use `set` instead of `export`
+- **PowerShell**: Wrap variables in quotes: `$env:KEY="value"`
+
+#### macOS
+- **Xcode Tools**: Run `xcode-select --install` if needed
+- **Permissions**: May need `sudo` for system-wide installs
+- **Homebrew**: Install dependencies with `brew install python3 git`
+
+#### Linux
+- **Dependencies**: Install with `sudo apt install python3 python3-pip python3-venv git`
+- **Build Tools**: May need `sudo apt install build-essential python3-dev`
 
 ### Common Issues
 
 #### "Could not connect to Supabase"
-- Check your `SUPABASE_URL` and `SUPABASE_ANON_KEY` in `.env`
-- Ensure you're using the **anon** key, not the service role key
-- Verify your project is active in Supabase dashboard
+- ✅ **Check credentials**: Verify `SUPABASE_URL` and `SUPABASE_ANON_KEY`
+- ✅ **Key type**: Use **anon** key, not service_role key
+- ✅ **Project status**: Verify project is active in Supabase
+- ✅ **Network**: Try accessing URL in browser
+- ✅ **Firewall**: Check if corporate firewall blocks connection
 
-#### "pgvector extension not found"
-- Run the SQL script in Supabase SQL Editor
-- Ensure the `vector` extension is enabled
-- Check that your Supabase project supports extensions
+#### "Module not found" errors
+- ✅ **Installation**: Reinstall with `pip install -e .`
+- ✅ **Virtual environment**: Activate correct environment
+- ✅ **Dependencies**: Run `pip install -r requirements.txt`
+- ✅ **Python path**: Check project directory is accessible
 
-#### "match_memories function not found"
-- Run the complete `setup_supabase_pgvector.sql` script
-- Verify the function was created in the `public` schema
+#### "API key invalid"
+- ✅ **Copy/paste**: Check for extra spaces or newlines
+- ✅ **Expiration**: Verify keys haven't expired
+- ✅ **Permissions**: Ensure keys have necessary permissions
+- ✅ **Regenerate**: Try creating new API key
 
-#### "Vector search returns no results"
-- Check embedding dimensions match (384 for all-MiniLM-L6-v2)
-- Lower the similarity threshold (try 0.1 - 0.3)
-- Ensure test data has embeddings
+#### ".env file not loading"
+- ✅ **Location**: Ensure `.env` is in project root
+- ✅ **Format**: Use `KEY=value` (no spaces around =)
+- ✅ **Comments**: Don't use inline comments
+- ✅ **Quotes**: Use quotes for values with spaces
 
-### Getting Help
+### Performance Issues
 
-1. **Check the logs** - Enable debug logging in your application
-2. **Review Supabase dashboard** - Check for errors in the dashboard
-3. **Verify credentials** - Double-check all API keys and URLs
-4. **Test connections** - Use the verification scripts
+#### "Slow response times"
+- ✅ **Model choice**: Use smaller models for speed
+- ✅ **Batch size**: Reduce batch sizes for memory operations
+- ✅ **Caching**: Enable caching in configuration
+- ✅ **Network**: Check internet connection stability
+
+#### "Memory usage too high"
+- ✅ **Cleanup**: Implement proper cleanup of large objects
+- ✅ **Streaming**: Use streaming for large responses
+- ✅ **Batch processing**: Process large datasets in chunks
+
+## 🔐 Security & Production
+
+### Security Best Practices
+
+1. **Environment Variables**:
+   - Never commit `.env` files
+   - Use different keys for dev/staging/prod
+   - Rotate API keys regularly
+
+2. **Database Security**:
+   - Use strong passwords
+   - Enable SSL/TLS connections
+   - Restrict database access by IP
+
+3. **API Key Management**:
+   - Set usage limits on API keys
+   - Monitor API usage for anomalies
+   - Use least-privilege access
+
+### Production Deployment
+
+#### Environment Setup
+```bash
+# Production environment
+cp .env.example .env.production
+
+# Edit with production credentials
+nano .env.production
+```
+
+#### Docker Deployment
+```dockerfile
+FROM python:3.9-slim
+
+WORKDIR /app
+COPY . .
+RUN pip install -e .
+
+CMD ["python", "-m", "ailego", "run", "your_agent.json"]
+```
+
+#### Monitoring
+- Set up logging for all services
+- Monitor API usage and costs
+- Set up alerts for failures
+- Regular health checks
+
+## 🎯 Next Steps
+
+After completing setup:
+
+1. **Learn the Basics**:
+   - Run example agents
+   - Understand the JSON configuration format
+   - Explore available services
+
+2. **Build Your First Custom Agent**:
+   - Use `ailego create` to generate templates
+   - Modify agent configurations
+   - Add custom tools and prompts
+
+3. **Advanced Features**:
+   - Set up memory services for persistent knowledge
+   - Configure multi-modal workflows
+   - Integrate custom tools and APIs
+
+4. **Production Ready**:
+   - Implement proper error handling
+   - Set up monitoring and logging
+   - Deploy with appropriate security measures
 
 ## 📚 Additional Resources
 
 ### Documentation
-- [Supabase Vector/Embeddings Guide](https://supabase.com/docs/guides/ai/vector-columns)
-- [pgvector Documentation](https://github.com/pgvector/pgvector)
-- [Neo4j Documentation](https://neo4j.com/docs/)
+- [Agent Orchestration Guide](../agent_orchestration/README.md)
+- [Universal Tools Documentation](../tools/README.md)
+- [Memory Services Guide](../memory/README.md)
+- [LLM Integration Guide](../llm/README.md)
 
-### Models and Libraries
-- [Sentence Transformers Models](https://www.sbert.net/docs/pretrained_models.html)
-- [Ollama Models](https://ollama.ai/library)
+### External Resources
+- [Supabase Documentation](https://supabase.com/docs)
+- [OpenAI API Reference](https://platform.openai.com/docs)
+- [Google AI Studio](https://makersuite.google.com)
+- [Anthropic Claude API](https://docs.anthropic.com)
 
-## 🎯 What's Next?
+### Community
+- [GitHub Issues](https://github.com/callmebeachy/ai-lego-bricks/issues)
+- [Contributing Guide](../CONTRIBUTING.md)
+- [License](../LICENSE)
 
-After completing setup:
+---
 
-1. **Test the memory service** with simple queries
-2. **Explore the project structure** to understand the codebase
-3. **Run your first project decomposition** using the LLM agent
-4. **Customize the configuration** for your specific needs
-
-Happy coding! 🚀
+**🚀 Ready to build amazing AI agents?** Start with the examples and work your way up to custom workflows!

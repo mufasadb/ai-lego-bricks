@@ -12,12 +12,22 @@ Simple logging utility for agent examples that provides:
 - Error tracking with context
 - Console output for immediate feedback
 
+### `log_viewer.py`
+Command-line utility for viewing and analyzing agent log files:
+- Human-readable formatting of JSON log entries
+- Optional filtering by stage name
+- Toggle display of model responses
+- List available log files with metadata
+- Summary statistics for log analysis
+
 ### Log Files
 Log files are automatically created with the format: `{agent_name}_{timestamp}.log`
 
 Example: `MultiModelPDFAgent_20240704_143052.log`
 
 ## Usage
+
+### Agent Logger
 
 ```python
 from agent_logs.agent_logger import AgentLogger
@@ -37,6 +47,22 @@ logger.log_processing_end("DATA_TRANSFORM", {"output_format": "json"})
 
 # Log errors
 logger.log_error("PROCESSING", exception, {"context": "data validation"})
+```
+
+### Log Viewer
+
+```bash
+# List available log files
+python agent_logs/log_viewer.py --list
+
+# View a specific log file
+python agent_logs/log_viewer.py MultiModelPDFAgent_20240704_143052.log
+
+# Filter by stage
+python agent_logs/log_viewer.py --filter "MODEL_SWITCH" agent.log
+
+# Hide model responses for cleaner view
+python agent_logs/log_viewer.py --no-responses agent.log
 ```
 
 ## Log Format

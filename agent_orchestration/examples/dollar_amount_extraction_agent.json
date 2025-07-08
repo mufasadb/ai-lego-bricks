@@ -1,0 +1,124 @@
+{
+  "name": "dollar_amount_extraction_agent",
+  "description": "Extract total dollar amount from documents and crop that region",
+  "config": {
+    "default_llm_provider": "gemini",
+    "default_model": "gemini-1.5-pro"
+  },
+  "steps": [
+    {
+      "id": "get_document_path",
+      "type": "input",
+      "description": "Get document path from user",
+      "config": {
+        "prompt": "Please provide the path to the document you want to analyze for dollar amounts:"
+      },
+      "outputs": ["document_path"]
+    },
+    {
+      "id": "convert_pdf_to_base64",
+      "type": "python_function",
+      "description": "Convert PDF to base64 image",
+      "config": {
+        "function": {
+          "module": "pdf_to_text.visual_to_text_service",
+          "name": "convert_pdf_to_images"
+        },
+        "function_kwargs": {
+          "dpi": 200
+        }
+      },
+      "inputs": {
+        "file_path": {
+          "from_step": "get_document_path",
+          "field": "document_path"
+        }
+      },
+      "outputs": ["base64_images"]
+    },
+    {
+      "id": "extract_dollar_amount_with_bounding_box",
+      "type": "llm_vision",
+      "description": "Find total dollar amount and return bounding box coordinates",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-pro",
+        "temperature": 0.1,
+        "vision_prompt": "Analyze this document and find the 'total dollar amount' or 'total amount due' or similar final total. Return your response in this exact JSON format: {\"total_amount\": \"$XX.XX\", \"bounding_box\": [x1, y1, x2, y2], \"confidence\": 0.95}. The bounding box should be the pixel coordinates of the area containing the total amount text. If no total amount is found, return {\"total_amount\": null, \"bounding_box\": null, \"confidence\": 0.0}."
+      },
+      "inputs": {
+        "image_path": {
+          "from_step": "convert_pdf_to_base64",
+          "field": "base64_images"
+        }
+      },
+      "outputs": ["dollar_amount_analysis"]
+    },
+    {
+      "id": "crop_dollar_amount_region",
+      "type": "tool_call",
+      "description": "Crop the image region containing the dollar amount",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "tools": ["crop_image"],
+        "tool_choice": "crop_image",
+        "auto_execute": true,
+        "prompt": "Use the crop_image tool to extract the dollar amount region from the document image."
+      },
+      "inputs": {
+        "message": "Please crop the image using the bounding box coordinates from the analysis. Base64 image: {{base64_image}} Bounding box: {{bounding_box}}",
+        "base64_image": {
+          "from_step": "convert_pdf_to_base64",
+          "field": "base64_images"
+        },
+        "bounding_box": {
+          "from_step": "extract_dollar_amount_with_bounding_box",
+          "field": "dollar_amount_analysis"
+        }
+      },
+      "outputs": ["cropped_image_result"]
+    },
+    {
+      "id": "save_cropped_image",
+      "type": "file_output",
+      "description": "Save the cropped image to file",
+      "config": {
+        "file_path": "output/cropped_dollar_amount.png",
+        "format": "base64_image",
+        "create_dirs": true
+      },
+      "inputs": {
+        "content": {
+          "from_step": "crop_dollar_amount_region",
+          "field": "cropped_image_result"
+        }
+      },
+      "outputs": ["saved_image_path"]
+    },
+    {
+      "id": "output_results",
+      "type": "output",
+      "description": "Return the extraction results",
+      "config": {
+        "format": "json"
+      },
+      "inputs": {
+        "document_analyzed": {
+          "from_step": "get_document_path",
+          "field": "document_path"
+        },
+        "dollar_amount_found": {
+          "from_step": "extract_dollar_amount_with_bounding_box",
+          "field": "dollar_amount_analysis"
+        },
+        "cropped_image": {
+          "from_step": "save_cropped_image",
+          "field": "saved_image_path"
+        },
+        "success": true,
+        "message": "Dollar amount extraction and cropping completed successfully"
+      }
+    }
+  ]
+}

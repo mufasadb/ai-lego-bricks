@@ -103,7 +103,7 @@
         "provider": "gemini",
         "model": "gemini-1.5-pro",
         "temperature": 0.4,
-        "response_schema": "{{json_recommendation_schema_dict}}"
+        "response_schema": "{{json_recommendation_schema}}"
       },
       "inputs": {
         "message": "Based on this user analysis, generate personalized recommendations: {{analysis_response}}\n\nUse the following JSON structure for your response:\n{{json_recommendation_schema}}",

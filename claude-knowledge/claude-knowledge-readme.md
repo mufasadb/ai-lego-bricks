@@ -4,16 +4,28 @@ This folder contains documentation and instructions specifically for Claude Code
 
 ## 📁 Contents
 
+### Core Project Documentation
 - **`CLAUDE.md`** - Project instructions and guidelines for Claude Code
 - **`PROJECT_STRUCTURE.md`** - Detailed project structure documentation for Claude's reference
-- **`CREDENTIAL_MANAGEMENT.md`** - Secure credential management system documentation ⭐ **NEW**
+- **`CREDENTIAL_MANAGEMENT.md`** - Secure credential management system documentation
+
+### Service Architecture Documentation
 - **`AGENT_ORCHESTRATION_OVERVIEW.md`** - Complete guide to structured responses and conditional workflows
 - **`STRUCTURED_RESPONSES.md`** - Detailed implementation of structured LLM responses
 - **`CONDITIONAL_WORKFLOWS.md`** - Detailed implementation of conditional flow control
-- **`PROMPT_MANAGEMENT.md`** - Comprehensive guide to prompt management system ⭐ **NEW**
-- **`VISUAL_CONTENT_PROCESSING.md`** - Visual to text service with bounding box extraction ⭐ **NEW**
-- **`UNIVERSAL_TOOL_SERVICE.md`** - Complete tool service implementation with secure credential management ⭐ **NEW**
+- **`PROMPT_MANAGEMENT.md`** - Comprehensive guide to prompt management system
+- **`VISUAL_CONTENT_PROCESSING.md`** - Visual to text service with bounding box extraction
+- **`UNIVERSAL_TOOL_SERVICE.md`** - Complete tool service implementation with secure credential management
 - **`AGENT_ORCHESTRATION_GUIDE.md`** - Original orchestration system documentation
+
+### Detailed Service Implementation Documentation ⭐ **NEW**
+- **`CHUNKING_DETAILED.md`** - Comprehensive chunking strategies and implementation details
+- **`CHAT_DETAILED.md`** - Detailed chat service architecture and features
+- **`IMAGE_GENERATION_DETAILED.md`** - Detailed image generation capabilities and provider implementations
+- **`MEMORY_DETAILED.md`** - Detailed memory management and storage with multiple backends
+- **`PDF_TO_TEXT_DETAILED.md`** - Detailed PDF processing and vision integration
+- **`STT_DETAILED.md`** - Detailed speech-to-text implementation with real-time processing
+- **`TTS_DETAILED.md`** - Detailed text-to-speech capabilities with streaming support
 
 ## 🎯 Purpose
 
@@ -37,7 +49,16 @@ Provides detailed technical documentation about:
 
 ### Latest Features
 
-**CREDENTIAL_MANAGEMENT.md** ⭐ **NEW**
+**Detailed Service Implementation Documentation** ⭐ **NEW**
+Comprehensive technical documentation for all major services:
+- **Deep Architecture Insights**: Internal implementations, algorithms, and design patterns
+- **Provider-Specific Details**: Multiple backend implementations with optimization strategies  
+- **Advanced Features**: Streaming, real-time processing, and performance optimization
+- **Production Patterns**: Scalability, error handling, and monitoring integrations
+- **Integration Examples**: Complex workflows and advanced use cases
+- **Performance Optimization**: Caching, connection pooling, and resource management
+
+**CREDENTIAL_MANAGEMENT.md**
 Complete guide to the secure credential management system:
 - **Library-Safe Credentials**: Optional .env loading to prevent interference when used as dependency
 - **Credential Isolation**: Different services can have different credentials for multi-tenant applications

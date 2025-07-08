@@ -16,14 +16,32 @@ python3 examples/run_agent_simple.py agent_orchestration/examples/basic_chat_age
 
 Located in `agent_orchestration/examples/`, these JSON files demonstrate different capabilities:
 
-| Agent | Description | Key Features |
-|-------|-------------|--------------|
-| **basic_chat_agent.json** | Simple conversational AI | Multi-provider support, conversation memory |
-| **streaming_agent.json** | Real-time response streaming | Streaming responses, TTS output |
-| **document_analysis_agent.json** | PDF processing & Q&A | Document parsing, vector memory, context retrieval |
-| **vision_analysis_agent.json** | Multi-modal document analysis | OCR vs Vision AI comparison, structured data extraction |
-| **voice_assistant_agent.json** | Complete voice pipeline | STT → LLM → TTS, conversation logging |
-| **complex_workflow_agent.json** | Advanced workflow patterns | Conditions, loops, human approval, dynamic routing |
+### ✅ Fully Working Examples
+
+| Agent | Description | Key Features | Status |
+|-------|-------------|--------------|--------|
+| **basic_chat_agent.json** | Simple conversational AI | Multi-provider support, conversation memory | ✅ Working |
+| **ai_coordinator_agent.json** | Intelligent request routing | Routes to Japanese, Home Assistant, or General experts | ✅ Working |
+| **streaming_agent.json** | Real-time response streaming | Streaming responses, TTS output | ✅ Working |
+| **voice_assistant_agent.json** | Complete voice pipeline | STT → LLM → TTS, conversation logging | ✅ Working |
+| **gemini_ollama_parallel_agent.json** | Multi-provider parallel execution | Concurrent analysis, memory storage, synthesis | ✅ Working |
+| **json_props_demo_agent.json** | Structured response generation | Natural JSON schema definitions, data validation | ✅ Working |
+| **graph_memory_agent.json** | Graph-based memory processing | Entity/relationship extraction, thinking tokens | ✅ Working |
+| **parallel_workflow_example.json** | Advanced parallel processing | Technical/business/UX analysis, memory integration | ✅ Working |
+| **dollar_amount_extraction_agent.json** | PDF vision analysis | Extract dollar amounts, image cropping, vision AI | ✅ Working |
+
+### 🔧 Partially Working Examples
+
+| Agent | Description | Issues | Status |
+|-------|-------------|--------|--------|
+| **complex_workflow_agent.json** | Advanced workflow patterns | Template variable substitution issues | 🔧 Needs fixes |
+
+### 🛠️ Recent Infrastructure Improvements
+
+- **Fixed parallel processing**: Dictionary handling in loops and chunking
+- **Enhanced vision analysis**: Support for different input formats (PDF→images)
+- **Improved output mapping**: Better field mapping for python functions  
+- **Better error handling**: Enhanced error propagation and validation
 
 ## 🛠️ Agent Runners
 

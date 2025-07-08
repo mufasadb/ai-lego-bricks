@@ -48,14 +48,26 @@ print(result['diagram'])  # Mermaid diagram code
 print(f"Complexity: {result['complexity_score']}")
 ```
 
-### Example Usage Script
+### Programmatic Usage
 
-```bash
-cd visualizer/examples
-python example_usage.py
+You can also use the visualizer programmatically to process workflows and generate diagrams:
+
+```python
+from visualizer import WorkflowParser, MermaidGenerator
+
+# Parse workflow file
+parser = WorkflowParser()
+workflow = parser.parse_workflow_file("path/to/workflow.json")
+
+# Generate diagram with statistics
+generator = MermaidGenerator()
+result = generator.generate_with_statistics(workflow)
+
+# Access components
+print(result['diagram'])           # Mermaid diagram code
+print(result['complexity_score'])  # Complexity score
+print(result['statistics'])        # Detailed statistics
 ```
-
-This will process example workflows and generate markdown files with diagrams.
 
 ## Supported Step Types
 
@@ -90,7 +102,6 @@ visualizer/
 │       ├── style.css          # Styling
 │       └── script.js          # Frontend logic
 └── examples/
-    ├── example_usage.py       # Usage demonstration
     └── output/                # Generated diagrams
 ```
 

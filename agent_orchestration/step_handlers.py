@@ -11,6 +11,7 @@ from pydantic import BaseModel
 import importlib
 import json
 import pathlib
+from datetime import datetime
 
 # Import LLM providers
 import sys
@@ -21,6 +22,26 @@ from llm.llm_types import LLMProvider, VisionProvider
 from chunking.chunking_service import ChunkingConfig
 from pdf_to_text.pdf_to_text_service import PDFExtractOptions
 from pdf_to_text.visual_to_text_service import VisualToTextService, VisualExtractOptions
+
+
+def _serialize_for_json(obj):
+    """Helper function to serialize objects for JSON output"""
+    if isinstance(obj, dict):
+        return {k: _serialize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_serialize_for_json(item) for item in obj]
+    elif isinstance(obj, BaseModel):
+        return obj.model_dump()
+    elif hasattr(obj, '__dict__'):
+        # Handle objects with __dict__ like DynamicSchema
+        return {k: _serialize_for_json(v) for k, v in obj.__dict__.items()}
+    elif isinstance(obj, (str, int, float, bool, type(None))):
+        return obj
+    elif isinstance(obj, datetime):
+        return obj.isoformat()
+    else:
+        # Fallback to string representation
+        return str(obj)
 
 
 class StepHandlerRegistry:
@@ -106,6 +127,30 @@ class StepHandlerRegistry:
                 raise ValueError(f"Failed to process JSON prop '{prop_name}': {e}")
         
         return enhanced_inputs
+    
+    def _process_template_string(self, template_str: str, inputs: Dict[str, Any], 
+                                context: ExecutionContext) -> str:
+        """Process template variables in a string like {{variable_name}}"""
+        import re
+        
+        # Build template context
+        template_context = {}
+        template_context.update(inputs)
+        template_context.update(context.global_variables)
+        
+        # Find all template variables in the string
+        pattern = r'\{\{([^}]+)\}\}'
+        matches = re.findall(pattern, template_str)
+        
+        result = template_str
+        for match in matches:
+            var_name = match.strip()
+            if var_name in template_context:
+                result = result.replace(f'{{{{{var_name}}}}}', str(template_context[var_name]))
+            else:
+                raise ValueError(f"Template variable '{var_name}' not found in context")
+        
+        return result
     
     def _handle_input(self, step: StepConfig, inputs: Dict[str, Any], 
                      context: ExecutionContext) -> Any:
@@ -1362,6 +1407,19 @@ class StepHandlerRegistry:
         if not schema_config:
             raise ValueError("response_schema required for structured LLM step")
         
+        # Process template variables in schema config
+        if isinstance(schema_config, str):
+            processed_schema = self._process_template_string(schema_config, enhanced_inputs, context)
+            # If the result looks like JSON, parse it as a dictionary
+            if processed_schema.strip().startswith('{'):
+                import json
+                try:
+                    schema_config = json.loads(processed_schema)
+                except json.JSONDecodeError:
+                    schema_config = processed_schema
+            else:
+                schema_config = processed_schema
+        
         # Parse schema - can be either a class reference or a direct Pydantic model
         schema_class = self._parse_schema_config(schema_config)
         
@@ -1689,8 +1747,26 @@ class StepHandlerRegistry:
         else:
             raise ValueError(f"Unsupported vision provider: {provider}")
         
-        # Process image - first we need to convert image to base64
-        if isinstance(image_path, str):
+        # Process image - handle different input formats
+        if isinstance(image_path, dict):
+            # Handle error cases from previous steps
+            if not image_path.get("success", True):
+                raise ValueError(f"Previous step failed: {image_path.get('error', 'Unknown error')}")
+            # Extract actual data from success case
+            if "base64_images" in image_path:
+                image_path = image_path["base64_images"]
+            elif "result" in image_path:
+                image_path = image_path["result"]
+            else:
+                raise ValueError(f"Could not extract image data from: {image_path}")
+        
+        if isinstance(image_path, list):
+            # If it's a list (e.g., from PDF conversion), use the first image
+            if len(image_path) > 0:
+                image_data = image_path[0]
+            else:
+                raise ValueError("Empty image list provided")
+        elif isinstance(image_path, str):
             # If it's a file path, read and encode it
             import base64
             with open(image_path, "rb") as image_file:
@@ -1698,6 +1774,10 @@ class StepHandlerRegistry:
         else:
             # If it's already image data, use it directly
             image_data = image_path
+        
+        # Ensure image_data is a string
+        if not isinstance(image_data, str):
+            raise ValueError(f"Expected base64 string, got {type(image_data)}: {image_data}")
         
         response = client.process_image(image_data, prompt)
         
@@ -1720,6 +1800,23 @@ class StepHandlerRegistry:
         if not text:
             raise ValueError("text required for chunking")
         
+        # Handle case where text is a dict with response content
+        if isinstance(text, dict):
+            # Extract text from common response formats
+            if 'response' in text:
+                text = text['response']
+            elif 'content' in text:
+                text = text['content']
+            elif 'message' in text:
+                text = text['message']
+            else:
+                # Convert dict to string representation
+                text = str(text)
+                
+        # Ensure text is a string
+        if not isinstance(text, str):
+            text = str(text)
+        
         # Prepare configuration dictionary from step config
         config_dict = {
             "target_size": step.config.get("target_size", 1000),
@@ -1737,11 +1834,20 @@ class StepHandlerRegistry:
         # Chunk the text
         chunks = chunking_service.chunk_text(text)
         
-        return {
+        result = {
             "chunks": chunks,
             "chunk_count": len(chunks),
             "total_length": len(text)
         }
+        
+        # If step has specific outputs defined, map chunks to those output names
+        if step.outputs:
+            for output_name in step.outputs:
+                if output_name not in result:
+                    # Map chunks to the custom output name
+                    result[output_name] = chunks
+        
+        return result
     
     def _handle_condition(self, step: StepConfig, inputs: Dict[str, Any], 
                          context: ExecutionContext) -> Any:
@@ -1992,6 +2098,9 @@ class StepHandlerRegistry:
                 except json.JSONDecodeError:
                     # Try splitting by newlines and filtering empty lines
                     items_to_process = [line.strip() for line in items_to_process.split('\n') if line.strip()]
+            elif isinstance(items_to_process, dict):
+                # Convert dict to list of key-value pairs or values
+                items_to_process = list(items_to_process.values()) if items_to_process else []
             else:
                 items_to_process = [items_to_process]
         
@@ -2041,7 +2150,7 @@ class StepHandlerRegistry:
                     resolved_inputs = self._resolve_loop_inputs(loop_step, loop_context, current_item, iteration_context)
                     
                     # Get handler for this step type
-                    handler = self.orchestrator.step_handlers.get_handler(StepType(loop_step.type))
+                    handler = self.orchestrator.step_registry.get_handler(StepType(loop_step.type))
                     if not handler:
                         raise ValueError(f"No handler found for step type: {loop_step.type}")
                     
@@ -2472,7 +2581,8 @@ class StepHandlerRegistry:
             format_type = step.config["format"]
             if format_type == "json":
                 import json
-                return json.dumps(inputs, indent=2)
+                serializable_inputs = _serialize_for_json(inputs)
+                return json.dumps(serializable_inputs, indent=2)
             elif format_type == "text":
                 if isinstance(inputs, dict):
                     return "\n".join(f"{k}: {v}" for k, v in inputs.items())
@@ -2757,6 +2867,17 @@ class StepHandlerRegistry:
                 "function_args": function_args,
                 "step_id": step.id
             })
+            
+            # If step has specific outputs defined, map result to those output names
+            if step.outputs:
+                for output_name in step.outputs:
+                    if output_name not in formatted_result:
+                        # Map the main result to the custom output name
+                        if "result" in formatted_result:
+                            formatted_result[output_name] = formatted_result["result"]
+                        else:
+                            # For dict results that were spread, try to use the entire result
+                            formatted_result[output_name] = result
             
             return formatted_result
             

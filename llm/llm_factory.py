@@ -14,21 +14,12 @@ from credentials import CredentialManager
 
 T = TypeVar('T', bound=BaseModel)
 
-# Import the new services
-try:
-    from .generation_service import GenerationService
-    GENERATION_SERVICE_AVAILABLE = True
-except ImportError:
-    GENERATION_SERVICE_AVAILABLE = False
+# Import the new services - delay import to avoid circular imports
+from typing import TYPE_CHECKING
 
-try:
-    import sys
-    import os
-    sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'chat'))
-    from conversation_service import ConversationService
-    CONVERSATION_SERVICE_AVAILABLE = True
-except ImportError:
-    CONVERSATION_SERVICE_AVAILABLE = False
+if TYPE_CHECKING:
+    from .generation_service import GenerationService
+    from ..chat.conversation_service import ConversationService
 
 
 class LLMClientFactory:
@@ -272,9 +263,7 @@ class LLMClientFactory:
         Returns:
             GenerationService instance
         """
-        if not GENERATION_SERVICE_AVAILABLE:
-            raise ImportError("GenerationService not available. Make sure generation_service.py is properly installed.")
-        
+        from .generation_service import GenerationService
         return GenerationService(provider, model, temperature, max_tokens, **kwargs)
     
     @staticmethod
@@ -296,9 +285,7 @@ class LLMClientFactory:
         Returns:
             ConversationService instance
         """
-        if not CONVERSATION_SERVICE_AVAILABLE:
-            raise ImportError("ConversationService not available. Make sure conversation_service.py is properly installed.")
-        
+        from ..chat.conversation_service import ConversationService
         return ConversationService(provider, model, temperature, max_tokens, conversation_id, **kwargs)
 
 
@@ -387,31 +374,3 @@ def create_anthropic_conversation(model: Optional[str] = None, **kwargs) -> 'Con
     """Create Anthropic conversation service"""
     return create_conversation_service('anthropic', model, **kwargs)
 
-# Backward compatibility helpers
-def get_chat_service(provider: str, model: Optional[str] = None, **kwargs):
-    """
-    Backward compatibility function that returns a text client
-    Compatible with existing ChatService interface
-    """
-    class ChatServiceAdapter:
-        def __init__(self, text_client: TextLLMClient):
-            self.client = text_client
-            self.service = provider
-            self.model = model
-        
-        def chat(self, message: str, chat_history=None):
-            return self.client.chat(message, chat_history)
-        
-        def chat_with_history(self, message: str, chat_history=None):
-            response = self.client.chat(message, chat_history)
-            if chat_history is None:
-                chat_history = []
-            
-            updated_history = chat_history.copy()
-            updated_history.append({'role': 'user', 'content': message})
-            updated_history.append({'role': 'assistant', 'content': response})
-            
-            return response, updated_history
-    
-    text_client = create_text_client(provider, model=model, **kwargs)
-    return ChatServiceAdapter(text_client)

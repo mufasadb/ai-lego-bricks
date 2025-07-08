@@ -7,15 +7,6 @@ import json
 if TYPE_CHECKING:
     from credentials import CredentialManager
 
-# Import LLM abstraction layer for new functionality
-try:
-    import sys
-    sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'llm'))
-    from llm_factory import LLMClientFactory, get_chat_service
-    from llm_types import LLMProvider, TextLLMClient, ChatMessage as LLMChatMessage
-    LLM_ABSTRACTION_AVAILABLE = True
-except ImportError:
-    LLM_ABSTRACTION_AVAILABLE = False
 
 class ChatMessage(BaseModel):
     """Pydantic model for chat messages"""
@@ -301,10 +292,9 @@ class ChatService:
         
         return response, updated_history
 
-# Modern factory functions using the new LLM abstraction
 def create_chat_service(provider: str, model: str = None, **kwargs):
     """
-    Create a chat service using the new LLM abstraction layer (recommended)
+    Create a chat service
     
     Args:
         provider: LLM provider ('gemini', 'ollama')
@@ -312,13 +302,9 @@ def create_chat_service(provider: str, model: str = None, **kwargs):
         **kwargs: Additional configuration
         
     Returns:
-        ChatService-compatible adapter or legacy ChatService
+        ChatService instance
     """
-    if LLM_ABSTRACTION_AVAILABLE:
-        return get_chat_service(provider, model, **kwargs)
-    else:
-        # Fallback to legacy implementation
-        return ChatService(provider, model, **kwargs)
+    return ChatService(provider, model, **kwargs)
 
 # Service discovery functions
 def get_available_chat_services() -> List[str]:
@@ -328,23 +314,23 @@ def get_available_chat_services() -> List[str]:
 # Convenience functions for quick usage
 def quick_chat_ollama(message: str, model: str = None) -> str:
     """Quick one-off chat with Ollama"""
-    chat_service = create_chat_service("ollama", model)
+    chat_service = ChatService("ollama", model)
     return chat_service.chat(message)
 
 def quick_chat_gemini(message: str, model: str = None) -> str:
     """Quick one-off chat with Gemini"""
-    chat_service = create_chat_service("gemini", model)
+    chat_service = ChatService("gemini", model)
     return chat_service.chat(message)
 
 # Streaming convenience functions
 def quick_chat_ollama_stream(message: str, model: str = None) -> Generator[str, None, str]:
     """Quick one-off streaming chat with Ollama"""
-    chat_service = create_chat_service("ollama", model)
+    chat_service = ChatService("ollama", model)
     return chat_service.chat_stream(message)
 
 def quick_chat_gemini_stream(message: str, model: str = None) -> Generator[str, None, str]:
     """Quick one-off streaming chat with Gemini"""
-    chat_service = create_chat_service("gemini", model)
+    chat_service = ChatService("gemini", model)
     return chat_service.chat_stream(message)
 
 # Example usage

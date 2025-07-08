@@ -89,7 +89,7 @@
       "description": "Analyze topic with Ollama Llama model",
       "config": {
         "provider": "ollama",
-        "model": "llama3.2",
+        "model": "qwen2.5:7b",
         "temperature": 0.6,
         "stream": false,
         "max_tokens": 600
@@ -115,7 +115,7 @@
       "description": "Analyze topic with Ollama Mistral model",
       "config": {
         "provider": "ollama",
-        "model": "mistral",
+        "model": "openhermes:7b-mistral-v2.5-q4_K_M",
         "temperature": 0.8,
         "stream": false,
         "max_tokens": 500
@@ -176,7 +176,7 @@
           "field": "gemini_pro_response"
         }
       },
-      "outputs": ["gemini_chunks"],
+      "outputs": ["chunks"],
       "parallelization": {
         "can_parallelize": true,
         "resource_group": "document",
@@ -202,7 +202,7 @@
           "field": "ollama_mistral_response"
         }
       },
-      "outputs": ["ollama_chunks"],
+      "outputs": ["chunks"],
       "parallelization": {
         "can_parallelize": true,
         "resource_group": "document",
@@ -223,7 +223,7 @@
       "inputs": {
         "content": {
           "from_step": "parallel_chunk_gemini_responses",
-          "field": "gemini_chunks"
+          "field": "chunks"
         }
       },
       "outputs": ["gemini_memory_ids"],
@@ -247,7 +247,7 @@
       "inputs": {
         "content": {
           "from_step": "parallel_chunk_ollama_responses",
-          "field": "ollama_chunks"
+          "field": "chunks"
         }
       },
       "outputs": ["ollama_memory_ids"],

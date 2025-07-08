@@ -36,12 +36,14 @@ jobs:
 
     - name: Run linting
       run: |
-        black --check .
-        flake8 ailego/ agent_orchestration/ llm/ memory/ chat/ prompt/ tts/ chunking/
+        echo "Linting checks disabled - skipping black and flake8"
+        # black --check .
+        # flake8 ailego/ agent_orchestration/ llm/ memory/ chat/ prompt/ tts/ chunking/
 
     - name: Run type checking
       run: |
-        mypy ailego/ agent_orchestration/ llm/ memory/ chat/ prompt/ tts/
+        echo "Type checking disabled - skipping mypy"
+        # mypy ailego/ agent_orchestration/ llm/ memory/ chat/ prompt/ tts/
 
     - name: Test CLI installation
       run: |

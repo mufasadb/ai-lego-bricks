@@ -35,7 +35,7 @@ def main():
     # Check if agent file exists
     if not os.path.exists(args.agent_file):
         print(f"❌ Agent file not found: {args.agent_file}")
-        print(f"💡 Available agents:")
+        print("💡 Available agents:")
         examples_dir = Path("agent_orchestration/examples")
         if examples_dir.exists():
             for agent_file in examples_dir.glob("*.json"):
@@ -68,14 +68,14 @@ def main():
             inputs["user_query"] = args.user_input
         
         # Execute the workflow
-        print(f"🚀 Executing workflow...")
+        print("🚀 Executing workflow...")
         result = orchestrator.execute_workflow(workflow, inputs)
         
         # Display results
         if result.success:
-            print(f"\n✅ Agent completed successfully!")
+            print("\n✅ Agent completed successfully!")
             print(f"⏱️  Execution time: {result.execution_time:.2f}s")
-            print(f"📄 Results:")
+            print("📄 Results:")
             print("-" * 50)
             
             if isinstance(result.final_output, dict):

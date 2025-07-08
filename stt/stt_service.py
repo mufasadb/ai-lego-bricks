@@ -4,7 +4,7 @@ Main STT service interface
 
 import os
 from typing import Optional, Dict, Any, List
-from .stt_types import STTConfig, STTResponse, STTClient
+from .stt_types import STTResponse, STTClient
 
 
 class STTService:
@@ -44,8 +44,8 @@ class STTService:
             )
         
         # Check file format
-        file_ext = os.path.splitext(audio_file_path)[1].lower().lstrip('.')
-        supported_formats = [fmt.value for fmt in self.client.config.provider.__class__.__bases__[0].__dict__.get('AudioFormat', [])]
+        os.path.splitext(audio_file_path)[1].lower().lstrip('.')
+        [fmt.value for fmt in self.client.config.provider.__class__.__bases__[0].__dict__.get('AudioFormat', [])]
         
         # Override config with provided parameters
         override_kwargs = {}
@@ -72,7 +72,7 @@ class STTService:
         """
         try:
             return self.client.get_supported_languages()
-        except Exception as e:
+        except Exception:
             return []
     
     def is_available(self) -> bool:

@@ -2,7 +2,7 @@
 Provider-specific adapters for tool calling.
 """
 from abc import ABC, abstractmethod
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional
 from .tool_types import ToolSchema, ToolCall, ToolResult, ToolChoice
 
 class ProviderAdapter(ABC):

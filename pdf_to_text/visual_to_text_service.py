@@ -1,7 +1,7 @@
 import os
 import pathlib
 import base64
-from typing import Optional, Dict, Any, List, Union
+from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, Field
 import pymupdf
 from PIL import Image

@@ -5,7 +5,6 @@ This module handles running AI agent workflows from JSON configuration files.
 """
 
 import json
-import os
 from pathlib import Path
 from typing import Optional, Dict, Any
 
@@ -13,6 +12,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.json import JSON
+from rich.table import Table
 
 console = Console()
 
@@ -177,7 +177,7 @@ def list_available_workflows():
                             'name': config.get('name', file_path.stem),
                             'description': config.get('description', 'No description')
                         })
-                except:
+                except Exception:
                     continue  # Skip invalid JSON files
     
     if workflows:

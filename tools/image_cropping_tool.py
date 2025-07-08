@@ -3,7 +3,6 @@ Image cropping tool implementation.
 """
 import os
 import base64
-from typing import Dict, Any, List
 from PIL import Image
 import io
 from .tool_types import ToolSchema, ToolParameter, ParameterType, ToolExecutor, ToolCall, ToolResult, Tool

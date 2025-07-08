@@ -1,6 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional, Union, TypeVar, Type, Protocol, Iterator, Generator
+from typing import List, Dict, Any, Optional, Union, TypeVar, Type, Protocol, Generator
 from pydantic import BaseModel
 from enum import Enum
 import json
@@ -273,7 +273,7 @@ JSON Response:
         
         try:
             return json.loads(json_str)
-        except json.JSONDecodeError as e:
+        except json.JSONDecodeError:
             # Try some common fixes
             json_str = self._fix_common_json_issues(json_str)
             return json.loads(json_str)

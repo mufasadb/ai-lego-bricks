@@ -3,14 +3,12 @@ Streaming TTS Service for real-time text-to-speech from LLM streams
 """
 
 import re
-import asyncio
 import threading
 from typing import Generator, Optional, Dict, Any, Callable, List
 from queue import Queue, Empty
 import time
 import os
 
-from .tts_types import TTSConfig, TTSResponse, TTSClient
 from .tts_service import TTSService
 
 

@@ -5,17 +5,14 @@ Storage backends for concept-based prompt evaluation
 import json
 import os
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from pathlib import Path
 from datetime import datetime
 import uuid
 
 from .concept_eval_models import (
     ConceptEvalDefinition, 
-    PromptEvaluation,
-    EvalExecutionResult,
-    TestCaseResult,
-    CheckResult
+    EvalExecutionResult
 )
 
 
@@ -202,7 +199,7 @@ class SupabaseConceptEvalStorage(ConceptEvalStorageBackend):
             data['concept_checks'] = json.dumps(data['concept_checks'])
             data['metadata'] = json.dumps(data['metadata'])
             
-            result = self.client.table(self.definitions_table).upsert(data).execute()
+            self.client.table(self.definitions_table).upsert(data).execute()
             return True
         except Exception as e:
             print(f"Error saving evaluation definition to Supabase: {e}")

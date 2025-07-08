@@ -4,15 +4,11 @@ MCP server process management and communication.
 import asyncio
 import json
 import logging
-import subprocess
-import weakref
-from typing import Dict, List, Optional, Any, AsyncGenerator
-from contextlib import asynccontextmanager
+from typing import Dict, List, Optional, Any
 from pathlib import Path
 
 from .mcp_types import (
-    MCPServerConfig, JSONRPCRequest, JSONRPCResponse, MCPTransport,
-    MCPMethods, MCPInitializeParams, MCPClientCapabilities, MCPErrorCodes
+    MCPServerConfig, JSONRPCRequest, JSONRPCResponse, MCPMethods, MCPInitializeParams, MCPClientCapabilities
 )
 
 try:

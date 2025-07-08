@@ -1,10 +1,9 @@
 import os
-from typing import List, Optional
+from typing import List
 import httpx
-import base64
 import time
 import random
-from .llm_types import VisionLLMClient, ChatMessage, VisionConfig, VisionProvider
+from .llm_types import VisionLLMClient, ChatMessage, VisionConfig
 
 
 class GeminiVisionClient(VisionLLMClient):

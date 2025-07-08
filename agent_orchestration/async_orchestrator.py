@@ -4,12 +4,11 @@ Async agent orchestration classes for parallel workflow execution
 
 import asyncio
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 from enum import Enum
 from dataclasses import dataclass
 
 from .models import WorkflowConfig, ExecutionContext, WorkflowResult, StepConfig, StepType
-from .step_handlers import StepHandlerRegistry
 from .orchestrator import AgentOrchestrator
 
 # Import existing services
@@ -373,6 +372,7 @@ class AsyncWorkflowExecutor:
                                initial_inputs: Dict[str, Any],
                                streaming_analysis: StreamingAnalysis) -> WorkflowResult:
         """Execute workflow with parallel step execution"""
+        start_time = time.time()
         dependency_graph = WorkflowDependencyGraph(workflow)
         
         # Execute parallel groups in dependency order

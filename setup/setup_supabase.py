@@ -33,7 +33,7 @@ def check_connection(supabase):
     """Test the connection to Supabase"""
     try:
         # Try to access the memories table (which should exist)
-        result = supabase.table('memories').select('*').limit(1).execute()
+        supabase.table('memories').select('*').limit(1).execute()
         print("✅ Successfully connected to Supabase")
         return True
     except Exception as e:
@@ -48,7 +48,7 @@ def check_pgvector_extension(supabase):
         test_vector = '[' + ','.join(['0'] * 384) + ']'
         
         # Try to call the match_memories function - this requires pgvector
-        result = supabase.rpc('match_memories', {
+        supabase.rpc('match_memories', {
             'query_embedding': test_vector,
             'match_threshold': 0.1,
             'match_count': 1
@@ -67,7 +67,7 @@ def check_memories_table(supabase):
     """Check if memories table exists with proper schema"""
     try:
         # Check if table exists
-        result = supabase.table('memories').select('*').limit(1).execute()
+        supabase.table('memories').select('*').limit(1).execute()
         print("✅ memories table exists")
         
         # Try to insert a test record to verify the schema
@@ -100,7 +100,7 @@ def check_match_function(supabase):
         test_vector = '[' + ','.join(['0'] * 384) + ']'
         
         # Try to call the match_memories function
-        result = supabase.rpc('match_memories', {
+        supabase.rpc('match_memories', {
             'query_embedding': test_vector,
             'match_threshold': 0.1,
             'match_count': 1

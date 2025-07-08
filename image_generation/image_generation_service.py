@@ -1,11 +1,9 @@
 from typing import Optional, Dict, Any, List
-import os
 
 from .image_generation_types import (
     ImageGenerationClient,
     ImageGenerationRequest,
     ImageGenerationResponse,
-    ImageGenerationConfig,
     ImageSize,
     ImageQuality,
     ImageStyle

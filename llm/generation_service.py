@@ -4,7 +4,7 @@ Optimized for one-shot prompt → response without conversation history.
 """
 
 from typing import Optional, Any, Dict, Generator
-from .llm_types import LLMProvider, TextLLMClient
+from .llm_types import LLMProvider
 from .llm_factory import LLMClientFactory
 from .thinking_tokens_service import ThinkingTokensService, ThinkingTokensMode
 

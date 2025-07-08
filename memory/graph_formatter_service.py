@@ -1,7 +1,6 @@
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 from datetime import datetime
-import json
 import logging
 
 from llm.generation_service import GenerationService
@@ -100,7 +99,7 @@ class GraphFormatterService:
                 prompt = self.prompt_service.get_prompt("graph_memory_extraction_default")
             
             if not prompt:
-                logger.warning(f"No graph extraction prompt found, using fallback")
+                logger.warning("No graph extraction prompt found, using fallback")
                 return None
             
             # Render the prompt with variables

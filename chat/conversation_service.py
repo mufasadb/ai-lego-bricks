@@ -3,17 +3,16 @@ Enhanced conversation service for managing multi-turn conversations with rich st
 Provides access to conversation history, context, and state for agent orchestration.
 """
 
-from typing import List, Optional, Dict, Any, Union, Generator
+from typing import List, Optional, Dict, Any, Generator
 from datetime import datetime
 from pydantic import BaseModel
-import json
 
 # Import LLM abstraction layer
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'llm'))
 from llm.llm_factory import LLMClientFactory
-from llm.llm_types import LLMProvider, TextLLMClient
+from llm.llm_types import LLMProvider
 
 
 class ConversationMessage(BaseModel):
@@ -370,6 +369,6 @@ if __name__ == "__main__":
     print(f"\nConversation stats: {stats}")
     
     # Export conversation
-    print(f"\n=== Conversation Export (Markdown) ===")
+    print("\n=== Conversation Export (Markdown) ===")
     markdown_export = conv.export_conversation('markdown')
     print(markdown_export)

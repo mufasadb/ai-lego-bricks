@@ -149,7 +149,7 @@ class MermaidGenerator:
         
         for step_type in step_types_used:
             style = self.step_styles.get(step_type, self.default_style)
-            style_name = f"style_{step_type}"
+            # style_name = f"style_{step_type}"  # Currently unused
             
             # Find all steps of this type
             steps_of_type = [step.id for step in steps if step.type == step_type]

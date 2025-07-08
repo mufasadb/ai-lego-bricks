@@ -1,7 +1,7 @@
 """
 Secure tool executor that handles API keys and secrets safely.
 """
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Dict, Any, Optional, List
 from .tool_types import ToolExecutor, ToolCall, ToolResult
 
@@ -98,7 +98,6 @@ class APIToolExecutor(SecureToolExecutor):
                               data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Make an authenticated API request."""
         import aiohttp
-        import json
         
         url = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
         headers = self.get_headers()
@@ -223,7 +222,7 @@ def create_tool_with_credentials(tool_class, credential_config: Dict[str, Any],
             {"model": "gpt-4"}
         )
     """
-    from .tool_types import Tool, ToolSchema
+    from .tool_types import Tool
     
     # Create credential manager
     cred_manager = CredentialManager(

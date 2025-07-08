@@ -9,7 +9,6 @@ from .llm_types import (
 from .text_clients import OllamaTextClient, GeminiTextClient, AnthropicTextClient
 from .vision_clients import GeminiVisionClient, LLaVAClient
 from .embedding_client import SentenceTransformerEmbeddingClient
-from .model_manager import ModelManager
 from credentials import CredentialManager
 
 T = TypeVar('T', bound=BaseModel)

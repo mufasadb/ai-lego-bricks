@@ -2,7 +2,7 @@
 Example secure tools that demonstrate proper API key and secret handling.
 """
 import asyncio
-from typing import Dict, Any, Optional, List
+from typing import Dict, Optional
 from .secure_tool_executor import APIToolExecutor, DatabaseToolExecutor, WebhookToolExecutor
 from .tool_types import ToolSchema, ToolParameter, ParameterType, ToolCall, ToolResult, Tool
 

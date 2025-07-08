@@ -2,9 +2,9 @@
 Tool registry for managing and discovering tools.
 """
 import asyncio
-from typing import Dict, List, Optional, Set, Any
+from typing import Dict, List, Optional, Set
 from contextlib import asynccontextmanager
-from .tool_types import Tool, ToolSchema, ToolCall, ToolResult, ToolExecutor, ToolChoice
+from .tool_types import Tool, ToolSchema, ToolCall, ToolResult
 
 class ToolRegistry:
     """Central registry for managing tools."""

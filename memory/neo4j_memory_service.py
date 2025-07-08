@@ -10,7 +10,7 @@ from neo4j import GraphDatabase
 import numpy as np
 import logging
 from .memory_service import MemoryService, Memory
-from .graph_formatter_service import GraphMemoryFormat, GraphEntity, GraphRelationship
+from .graph_formatter_service import GraphMemoryFormat
 
 # Import shared embedding service
 try:
@@ -139,7 +139,7 @@ class Neo4jMemoryService(MemoryService):
                 # Serialize metadata to JSON string
                 metadata_json = json.dumps(metadata or {})
                 
-                result = session.run(query, {
+                session.run(query, {
                     'id': memory_id,
                     'content': content,
                     'embedding': embedding,

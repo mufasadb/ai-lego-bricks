@@ -19,7 +19,7 @@ def format_log_entry(entry):
     try:
         dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
         formatted_time = dt.strftime("%H:%M:%S")
-    except:
+    except Exception:
         formatted_time = timestamp
     
     print(f"\n[{formatted_time}] {stage}")

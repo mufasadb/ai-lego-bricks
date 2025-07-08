@@ -3,10 +3,9 @@ MCP tool executor that integrates with the existing tool system.
 """
 import logging
 from typing import Dict, List, Optional, Any
-from .tool_types import ToolExecutor, ToolCall, ToolResult, ToolSchema, ParameterType, ToolParameter, Tool
+from .tool_types import ToolCall, ToolResult, ToolSchema, ParameterType, ToolParameter, Tool
 from .secure_tool_executor import SecureToolExecutor
-from .mcp_server_manager import get_global_mcp_manager, MCPServerProcess
-from .mcp_types import MCPToolInfo, MCPErrorCodes
+from .mcp_server_manager import get_global_mcp_manager
 
 logger = logging.getLogger(__name__)
 

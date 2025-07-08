@@ -1,8 +1,7 @@
 """
 Main tool service that provides unified interface for tool calling across providers.
 """
-import asyncio
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any
 from .tool_registry import ToolRegistry, get_global_registry
 from .provider_adapters import AdapterFactory
 from .tool_types import ToolSchema, ToolCall, ToolResult, ToolChoice, Tool

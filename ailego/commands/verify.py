@@ -5,9 +5,8 @@ This module handles verifying system setup, dependencies, and configuration.
 """
 
 import os
-import subprocess
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 
 from rich.console import Console
 from rich.table import Table

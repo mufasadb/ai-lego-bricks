@@ -2,7 +2,6 @@
 PDF to base64 conversion tool implementation.
 """
 import os
-from typing import Dict, Any, List
 from .tool_types import ToolSchema, ToolParameter, ParameterType, ToolExecutor, ToolCall, ToolResult, Tool
 
 

@@ -7,7 +7,7 @@ from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime, timedelta
 from collections import defaultdict
 
-from .prompt_models import PromptExecution, PromptEvaluation, PromptComparisonResult
+from .prompt_models import PromptEvaluation, PromptComparisonResult
 from .prompt_storage import PromptStorageBackend
 
 

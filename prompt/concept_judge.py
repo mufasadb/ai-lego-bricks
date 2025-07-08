@@ -2,10 +2,8 @@
 LLM-as-judge service for concept-based evaluation
 """
 
-import json
 import time
-from typing import List, Dict, Any, Optional
-from datetime import datetime
+from typing import List
 
 from .concept_eval_models import (
     ConceptCheck, ConceptCheckType, CheckResult
@@ -258,7 +256,7 @@ CONFIDENCE: [A number from 0.0 to 1.0 indicating how confident you are in your a
             
             return passed, reasoning, confidence
             
-        except Exception as e:
+        except Exception:
             # Fallback parsing
             response_upper = response.upper()
             passed = 'YES' in response_upper and ('NO' not in response_upper or response_upper.find('YES') < response_upper.find('NO'))

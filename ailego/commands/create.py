@@ -10,7 +10,6 @@ from typing import Optional, Dict, Any
 
 from rich.console import Console
 from rich.prompt import Prompt, Confirm
-from rich.panel import Panel
 from rich.table import Table
 
 console = Console()
@@ -434,7 +433,7 @@ def _save_agent_config(config: Dict[str, Any], name: str):
         with open(filepath, 'w') as f:
             json.dump(config, f, indent=2)
         
-        console.print(f"\n[green]✓ Agent created successfully![/green]")
+        console.print("\n[green]✓ Agent created successfully![/green]")
         console.print(f"[blue]Location: {filepath}[/blue]")
         console.print(f"[blue]Test with: ailego run {filepath}[/blue]")
         

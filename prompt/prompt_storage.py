@@ -3,13 +3,12 @@ Storage backends for prompt management
 """
 
 import json
-import os
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from pathlib import Path
 from datetime import datetime
 
-from .prompt_models import Prompt, PromptExecution, PromptEvaluation
+from .prompt_models import Prompt, PromptExecution
 
 
 class PromptStorageBackend(ABC):
@@ -412,7 +411,7 @@ def create_storage_backend(backend_type: str = "auto", **kwargs) -> PromptStorag
                 backend_type = "supabase"
             else:
                 backend_type = "file"
-        except:
+        except Exception:
             backend_type = "file"
     
     if backend_type == "file":

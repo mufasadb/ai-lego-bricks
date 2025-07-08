@@ -3,7 +3,7 @@ Main TTS service interface
 """
 
 from typing import Optional, Dict, Any
-from .tts_types import TTSConfig, TTSResponse, TTSClient
+from .tts_types import TTSResponse, TTSClient
 
 
 class TTSService:

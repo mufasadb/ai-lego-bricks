@@ -11,8 +11,7 @@ import jinja2
 
 from .concept_eval_models import (
     PromptEvaluation, EvalTestCase, ConceptCheck, 
-    TestCaseResult, CheckResult, EvalExecutionResult,
-    ConceptEvalDefinition
+    TestCaseResult, CheckResult, EvalExecutionResult
 )
 from .concept_eval_storage import ConceptEvalStorageBackend
 from .concept_judge import ConceptJudgeService, create_concept_judge
@@ -128,9 +127,9 @@ class ConceptEvaluationService:
         if save_results:
             success = self.storage.save_execution_result(execution_result)
             if success:
-                print(f"✅ Results saved to storage")
+                print("✅ Results saved to storage")
             else:
-                print(f"⚠️ Failed to save results to storage")
+                print("⚠️ Failed to save results to storage")
         
         print(f"🏁 Evaluation completed in {execution_time:.0f}ms")
         print(f"📈 Overall score: {summary_metrics['overall_score']:.1%}")

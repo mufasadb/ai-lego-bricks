@@ -238,7 +238,7 @@ class WorkflowExecutor:
             self.context.global_config = workflow.config
             
             # Create a mapping of step IDs to steps for easy lookup
-            step_map = {step.id: step for step in workflow.steps}
+            # step_map = {step.id: step for step in workflow.steps}  # Currently unused
             
             # Execute workflow with conditional branching
             current_step_index = 0

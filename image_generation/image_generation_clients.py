@@ -4,17 +4,13 @@ import requests
 import uuid
 from datetime import datetime
 from typing import Optional
-from PIL import Image
-from io import BytesIO
 
 from .image_generation_types import (
     ImageGenerationClient,
     ImageGenerationConfig,
     ImageGenerationRequest,
     ImageGenerationResponse,
-    ImageGenerationProvider,
-    ImageSize,
-    ImageQuality
+    ImageGenerationProvider
 )
 from credentials import CredentialManager, default_credential_manager
 
@@ -95,7 +91,7 @@ class OpenAIImageGenerationClient(ImageGenerationClient):
     def is_available(self) -> bool:
         try:
             return bool(self.credential_manager.get_credential("OPENAI_API_KEY"))
-        except:
+        except Exception:
             return False
 
 
@@ -110,9 +106,6 @@ class GoogleImageGenerationClient(ImageGenerationClient):
     
     def generate_image(self, request: ImageGenerationRequest) -> ImageGenerationResponse:
         try:
-            import google.auth
-            from google.auth.transport.requests import Request as GoogleRequest
-            from google.oauth2 import service_account
             
             self._ensure_output_dir()
             
@@ -139,7 +132,7 @@ class GoogleImageGenerationClient(ImageGenerationClient):
     def is_available(self) -> bool:
         try:
             return bool(self.credential_manager.get_credential("GOOGLE_AI_STUDIO_KEY"))
-        except:
+        except Exception:
             return False
 
 
@@ -229,7 +222,7 @@ class StabilityAIImageGenerationClient(ImageGenerationClient):
     def is_available(self) -> bool:
         try:
             return bool(self.credential_manager.get_credential("STABILITY_API_KEY"))
-        except:
+        except Exception:
             return False
 
 
@@ -311,5 +304,5 @@ class LocalImageGenerationClient(ImageGenerationClient):
         try:
             response = requests.get(f"{self.base_url}/health", timeout=5)
             return response.status_code == 200
-        except:
+        except Exception:
             return False

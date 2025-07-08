@@ -17,7 +17,6 @@ import json
 import argparse
 from pathlib import Path
 from datetime import datetime
-import time
 
 # Add project root to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -169,7 +168,7 @@ def main():
     
     try:
         agent_name = Path(args.agent_file).stem
-        print(f"🎯 Interactive Agent Runner")
+        print("🎯 Interactive Agent Runner")
         print(f"🤖 Agent: {agent_name}")
         
         # Create orchestrator

@@ -6,7 +6,6 @@ import uuid
 import os
 from datetime import datetime
 from supabase import create_client, Client
-import numpy as np
 import logging
 from .memory_service import MemoryService, Memory
 
@@ -124,7 +123,7 @@ class SupabaseMemoryService(MemoryService):
         }
         
         try:
-            result = self.supabase.table(self.table_name).insert(memory_data).execute()
+            self.supabase.table(self.table_name).insert(memory_data).execute()
             logger.info(f"Stored memory with ID: {memory_id}")
             return memory_id
         except Exception as e:

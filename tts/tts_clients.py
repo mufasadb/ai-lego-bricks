@@ -7,14 +7,13 @@ import time
 import requests
 import tempfile
 import base64
-from pathlib import Path
-from typing import Optional, Dict, Any, Union, TYPE_CHECKING
+from typing import Optional, Dict, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..credentials import CredentialManager
 from .tts_types import (
-    TTSClient, TTSConfig, TTSResponse, TTSProvider, AudioFormat,
-    OpenAIVoice, OpenAIModel, GoogleVoiceConfig, CoquiXTTSConfig
+    TTSClient, TTSConfig, TTSResponse, AudioFormat,
+    OpenAIVoice, OpenAIModel
 )
 
 
@@ -283,7 +282,7 @@ class OpenAITTSClient(TTSClient):
                 try:
                     error_json = response.json()
                     error_detail = error_json.get("error", {}).get("message", error_detail)
-                except:
+                except Exception:
                     pass
                 
                 return TTSResponse(

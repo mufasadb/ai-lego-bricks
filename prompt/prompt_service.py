@@ -5,7 +5,6 @@ Main prompt management service
 import os
 import uuid
 from typing import Dict, List, Optional, Any
-from datetime import datetime
 
 from .prompt_models import (
     Prompt, PromptContent, PromptTemplate, PromptVersion, PromptMetadata,

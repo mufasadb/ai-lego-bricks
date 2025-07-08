@@ -1,4 +1,4 @@
-from typing import Union, Optional, Dict, Any
+from typing import Union, Optional, Dict
 import os
 
 from .image_generation_types import (
@@ -59,7 +59,7 @@ class ImageGenerationServiceFactory:
             response = requests.get(f"{local_url}/health", timeout=5)
             if response.status_code == 200:
                 return ImageGenerationProvider.LOCAL
-        except:
+        except Exception:
             pass
         
         # Check API-based providers
@@ -104,7 +104,7 @@ class ImageGenerationServiceFactory:
             local_url = os.getenv("LOCAL_IMAGE_GEN_URL", "http://192.168.0.96:8000")
             response = requests.get(f"{local_url}/health", timeout=5)
             providers["local"] = response.status_code == 200
-        except:
+        except Exception:
             providers["local"] = False
         
         # Check API providers

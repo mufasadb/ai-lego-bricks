@@ -6,7 +6,7 @@ step relationships, and metadata needed for visualization.
 """
 
 import json
-from typing import Dict, List, Optional, Any, Set
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 
 

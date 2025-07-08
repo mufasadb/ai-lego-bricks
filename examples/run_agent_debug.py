@@ -37,7 +37,7 @@ def print_step_details(step, step_output, step_time, debug_level=1):
             print(f"📥 Inputs: {json.dumps(step.inputs, indent=2, default=str)}")
     
     if debug_level >= 1:
-        print(f"📤 Output:")
+        print("📤 Output:")
         if isinstance(step_output, dict):
             for key, value in step_output.items():
                 if isinstance(value, str) and len(value) > 300:
@@ -68,7 +68,6 @@ def main():
         print(f"❌ Agent file not found: {args.agent_file}")
         return 1
     
-    debug_log = []
     
     try:
         # Load and display agent configuration
@@ -79,7 +78,7 @@ def main():
         
         with open(args.agent_file, 'r') as f:
             config = json.load(f)
-            print(f"\n📋 Agent Configuration:")
+            print("\n📋 Agent Configuration:")
             print(f"   Name: {config.get('name', 'Unnamed')}")
             print(f"   Description: {config.get('description', 'No description')}")
             print(f"   Steps: {len(config.get('steps', []))}")
@@ -110,7 +109,7 @@ def main():
         print(f"\n🔧 Prepared inputs: {json.dumps(inputs, indent=2, default=str)}")
         
         # Execute with detailed monitoring
-        print(f"\n🚀 Starting workflow execution...")
+        print("\n🚀 Starting workflow execution...")
         start_time = time.time()
         
         # TODO: Implement step-by-step execution monitoring
@@ -122,7 +121,7 @@ def main():
         # Show detailed results
         if result.success:
             print(f"\n{'='*60}")
-            print(f"✅ WORKFLOW COMPLETED SUCCESSFULLY!")
+            print("✅ WORKFLOW COMPLETED SUCCESSFULLY!")
             print(f"⏱️  Total execution time: {total_time:.3f}s")
             
             if hasattr(result, 'step_outputs') and result.step_outputs:
@@ -142,7 +141,7 @@ def main():
                         else:
                             print(f"    {output_str}")
             
-            print(f"\n📄 Final Output:")
+            print("\n📄 Final Output:")
             print(f"{json.dumps(result.final_output, indent=2, default=str)}")
             
             # Save debug log if requested
@@ -167,7 +166,7 @@ def main():
                 
                 print(f"💾 Debug log saved to: {debug_file}")
         else:
-            print(f"\n❌ WORKFLOW FAILED!")
+            print("\n❌ WORKFLOW FAILED!")
             print(f"💥 Error: {result.error}")
             print(f"⏱️  Time before failure: {total_time:.3f}s")
             
@@ -182,7 +181,7 @@ def main():
         print(f"❌ Fatal error: {e}")
         import traceback
         if args.debug_level >= 2:
-            print(f"📚 Full traceback:")
+            print("📚 Full traceback:")
             traceback.print_exc()
         return 1
     

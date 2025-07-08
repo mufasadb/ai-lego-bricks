@@ -4,15 +4,12 @@ Project initialization command for AI Lego Bricks CLI.
 This module handles creating new AI agent projects with templates and setup.
 """
 
-import os
-import shutil
 from pathlib import Path
-from typing import Dict, Any
 import json
 
 from rich.console import Console
 from rich.panel import Panel
-from rich.prompt import Prompt, Confirm
+from rich.prompt import Confirm
 
 console = Console()
 

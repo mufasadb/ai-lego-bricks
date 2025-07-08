@@ -4,9 +4,9 @@ Step handlers for different workflow step types
 
 from typing import Any, Dict, Callable, Type, List
 try:
-    from .models import StepConfig, StepType, ExecutionContext, ConversationThread, ConversationMessage, ThinkingTokensMode
+    from .models import StepConfig, StepType, ExecutionContext, ThinkingTokensMode
 except ImportError:
-    from models import StepConfig, StepType, ExecutionContext, ConversationThread, ConversationMessage, ThinkingTokensMode
+    from models import StepConfig, StepType, ExecutionContext, ThinkingTokensMode
 from pydantic import BaseModel
 import importlib
 import json
@@ -19,7 +19,6 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from llm.llm_types import LLMProvider, VisionProvider
-from chunking.chunking_service import ChunkingConfig
 from pdf_to_text.pdf_to_text_service import PDFExtractOptions
 from pdf_to_text.visual_to_text_service import VisualToTextService, VisualExtractOptions
 
@@ -709,7 +708,7 @@ class StepHandlerRegistry:
                     # Handle Ctrl+D
                     print(f"\nInput interrupted. Using default action: {default_action}")
                     decision = default_action
-                    feedback = f"Default action used due to input interruption"
+                    feedback = "Default action used due to input interruption"
                     break
                     
         except TimeoutError:
@@ -1040,7 +1039,7 @@ class StepHandlerRegistry:
         
         # Configure retrieval
         limit = step.config.get("limit", 5)
-        threshold = step.config.get("threshold", 0.7)
+        # threshold = step.config.get("threshold", 0.7)  # Currently unused, handled internally
         
         # Retrieve memories (note: threshold filtering is handled internally by the memory service)
         memories = memory_service.retrieve_memories(query, limit=limit)
@@ -1645,7 +1644,6 @@ class StepHandlerRegistry:
     def _create_schema_from_dict(self, schema_dict: Dict[str, Any]) -> Type[BaseModel]:
         """Create a Pydantic model from a dictionary definition"""
         from pydantic import create_model
-        from typing import get_type_hints
         
         # Extract fields from dictionary
         fields = {}
@@ -1653,7 +1651,7 @@ class StepHandlerRegistry:
             if isinstance(field_config, dict):
                 field_type = field_config.get("type", str)
                 field_default = field_config.get("default", ...)
-                field_description = field_config.get("description", "")
+                # field_description = field_config.get("description", "")  # Currently unused
                 
                 # Convert string type names to actual types
                 if isinstance(field_type, str):
@@ -2002,7 +2000,6 @@ class StepHandlerRegistry:
             for key, value in inputs.items():
                 if isinstance(value, str) and field_to_check.lower() in value.lower():
                     # Look for the field value in the string
-                    import re
                     for option in route_options:
                         if option.lower() in value.lower():
                             field_value = option
@@ -2807,11 +2804,8 @@ class StepHandlerRegistry:
     def _handle_python_function(self, step: StepConfig, inputs: Dict[str, Any], 
                                context: ExecutionContext) -> Any:
         """Handle Python function execution step"""
-        import importlib
-        import inspect
         import traceback
         import time
-        from types import ModuleType
         
         function_config = step.config.get("function")
         if not function_config:
@@ -3119,7 +3113,7 @@ class StepHandlerRegistry:
             if any(word in user_message.lower() for word in ["multiply", "multiplied", "calculate", "*", "times", "x", "+", "-", "/"]):
                 # Simulate executing calculator tool
                 from tools.example_tools import CalculatorExecutor
-                from tools import ToolCall, ToolResult
+                from tools import ToolCall
                 
                 # Extract numbers if possible (simple pattern)
                 import re

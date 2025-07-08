@@ -2,10 +2,8 @@
 Service for handling thinking tokens in LLM responses
 """
 
-import re
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
-from enum import Enum
 
 from agent_orchestration.models import ThinkingTokensMode
 
@@ -185,13 +183,13 @@ class ThinkingTokensService:
         
         # Process according to mode
         if mode == ThinkingTokensMode.SHOW:
-            final_response = response
+            pass
         elif mode == ThinkingTokensMode.HIDE:
-            final_response = clean_response
+            pass
         elif mode == ThinkingTokensMode.EXTRACT:
-            final_response = clean_response  # Return clean by default
+            pass  # Return clean by default
         else:
-            final_response = response  # Fallback
+            pass  # Fallback
         
         return ThinkingTokensResult(
             original_response=response,

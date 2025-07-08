@@ -6,7 +6,7 @@ with automatic provider detection and sensible defaults.
 """
 
 import os
-from typing import Optional, Any, Dict
+from typing import Any, Dict
 
 
 def create_memory_service(provider: str = "auto", **kwargs) -> Any:

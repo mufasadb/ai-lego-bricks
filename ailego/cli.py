@@ -9,15 +9,10 @@ import typer
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
-from rich.text import Text
-from pathlib import Path
-import json
-import os
-import shutil
-from typing import Optional, List
+from typing import Optional
 
 from ailego.core import get_version, get_available_providers
-from ailego.commands import init, verify, run, create
+# Import commands will be done locally to avoid redefinition issues
 
 app = typer.Typer(
     name="ailego",

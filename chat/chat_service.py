@@ -1,11 +1,11 @@
 import os
-from typing import List, Optional, Dict, Any, Generator, TYPE_CHECKING
+from typing import List, Optional, Dict, Generator, TYPE_CHECKING
 from pydantic import BaseModel
 import httpx
 import json
 
 if TYPE_CHECKING:
-    from credentials import CredentialManager
+    pass
 
 
 class ChatMessage(BaseModel):
@@ -126,7 +126,7 @@ class ChatService:
                 return self._call_gemini_stream(messages)
             else:
                 raise ValueError(f"Unsupported service: {self.service}")
-        except Exception as e:
+        except Exception:
             # Fall back to regular chat if streaming fails
             full_response = self.chat(message, chat_history)
             yield full_response
@@ -230,7 +230,7 @@ class ChatService:
                                 # Skip malformed JSON lines
                                 continue
                                 
-        except Exception as e:
+        except Exception:
             # If streaming fails, fall back to regular response
             full_response = self._call_ollama(messages)
             yield full_response
@@ -257,7 +257,7 @@ class ChatService:
             
             return full_response
             
-        except Exception as e:
+        except Exception:
             # Fall back to regular response
             full_response = self._call_gemini(messages)
             yield full_response

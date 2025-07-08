@@ -5,14 +5,12 @@ STT client implementations for different providers
 import os
 import time
 import requests
-from pathlib import Path
-from typing import Optional, Dict, Any, List, TYPE_CHECKING
+from typing import Optional, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..credentials import CredentialManager
 from .stt_types import (
-    STTClient, STTConfig, STTResponse, STTProvider, AudioFormat,
-    WordTimestamp, SpeakerSegment, FasterWhisperConfig, GoogleSTTConfig
+    STTClient, STTConfig, STTResponse, WordTimestamp, SpeakerSegment
 )
 
 

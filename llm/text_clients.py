@@ -1,5 +1,4 @@
 from __future__ import annotations
-import os
 import time
 import random
 import json
@@ -7,8 +6,7 @@ from typing import List, Optional, Union, Type, TypeVar, Dict, Any, Generator
 import httpx
 from pydantic import BaseModel
 from .llm_types import (
-    TextLLMClient, ChatMessage, LLMConfig, LLMProvider, 
-    StructuredLLMWrapper, StructuredResponseConfig
+    TextLLMClient, ChatMessage, LLMConfig, StructuredLLMWrapper
 )
 from credentials import CredentialManager, default_credential_manager
 
@@ -200,7 +198,7 @@ JSON Response:
                                 # Skip malformed JSON lines
                                 continue
                                 
-        except Exception as e:
+        except Exception:
             # If streaming fails, fall back to regular response
             full_response = self.chat_with_messages(messages)
             yield full_response
@@ -357,7 +355,7 @@ class GeminiTextClient(TextLLMClient):
             
             return full_response
             
-        except Exception as e:
+        except Exception:
             # Fall back to regular response
             full_response = self.chat_with_messages(messages)
             yield full_response
@@ -559,7 +557,7 @@ JSON Response:
                 full_response = self.chat_with_messages(messages)
                 yield full_response
                 return full_response
-        except Exception as e:
+        except Exception:
             # Fall back to regular API
             full_response = self.chat_with_messages(messages)
             yield full_response

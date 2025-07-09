@@ -1,0 +1,41 @@
+{
+  "name": "HTTP Request Examples",
+  "description": "Collection of HTTP request workflow examples demonstrating various use cases",
+  "config": {
+    "max_iterations": 10,
+    "default_llm_provider": "gemini"
+  },
+  "steps": [
+    {
+      "id": "get_user",
+      "type": "http_request",
+      "config": {
+        "method": "GET",
+        "timeout": 30.0,
+        "max_retries": 3
+      },
+      "inputs": {
+        "url": "https://jsonplaceholder.typicode.com/users/1",
+        "headers": {
+          "Accept": "application/json",
+          "User-Agent": "AI-Lego-Bricks/1.0"
+        }
+      },
+      "outputs": ["json", "status_code", "success"]
+    },
+    {
+      "id": "output_result",
+      "type": "output",
+      "inputs": {
+        "result": {
+          "from_step": "get_user",
+          "field": "json"
+        },
+        "success": {
+          "from_step": "get_user",
+          "field": "success"
+        }
+      }
+    }
+  ]
+}

@@ -59,6 +59,11 @@ try:
 except ImportError:
     create_stt_service = None
 
+try:
+    from services.http_request_service import create_http_request_service
+except ImportError:
+    create_http_request_service = None
+
 
 class AgentOrchestrator:
     """
@@ -193,6 +198,20 @@ class AgentOrchestrator:
                 self._services["stt"] = None
         else:
             self._services["stt"] = None
+        
+        # HTTP Request service
+        if create_http_request_service:
+            try:
+                # Create HTTP request service with credential manager if available
+                credential_manager = None
+                if hasattr(self, '_credential_manager') and self._credential_manager:
+                    credential_manager = self._credential_manager
+                self._services["http_request"] = create_http_request_service(credential_manager=credential_manager)
+            except Exception as e:
+                print(f"Warning: HTTP request service not available: {e}")
+                self._services["http_request"] = None
+        else:
+            self._services["http_request"] = None
     
     def get_service(self, service_name: str):
         """Get a service by name"""
@@ -209,9 +228,13 @@ class AgentOrchestrator:
         return WorkflowConfig(**config_dict)
     
     def execute_workflow(self, workflow: WorkflowConfig, 
-                        initial_inputs: Optional[Dict[str, Any]] = None) -> WorkflowResult:
+                        initial_inputs: Optional[Dict[str, Any]] = None,
+                        workflow_file_path: Optional[str] = None) -> WorkflowResult:
         """Execute a complete workflow"""
         executor = WorkflowExecutor(self)
+        if workflow_file_path:
+            # Store the workflow file path in context for relative path resolution
+            executor.context.global_variables['_workflow_file_path'] = workflow_file_path
         return executor.execute(workflow, initial_inputs or {})
 
 

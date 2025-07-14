@@ -45,6 +45,10 @@ class StepType(str, Enum):
     GRAPH_MEMORY_FORMAT = "graph_memory_format"
     # Tool calling step types
     TOOL_CALL = "tool_call"
+    # HTTP request step types
+    HTTP_REQUEST = "http_request"
+    # Multi-agent step types
+    AGENT_CALL = "agent_call"
 
 
 class InputReference(BaseModel):
@@ -153,6 +157,14 @@ class ToolCallConfig(BaseModel):
     thinking_tokens_mode: ThinkingTokensMode = Field(default=ThinkingTokensMode.HIDE, description="How to handle thinking tokens")
 
 
+class AgentReference(BaseModel):
+    """Reference to another agent workflow for multi-agent orchestration"""
+    agent_file: str = Field(description="Path to child agent JSON file")
+    timeout: Optional[int] = Field(default=300, description="Execution timeout in seconds")
+    inherit_context: bool = Field(default=True, description="Whether to share execution context")
+    return_outputs: List[str] = Field(default_factory=list, description="Specific outputs to return from child agent")
+
+
 class StepConfig(BaseModel):
     """Configuration for a single workflow step"""
     id: str
@@ -172,6 +184,8 @@ class StepConfig(BaseModel):
     json_props: Optional[Dict[str, Dict[str, Any]]] = Field(default_factory=dict)
     # Parallelization configuration
     parallelization: Optional[StepParallelizationConfig] = None
+    # Agent reference for multi-agent workflows
+    agent_ref: Optional[AgentReference] = None
 
 
 class ParallelizationConfig(BaseModel):
@@ -227,6 +241,10 @@ class ExecutionContext(BaseModel):
     step_iteration_history: Dict[str, List[Any]] = Field(default_factory=dict)  # step_id -> list of previous results
     # Global configuration for thinking tokens and other settings
     global_config: Optional["WorkflowGlobalConfig"] = None
+    # Multi-agent execution tracking
+    agent_call_stack: List[str] = Field(default_factory=list)  # Track nested agent calls for recursion prevention
+    parent_context: Optional["ExecutionContext"] = None  # Reference to parent context for nested agents
+    agent_outputs: Dict[str, Dict[str, Any]] = Field(default_factory=dict)  # agent_id -> outputs mapping
     
     def get_active_conversation(self) -> Optional[ConversationThread]:
         """Get the currently active conversation thread"""

@@ -1,0 +1,113 @@
+{
+  "name": "multi_agent_coordinator",
+  "description": "Parent agent that coordinates multiple specialist agents for comprehensive text processing",
+  "config": {
+    "default_llm_provider": "gemini",
+    "default_model": "gemini-1.5-flash",
+    "max_iterations": 5
+  },
+  "steps": [
+    {
+      "id": "get_user_input",
+      "type": "input",
+      "description": "Get text to analyze from user",
+      "config": {
+        "prompt": "Please provide the text you'd like me to analyze:"
+      },
+      "outputs": ["user_text"]
+    },
+    {
+      "id": "validate_input",
+      "type": "condition",
+      "description": "Check if input is valid for analysis",
+      "config": {
+        "condition_type": "llm_decision",
+        "condition_prompt": "Is this text suitable for analysis (more than 10 words and meaningful content)? Answer only 'yes' or 'no'.",
+        "route_options": ["yes", "no"]
+      },
+      "inputs": {
+        "text_to_check": {
+          "from_step": "get_user_input",
+          "field": "user_text"
+        }
+      },
+      "routes": {
+        "yes": "call_text_specialist",
+        "no": "handle_invalid_input"
+      }
+    },
+    {
+      "id": "handle_invalid_input",
+      "type": "output",
+      "description": "Handle insufficient input",
+      "config": {
+        "message": "The provided text is too short or unclear for meaningful analysis. Please provide at least 10 words of coherent text."
+      },
+      "outputs": ["error_message"]
+    },
+    {
+      "id": "call_text_specialist",
+      "type": "agent_call",
+      "description": "Call the text analysis specialist agent",
+      "config": {
+        "agent_file": "./text_analyzer_specialist.json",
+        "timeout": 180,
+        "inherit_context": true,
+        "return_outputs": ["specialist_results"]
+      },
+      "inputs": {
+        "text": {
+          "from_step": "get_user_input",
+          "field": "user_text"
+        }
+      },
+      "outputs": ["analysis_from_specialist"]
+    },
+    {
+      "id": "enhance_analysis",
+      "type": "llm_chat",
+      "description": "Add coordinator insights to specialist analysis",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "temperature": 0.5,
+        "system_message": "You are a coordination AI that enhances specialist analysis with additional insights. Review the specialist's analysis and add:\n1. Potential applications or use cases\n2. Recommendations for follow-up actions\n3. Overall quality assessment\n4. Any gaps or areas for deeper analysis\n\nBuild upon the specialist's work, don't replace it."
+      },
+      "inputs": {
+        "message": "Original text:\n{original_text}\n\nSpecialist Analysis:\n{specialist_analysis}\n\nPlease enhance this analysis with coordinator insights:",
+        "original_text": {
+          "from_step": "get_user_input",
+          "field": "user_text"
+        },
+        "specialist_analysis": {
+          "from_step": "call_text_specialist",
+          "field": "analysis_from_specialist"
+        }
+      },
+      "outputs": ["enhanced_analysis"]
+    },
+    {
+      "id": "final_output",
+      "type": "output",
+      "description": "Present comprehensive analysis results",
+      "config": {
+        "format": "structured"
+      },
+      "inputs": {
+        "original_text": {
+          "from_step": "get_user_input",
+          "field": "user_text"
+        },
+        "specialist_results": {
+          "from_step": "call_text_specialist",
+          "field": "analysis_from_specialist"
+        },
+        "coordinator_insights": {
+          "from_step": "enhance_analysis",
+          "field": "enhanced_analysis"
+        }
+      },
+      "outputs": ["comprehensive_analysis"]
+    }
+  ]
+}

@@ -1,0 +1,281 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "HTTP Request Step Schema",
+  "description": "Schema for HTTP request workflow step configuration",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the step"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["http_request"],
+      "description": "Step type identifier"
+    },
+    "config": {
+      "type": "object",
+      "description": "Step configuration options",
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"],
+          "default": "GET",
+          "description": "HTTP method to use"
+        },
+        "timeout": {
+          "type": "number",
+          "minimum": 0,
+          "default": 30.0,
+          "description": "Request timeout in seconds"
+        },
+        "max_retries": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 3,
+          "description": "Maximum number of retry attempts"
+        },
+        "backoff_factor": {
+          "type": "number",
+          "minimum": 0,
+          "default": 1.0,
+          "description": "Backoff factor for retry delays"
+        },
+        "follow_redirects": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to follow HTTP redirects"
+        },
+        "verify_ssl": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to verify SSL certificates"
+        },
+        "include_content": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to include response content in output"
+        },
+        "include_text": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to include response text in output"
+        },
+        "auth_type": {
+          "type": "string",
+          "enum": ["bearer", "basic", "api_key"],
+          "description": "Authentication type"
+        },
+        "auth_credentials": {
+          "type": "object",
+          "description": "Authentication credentials",
+          "properties": {
+            "token": {
+              "type": "string",
+              "description": "Bearer token (for bearer auth)"
+            },
+            "username": {
+              "type": "string",
+              "description": "Username (for basic auth)"
+            },
+            "password": {
+              "type": "string",
+              "description": "Password (for basic auth)"
+            },
+            "api_key": {
+              "type": "string",
+              "description": "API key (for api_key auth)"
+            },
+            "header_name": {
+              "type": "string",
+              "default": "X-API-Key",
+              "description": "Header name for API key (for api_key auth)"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "inputs": {
+      "type": "object",
+      "description": "Step input parameters",
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Target URL for the request"
+        },
+        "headers": {
+          "type": "object",
+          "description": "HTTP headers to include",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "params": {
+          "type": "object",
+          "description": "Query parameters",
+          "additionalProperties": true
+        },
+        "json_data": {
+          "type": "object",
+          "description": "JSON request body",
+          "additionalProperties": true
+        },
+        "form_data": {
+          "type": "object",
+          "description": "Form data for POST requests",
+          "additionalProperties": true
+        },
+        "data": {
+          "type": ["string", "array"],
+          "description": "Raw request body (string or bytes)",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          }
+        },
+        "auth_credentials": {
+          "type": "object",
+          "description": "Runtime authentication credentials (overrides config)",
+          "properties": {
+            "token": {
+              "type": "string",
+              "description": "Bearer token"
+            },
+            "username": {
+              "type": "string",
+              "description": "Username"
+            },
+            "password": {
+              "type": "string",
+              "description": "Password"
+            },
+            "api_key": {
+              "type": "string",
+              "description": "API key"
+            },
+            "header_name": {
+              "type": "string",
+              "description": "Header name for API key"
+            }
+          }
+        }
+      },
+      "required": ["url"],
+      "additionalProperties": false
+    },
+    "outputs": {
+      "type": "array",
+      "description": "Expected output fields",
+      "items": {
+        "type": "string",
+        "enum": [
+          "success",
+          "status_code",
+          "headers",
+          "url",
+          "method",
+          "elapsed_time",
+          "content_length",
+          "is_client_error",
+          "is_server_error",
+          "content",
+          "text",
+          "json",
+          "metadata",
+          "error",
+          "error_type"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "routes": {
+      "type": "object",
+      "description": "Conditional routing based on step results",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "max_iterations": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Maximum iterations for this step"
+    },
+    "preserve_previous_results": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether to preserve results from previous iterations"
+    }
+  },
+  "required": ["id", "type"],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "id": "fetch_user_data",
+      "type": "http_request",
+      "config": {
+        "method": "GET",
+        "auth_type": "bearer",
+        "timeout": 30.0,
+        "max_retries": 3
+      },
+      "inputs": {
+        "url": "https://api.example.com/users/123",
+        "headers": {
+          "Accept": "application/json"
+        }
+      },
+      "outputs": ["json", "status_code", "success"]
+    },
+    {
+      "id": "submit_form",
+      "type": "http_request",
+      "config": {
+        "method": "POST",
+        "auth_type": "api_key",
+        "auth_credentials": {
+          "api_key": "your-api-key-here"
+        }
+      },
+      "inputs": {
+        "url": "https://api.example.com/forms",
+        "json_data": {
+          "name": "John Doe",
+          "email": "john@example.com"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "outputs": ["success", "status_code", "json"],
+      "routes": {
+        "true": "success_handler",
+        "false": "error_handler"
+      }
+    },
+    {
+      "id": "api_call_with_params",
+      "type": "http_request",
+      "config": {
+        "method": "GET",
+        "timeout": 60.0,
+        "include_content": false,
+        "include_text": false
+      },
+      "inputs": {
+        "url": "https://api.example.com/search",
+        "params": {
+          "q": "search term",
+          "limit": 10,
+          "offset": 0
+        },
+        "headers": {
+          "User-Agent": "AI-Lego-Bricks/1.0"
+        }
+      },
+      "outputs": ["json", "status_code", "elapsed_time"]
+    }
+  ]
+}

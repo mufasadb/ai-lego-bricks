@@ -1,13 +1,3 @@
-Let's make sure they read me is up-to-date. We should especially try to make sure that an AI might reasonably be able to read the docs for this when this project is used as a library so that it might quickly be able to implement something as instructed.
-
-
-Bounding Box Plan
-One of the goals of using a vision model was in the hope that we would be able to identify where a specific piece of information would be. Can we please see if we can make a test agent that asks the old llama vision model where the dollar amount is for GST in the zoom invoice and then see if it gives us something like a bounding box which we could then use in a front end to identify the specific position in the PDF
-
-An AI Coordinator Workflow example
-Can we pelase make an ai coordinator test that takes a given request and decides if it should go to our japanese expert, our home assistant expert or our general tool. the coordinator and each of the nodes will be ollama with the r1 abliterated model, the first query lets make a prompt that sorts them into their categories, then a customised prompt for each of the "experts" then for our purposes lets just hand over the request to a streaming version of ollama who will respond to the question in streaming mode. lets make prompts for each. and then lets make an eval setup for each with some examples to make sure our pompt works as expected.
-
-
 Eval
 Lets make sure our eval provides feedback (from the LLM as a judge based on which of the criteria it didnt meet) so that a prompt could try to zero in on the correct answer.
 
@@ -15,9 +5,103 @@ Prompt stuff
 how does our prompt and prompts setup work now and how does it interface with our eval system? how can i use it if iwanted to make a prompt for an agent and iterate over it, or write evals for it to check its working
 
 
-Thinking Tokens
-Some of the models that get used will have thinking tokens in them, we need to be able to allow user sto either view or not view thinking tokens, or to take advantage of the advanced erasoning of thinking models without letting the thinking tokens muddy the response in a structued answer.
+Can you please have a subagent go through each subfolder and remove the example python files, make sure there is some broad coverage in the corresponding readme (for each folder) to clean up the projects space.
+
+Lets review what is covered by each of the readme's in subfolders, in claude knowledge, and then think deeply about what should really be in the main structure readme, present a few general approaches that might make sense, considering consumption by a human, why and what this app is useful for and how to go about getting information on each section in more detail (and maybe some very light or overarchign examples). 
+
+how does the agent logger work, does it have to be invoked?
 
 
-Model selection for ollama
-does the agent orchestrator model selection actually affect the model for ollama? what does it do when there are no models by that name
+ Main README Structure Overhaul
+
+  - Current: 1130+ lines, comprehensive reference manual
+  - Target: ~400 lines, entry point and navigation guide
+  - Changes:
+    - Reduce feature explanations to 1-2 sentences + link
+    - Move detailed examples to subfolder docs
+    - Create clear section hierarchy with progressive disclosure
+    - Add visual navigation elements (tables, diagrams)
+
+  2. Content Reorganization
+
+  - Move from main README to subfolders:
+    - Detailed API examples → service-specific READMEs
+    - Comprehensive configuration → setup documentation
+    - Advanced use cases → agent orchestration examples
+  - Keep in main README:
+    - Quick start (5-minute experience)
+    - Core concepts overview
+    - Navigation to detailed docs
+
+  3. Missing Service Documentation
+
+  - Create missing README files:
+    - stt/README.md (currently only has stt-readme.md)
+    - pdf_to_text/README.md
+    - chunking/README.md
+    - credentials/README.md
+    - prompt/README.md
+  - Standardize naming: Convert -readme.md files to README.md
+
+  4. Duplicate Content Cleanup
+
+  - Consolidate:
+    - TOOLS_README.md and tools/tools-readme.md (same content, different locations)
+    - Credential management examples (scattered across multiple files)
+    - Provider setup instructions (repeated in multiple service docs)
+  - Create authoritative sources: One definitive location per topic
+
+  5. Navigation and Cross-Linking
+
+  - Add navigation elements:
+    - Quick-access table for "I want to..." scenarios
+    - Service compatibility matrix
+    - Visual component relationship diagram
+  - Fix broken links: Ensure all main README links point to correct locations
+  - Add breadcrumb navigation: Help users understand where they are
+
+  6. Learning Path Creation
+
+  - Progressive complexity structure:
+    - Beginner: Install → Simple chat agent
+    - Intermediate: Add memory → Multi-step workflows
+    - Advanced: Custom tools → Production deployment
+  - Create guided tutorials: Step-by-step walkthroughs for common patterns
+
+  7. Examples and Use Cases
+
+  - Move detailed examples from main README to:
+    - examples/ folder for runnable code
+    - Service-specific READMEs for feature demos
+    - Agent orchestration examples for workflows
+  - Keep minimal examples in main README (1-3 lines max)
+
+  8. Setup and Configuration
+
+  - Streamline setup section:
+    - Single command quick start
+    - Link to comprehensive setup guide
+    - Environment verification steps
+  - Improve setup documentation:
+    - Better organize setup/README.md
+    - Add troubleshooting section
+    - Include common configuration patterns
+
+  9. CLI Documentation
+
+  - Expand CLI section:
+    - Add more examples of common commands
+    - Include output examples
+    - Link to complete CLI reference
+  - Improve CLI help: Ensure ailego --help provides good guidance
+
+  10. Visual Elements
+
+  - Add diagrams:
+    - Architecture overview diagram
+    - Service interaction flow
+    - Data flow for common patterns
+  - Improve formatting:
+    - Better use of tables for comparisons
+    - Consistent emoji usage
+    - Clear section dividers

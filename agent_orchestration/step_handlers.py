@@ -80,6 +80,10 @@ class StepHandlerRegistry:
         self.handlers[StepType.GRAPH_MEMORY_FORMAT] = self._handle_graph_memory_format
         # Tool calling handlers
         self.handlers[StepType.TOOL_CALL] = self._handle_tool_call
+        # HTTP request handlers
+        self.handlers[StepType.HTTP_REQUEST] = self._handle_http_request
+        # Multi-agent handlers
+        self.handlers[StepType.AGENT_CALL] = self._handle_agent_call
     
     def get_handler(self, step_type: StepType) -> Callable:
         """Get handler for a specific step type"""
@@ -3189,4 +3193,288 @@ class StepHandlerRegistry:
                 "tool_calls": [],
                 "conversation_history": [],
                 "iterations": 0
+            }
+    
+    def _handle_http_request(self, step: StepConfig, inputs: Dict[str, Any], 
+                           context: ExecutionContext) -> Any:
+        """Handle HTTP request step"""
+        try:
+            # Import HTTP request service
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'services'))
+            from services.http_request_service import HttpRequestService, HttpRequestConfig, HttpMethod
+            
+            # Get URL (required)
+            url = inputs.get("url")
+            if not url:
+                raise ValueError("url is required for HTTP request step")
+            
+            # Get method (default to GET)
+            method_str = step.config.get("method", "GET").upper()
+            try:
+                method = HttpMethod(method_str)
+            except ValueError:
+                raise ValueError(f"Invalid HTTP method: {method_str}")
+            
+            # Get optional parameters
+            headers = inputs.get("headers", {})
+            params = inputs.get("params", {})
+            json_data = inputs.get("json_data")
+            form_data = inputs.get("form_data")
+            data = inputs.get("data")
+            
+            # Get configuration from step config
+            timeout = step.config.get("timeout", 30.0)
+            follow_redirects = step.config.get("follow_redirects", True)
+            verify_ssl = step.config.get("verify_ssl", True)
+            max_retries = step.config.get("max_retries", 3)
+            backoff_factor = step.config.get("backoff_factor", 1.0)
+            
+            # Authentication configuration
+            auth_type = step.config.get("auth_type")
+            auth_credentials = step.config.get("auth_credentials", {})
+            
+            # Also check for auth credentials in inputs (for dynamic auth)
+            if "auth_credentials" in inputs:
+                auth_credentials.update(inputs["auth_credentials"])
+            
+            # Create HTTP request configuration
+            config = HttpRequestConfig(
+                url=url,
+                method=method,
+                headers=headers,
+                params=params,
+                json_data=json_data,
+                form_data=form_data,
+                data=data,
+                timeout=timeout,
+                follow_redirects=follow_redirects,
+                verify_ssl=verify_ssl,
+                auth_type=auth_type,
+                auth_credentials=auth_credentials if auth_credentials else None
+            )
+            
+            # Create HTTP service with credential manager if available
+            credential_manager = None
+            if hasattr(context, 'credential_manager') and context.credential_manager:
+                credential_manager = context.credential_manager
+            
+            # Create service instance
+            service = HttpRequestService(
+                credential_manager=credential_manager,
+                max_retries=max_retries,
+                backoff_factor=backoff_factor
+            )
+            
+            # Execute request
+            import asyncio
+            try:
+                # Try to get existing event loop
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # In an async context, need to run in a new thread
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(asyncio.run, service.request(config))
+                        response = future.result()
+                else:
+                    # No running loop, safe to use asyncio.run
+                    response = asyncio.run(service.request(config))
+            except RuntimeError:
+                # No event loop, safe to use asyncio.run
+                response = asyncio.run(service.request(config))
+            
+            # Build response
+            result = {
+                "success": response.is_success,
+                "status_code": response.status_code,
+                "headers": response.headers,
+                "url": response.url,
+                "method": response.method,
+                "elapsed_time": response.elapsed_time,
+                "content_length": len(response.content),
+                "is_client_error": response.is_client_error,
+                "is_server_error": response.is_server_error
+            }
+            
+            # Add response content based on configuration
+            include_content = step.config.get("include_content", True)
+            include_text = step.config.get("include_text", True)
+            
+            if include_content:
+                result["content"] = response.content.decode('utf-8', errors='replace')
+            
+            if include_text:
+                result["text"] = response.text
+            
+            # Try to parse JSON if possible
+            content_type = response.headers.get('content-type', response.headers.get('Content-Type', '')).lower()
+            if 'application/json' in content_type or response.text.strip().startswith('{'):
+                try:
+                    result["json"] = response.json()
+                except ValueError:
+                    # Not valid JSON, skip
+                    pass
+            
+            # Add metadata
+            result["metadata"] = {
+                "request_config": {
+                    "url": config.url,
+                    "method": config.method.value,
+                    "headers": dict(config.headers),
+                    "params": dict(config.params),
+                    "auth_type": config.auth_type,
+                    "timeout": config.timeout,
+                    "follow_redirects": config.follow_redirects,
+                    "verify_ssl": config.verify_ssl
+                },
+                "response_info": {
+                    "content_type": content_type,
+                    "content_encoding": response.headers.get('content-encoding', response.headers.get('Content-Encoding')),
+                    "server": response.headers.get('server', response.headers.get('Server'))
+                }
+            }
+            
+            return result
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "status_code": None,
+                "url": inputs.get("url"),
+                "method": step.config.get("method", "GET"),
+                "elapsed_time": 0.0,
+                "metadata": {
+                    "request_config": {
+                        "url": inputs.get("url"),
+                        "method": step.config.get("method", "GET")
+                    },
+                    "error_details": {
+                        "error": str(e),
+                        "error_type": type(e).__name__
+                    }
+                }
+            }
+    
+    def _handle_agent_call(self, step: StepConfig, inputs: Dict[str, Any], context: ExecutionContext) -> Any:
+        """Handle calling another agent workflow"""
+        import os
+        import time
+        from .orchestrator import AgentOrchestrator, WorkflowExecutor
+        
+        try:
+            # Get agent reference configuration
+            agent_config = step.config
+            agent_file = agent_config.get("agent_file")
+            timeout = agent_config.get("timeout", 300)
+            inherit_context = agent_config.get("inherit_context", True)
+            return_outputs = agent_config.get("return_outputs", [])
+            
+            if not agent_file:
+                raise ValueError("agent_file must be specified in agent_call step config")
+            
+            # Resolve agent file path (relative to current workflow)
+            if not os.path.isabs(agent_file):
+                # Get the directory of the current workflow if available
+                current_dir = os.getcwd()
+                if '_workflow_file_path' in context.global_variables:
+                    current_dir = os.path.dirname(context.global_variables['_workflow_file_path'])
+                agent_file = os.path.join(current_dir, agent_file)
+            
+            if not os.path.exists(agent_file):
+                raise FileNotFoundError(f"Agent file not found: {agent_file}")
+            
+            # Check for circular dependencies
+            agent_name = os.path.basename(agent_file)
+            max_call_depth = 5  # Prevent infinite recursion
+            
+            if agent_name in context.agent_call_stack:
+                raise RuntimeError(f"Circular agent dependency detected: {agent_name} is already in call stack {context.agent_call_stack}")
+            
+            if len(context.agent_call_stack) >= max_call_depth:
+                raise RuntimeError(f"Maximum agent call depth ({max_call_depth}) exceeded")
+            
+            # Create child orchestrator and load workflow
+            child_orchestrator = AgentOrchestrator()
+            child_workflow = child_orchestrator.load_workflow_from_file(agent_file)
+            
+            # Prepare child context
+            if inherit_context:
+                # Create a new context that inherits from parent
+                child_context = ExecutionContext()
+                child_context.step_outputs = {}  # Start fresh but can access parent via parent_context
+                child_context.global_variables = context.global_variables.copy()
+                child_context.current_step_index = 0
+                child_context.conversations = context.conversations  # Share conversations
+                child_context.active_conversation_id = context.active_conversation_id
+                child_context.step_iteration_counts = {}
+                child_context.step_iteration_history = {}
+                child_context.global_config = context.global_config
+                child_context.agent_call_stack = context.agent_call_stack + [agent_name]
+                child_context.parent_context = context
+                child_context.agent_outputs = context.agent_outputs.copy()
+            else:
+                # Create isolated context
+                child_context = ExecutionContext()
+                child_context.agent_call_stack = [agent_name]
+                child_context.parent_context = None
+            
+            # Create child executor with the inherited/isolated context
+            child_executor = WorkflowExecutor(child_orchestrator)
+            child_executor.context = child_context
+            
+            # Execute child workflow with timeout
+            start_time = time.time()
+            try:
+                # Pass inputs as initial inputs to child workflow
+                child_result = child_executor.execute(child_workflow, inputs)
+                execution_time = time.time() - start_time
+                
+                if execution_time > timeout:
+                    raise TimeoutError(f"Agent call timed out after {execution_time:.2f}s (limit: {timeout}s)")
+                
+                # Extract specified outputs or return all
+                if return_outputs:
+                    filtered_outputs = {}
+                    for output_key in return_outputs:
+                        if output_key in child_result.step_outputs:
+                            filtered_outputs[output_key] = child_result.step_outputs[output_key]
+                    result_data = filtered_outputs
+                else:
+                    result_data = child_result.step_outputs
+                
+                # Store agent outputs in parent context for potential reuse
+                context.agent_outputs[agent_name] = result_data
+                
+                return {
+                    "success": True,
+                    "agent_name": agent_name,
+                    "execution_time": execution_time,
+                    "outputs": result_data,
+                    "final_output": child_result.final_output,
+                    "metadata": {
+                        "agent_file": agent_file,
+                        "timeout": timeout,
+                        "inherit_context": inherit_context,
+                        "return_outputs": return_outputs,
+                        "total_steps": len(child_workflow.steps)
+                    }
+                }
+                
+            except Exception as child_error:
+                execution_time = time.time() - start_time
+                raise RuntimeError(f"Child agent execution failed: {str(child_error)}") from child_error
+                
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "agent_file": agent_config.get("agent_file"),
+                "metadata": {
+                    "step_id": step.id,
+                    "step_type": "agent_call",
+                    "config": agent_config
+                }
             }

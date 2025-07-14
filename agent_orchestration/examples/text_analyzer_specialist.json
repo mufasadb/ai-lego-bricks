@@ -1,0 +1,90 @@
+{
+  "name": "text_analyzer_specialist",
+  "description": "Specialist agent that analyzes text and extracts key insights",
+  "config": {
+    "default_llm_provider": "gemini",
+    "default_model": "gemini-1.5-flash"
+  },
+  "steps": [
+    {
+      "id": "analyze_text",
+      "type": "llm_chat",
+      "description": "Analyze the provided text for key insights",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "temperature": 0.3,
+        "system_message": "You are a text analysis specialist. Analyze the provided text and extract:\n1. Main topics and themes\n2. Sentiment (positive/negative/neutral)\n3. Key entities (people, places, organizations)\n4. Important facts or statistics\n5. Overall summary\n\nProvide your analysis in a structured format with clear sections."
+      },
+      "inputs": {
+        "message": "Please analyze this text:\n\n{text_content}",
+        "text_content": {
+          "from_step": "input",
+          "field": "text"
+        }
+      },
+      "outputs": ["analysis_result"]
+    },
+    {
+      "id": "extract_keywords",
+      "type": "llm_chat",
+      "description": "Extract key terms and concepts",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "temperature": 0.2,
+        "system_message": "Extract the 10 most important keywords/phrases from the provided text analysis. Return them as a simple comma-separated list."
+      },
+      "inputs": {
+        "message": "Extract keywords from this analysis:\n\n{analysis}",
+        "analysis": {
+          "from_step": "analyze_text",
+          "field": "analysis_result"
+        }
+      },
+      "outputs": ["keywords"]
+    },
+    {
+      "id": "generate_summary",
+      "type": "llm_chat",
+      "description": "Create a concise summary",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "temperature": 0.4,
+        "system_message": "Create a 2-3 sentence executive summary of the text analysis that captures the most important points."
+      },
+      "inputs": {
+        "message": "Summarize this analysis:\n\n{analysis}",
+        "analysis": {
+          "from_step": "analyze_text",
+          "field": "analysis_result"
+        }
+      },
+      "outputs": ["executive_summary"]
+    },
+    {
+      "id": "output_results",
+      "type": "output",
+      "description": "Return the complete analysis results",
+      "config": {
+        "format": "json"
+      },
+      "inputs": {
+        "full_analysis": {
+          "from_step": "analyze_text",
+          "field": "analysis_result"
+        },
+        "keywords": {
+          "from_step": "extract_keywords", 
+          "field": "keywords"
+        },
+        "summary": {
+          "from_step": "generate_summary",
+          "field": "executive_summary"
+        }
+      },
+      "outputs": ["specialist_results"]
+    }
+  ]
+}

@@ -101,7 +101,7 @@ class ModelManager:
         for model in models:
             model_lower = model.lower()
             # Vision/VL models - expanded detection
-            if any(vl_indicator in model_lower for vl_indicator in ["llava", "vision", "vl", "multimodal", "bakllava", "moondream"]):
+            if any(vl_indicator in model_lower for vl_indicator in ["llava", "vision", "vl", "multimodal", "bakllava", "moondream", "gemma-3n", "3n"]):
                 categorized["vision"].append(model)
             # Code models
             elif "code" in model_lower or "codellama" in model_lower:

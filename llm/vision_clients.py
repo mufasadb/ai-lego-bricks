@@ -291,5 +291,5 @@ class LLaVAClient(VisionLLMClient):
         Returns:
             True if it's a vision model, False otherwise
         """
-        vision_indicators = ["llava", "vision", "multimodal", "vl", "qwen2.5-vl"]
+        vision_indicators = ["llava", "vision", "multimodal", "vl", "qwen2.5-vl", "gemma-3n", "3n"]
         return any(indicator in model_name.lower() for indicator in vision_indicators)

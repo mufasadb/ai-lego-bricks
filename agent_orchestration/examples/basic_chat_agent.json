@@ -13,7 +13,7 @@
     },
     "ollama_config": {
       "default_llm_provider": "ollama",
-      "default_model": "qwen2.5:7b"
+      "default_model": "gemma3:4b"
     }
   },
   "steps": [
@@ -44,7 +44,7 @@
         },
         "ollama": {
           "provider": "ollama",
-          "model": "qwen2.5:7b"
+          "model": "gemma3:4b"
         }
       },
       "inputs": {

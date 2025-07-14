@@ -89,7 +89,7 @@
       "description": "Analyze topic with Ollama Llama model",
       "config": {
         "provider": "ollama",
-        "model": "qwen2.5:7b",
+        "model": "gemma3:4b",
         "temperature": 0.6,
         "stream": false,
         "max_tokens": 600
@@ -115,7 +115,7 @@
       "description": "Analyze topic with Ollama Mistral model",
       "config": {
         "provider": "ollama",
-        "model": "openhermes:7b-mistral-v2.5-q4_K_M",
+        "model": "gemma3:4b",
         "temperature": 0.8,
         "stream": false,
         "max_tokens": 500

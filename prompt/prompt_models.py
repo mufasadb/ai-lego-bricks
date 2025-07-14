@@ -34,6 +34,8 @@ class PromptMetadata(BaseModel):
     model_recommendations: List[str] = Field(default_factory=list)
     language: str = "en"
     custom_fields: Dict[str, Any] = Field(default_factory=dict)
+    
+    model_config = {'protected_namespaces': ()}
 
 
 class JsonStructure(BaseModel):

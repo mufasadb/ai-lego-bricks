@@ -4,7 +4,7 @@
   "config": {
     "memory_backend": "neo4j",
     "default_llm_provider": "ollama",
-    "default_model": "hf.co/ngxson/DeepSeek-R1-Distill-Qwen-7B-abliterated-GGUF:Q4_K_M",
+    "default_model": "hf.co/unsloth/gemma-3n-E4B-it-GGUF:Q4_K_XL",
     "max_iterations": 10,
     "thinking_tokens_mode": "hide",
     "thinking_tokens_delimiters": ["<thinking>", "<think>", "<reasoning>"]

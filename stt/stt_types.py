@@ -67,6 +67,8 @@ class STTResponse(BaseModel):
     model_used: Optional[str] = None
     error_message: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
+    
+    model_config = {'protected_namespaces': ()}
 
 
 class STTClient(ABC):
@@ -117,6 +119,8 @@ class FasterWhisperConfig(BaseModel):
     model_size: str = "base"  # tiny, base, small, medium, large
     device: str = "auto"  # auto, cpu, cuda
     compute_type: str = "auto"  # auto, int8, float16, float32
+    
+    model_config = {'protected_namespaces': ()}
 
 
 class GoogleSTTConfig(BaseModel):

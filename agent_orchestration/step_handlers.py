@@ -574,13 +574,16 @@ class StepHandlerRegistry:
         provider = step.config.get("provider", "gemini")
         model = step.config.get("model")
         
-        # Create LLM client
+        # Get credential manager from orchestrator
+        credential_manager = getattr(self.orchestrator, '_credential_manager', None)
+        
+        # Create LLM client with credential manager
         if provider == "gemini":
-            client = llm_factory.create_text_client(LLMProvider.GEMINI, model)
+            client = llm_factory.create_text_client(LLMProvider.GEMINI, model, credential_manager=credential_manager)
         elif provider == "ollama":
-            client = llm_factory.create_text_client(LLMProvider.OLLAMA, model)
+            client = llm_factory.create_text_client(LLMProvider.OLLAMA, model, credential_manager=credential_manager)
         elif provider == "anthropic":
-            client = llm_factory.create_text_client(LLMProvider.ANTHROPIC, model)
+            client = llm_factory.create_text_client(LLMProvider.ANTHROPIC, model, credential_manager=credential_manager)
         else:
             raise ValueError(f"Unsupported LLM provider: {provider}")
         
@@ -1430,13 +1433,17 @@ class StepHandlerRegistry:
         provider = step.config.get("provider", "gemini")
         model = step.config.get("model")
         
+        # Get credential manager from orchestrator
+        credential_manager = getattr(self.orchestrator, '_credential_manager', None)
+        
         # Create structured client
         structured_client = llm_factory.create_structured_client(
             provider=provider,
             schema=schema_class,
             model=model,
             temperature=step.config.get("temperature", 0.7),
-            max_tokens=step.config.get("max_tokens", 1000)
+            max_tokens=step.config.get("max_tokens", 1000),
+            credential_manager=credential_manager
         )
         
         # Generate structured response
@@ -1510,13 +1517,17 @@ class StepHandlerRegistry:
         provider = step.config.get("provider", "gemini")
         model = step.config.get("model")
         
+        # Get credential manager from orchestrator
+        credential_manager = getattr(self.orchestrator, '_credential_manager', None)
+        
         # Create structured client
         structured_client = llm_factory.create_structured_client(
             provider=provider,
             schema=schema_class,
             model=model,
             temperature=step.config.get("temperature", 0.7),
-            max_tokens=step.config.get("max_tokens", 1000)
+            max_tokens=step.config.get("max_tokens", 1000),
+            credential_manager=credential_manager
         )
         
         # For structured responses, we need to convert multi-message prompt to single message

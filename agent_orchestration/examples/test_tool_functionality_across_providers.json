@@ -1,0 +1,236 @@
+{
+  "name": "test_tool_functionality_across_providers",
+  "description": "Test agent orchestration to verify tool functionality works across Anthropic, OpenAI, and Gemini providers using Supabase MCP",
+  "config": {
+    "memory_backend": "supabase",
+    "default_llm_provider": "gemini",
+    "default_model": "gemini-1.5-flash",
+    "max_iterations": 10,
+    "parallelization": {
+      "mode": "selective",
+      "max_concurrent_steps": 3,
+      "max_concurrent_llm": 3,
+      "resource_groups": ["llm", "memory", "mcp"],
+      "streaming_compatibility": "strict"
+    }
+  },
+  "steps": [
+    {
+      "id": "initialization",
+      "type": "output",
+      "description": "Initialize test environment and display configuration",
+      "config": {
+        "message": "🚀 Starting Tool Functionality Test Across LLM Providers\n\nTesting Configuration:\n- Anthropic: Claude 3.5 Sonnet\n- OpenAI: GPT-4\n- Gemini: Gemini 1.5 Flash\n- Tool: Supabase MCP Server\n- Memory Backend: Supabase\n\nInitializing test sequence..."
+      },
+      "inputs": {},
+      "outputs": ["test_status"]
+    },
+    {
+      "id": "store_test_context",
+      "type": "memory_store",
+      "description": "Store initial test context in Supabase memory",
+      "config": {
+        "memory_type": "contextual",
+        "content": "Tool functionality test initiated across three major LLM providers: Anthropic, OpenAI, and Gemini. Testing Supabase MCP server integration.",
+        "metadata": {
+          "test_type": "cross_provider_tool_functionality",
+          "timestamp": "{{current_timestamp}}",
+          "providers": ["anthropic", "openai", "gemini"],
+          "tool_tested": "supabase_mcp"
+        }
+      },
+      "inputs": {
+        "content": "Tool functionality test initiated across three major LLM providers: Anthropic, OpenAI, and Gemini. Testing Supabase MCP server integration."
+      },
+      "outputs": ["memory_stored"]
+    },
+    {
+      "id": "test_anthropic_tools",
+      "type": "tool_call",
+      "description": "Test Supabase MCP tools using Anthropic Claude",
+      "config": {
+        "provider": "anthropic",
+        "model": "claude-3-5-sonnet-20241022",
+        "temperature": 0.3,
+        "max_tokens": 1000,
+        "tools": ["list_tables", "execute_sql", "apply_migration"],
+        "tool_choice": "auto",
+        "max_iterations": 3,
+        "auto_execute": true,
+        "system_prompt": "You are testing Supabase MCP tools. Explore the database and perform meaningful operations:\n1. Use list_tables to see what tables exist\n2. Use execute_sql to explore the schema and existing data\n3. Create a test table if needed, or use an existing one\n4. Insert a test record identifying yourself as 'anthropic' provider\n5. Query your test data to verify it worked\n6. Report what you discovered and accomplished"
+      },
+      "inputs": {
+        "memory_stored": "store_test_context"
+      },
+      "outputs": ["anthropic_test_results"],
+      "_alternatives": {
+        "fallback_anthropic": {
+          "provider": "gemini",
+          "model": "gemini-1.5-flash",
+          "note": "Fallback to Gemini if Anthropic unavailable"
+        }
+      }
+    },
+    {
+      "id": "test_openai_tools",
+      "type": "tool_call",
+      "description": "Test Supabase MCP tools using OpenAI GPT",
+      "config": {
+        "provider": "openai",
+        "model": "gpt-4",
+        "temperature": 0.3,
+        "max_tokens": 1000,
+        "tools": ["list_tables", "execute_sql", "apply_migration"],
+        "tool_choice": "auto",
+        "max_iterations": 3,
+        "auto_execute": true,
+        "system_prompt": "You are testing Supabase MCP tools. Explore the database and perform meaningful operations:\n1. Use list_tables to see what tables exist\n2. Use execute_sql to explore the schema and existing data\n3. Create a test table if needed, or use an existing one\n4. Insert a test record identifying yourself as 'openai' provider\n5. Query your test data to verify it worked\n6. Report what you discovered and accomplished"
+      },
+      "inputs": {
+        "memory_stored": "store_test_context"
+      },
+      "outputs": ["openai_test_results"],
+      "_alternatives": {
+        "fallback_openai": {
+          "provider": "gemini",
+          "model": "gemini-1.5-flash",
+          "note": "Fallback to Gemini if OpenAI unavailable"
+        }
+      }
+    },
+    {
+      "id": "test_gemini_tools",
+      "type": "tool_call",
+      "description": "Test Supabase MCP tools using Gemini",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "temperature": 0.3,
+        "max_tokens": 1000,
+        "tools": ["list_tables", "execute_sql", "apply_migration"],
+        "tool_choice": "auto",
+        "max_iterations": 3,
+        "auto_execute": true,
+        "system_prompt": "You are testing Supabase MCP tools. Explore the database and perform meaningful operations:\n1. Use list_tables to see what tables exist\n2. Use execute_sql to explore the schema and existing data\n3. Create a test table if needed, or use an existing one\n4. Insert a test record identifying yourself as 'gemini' provider\n5. Query your test data to verify it worked\n6. Report what you discovered and accomplished"
+      },
+      "inputs": {
+        "memory_stored": "store_test_context"
+      },
+      "outputs": ["gemini_test_results"]
+    },
+    {
+      "id": "cross_provider_verification",
+      "type": "tool_call",
+      "description": "Verify all provider test results using cross-provider query",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-pro",
+        "temperature": 0.1,
+        "max_tokens": 800,
+        "tools": ["list_tables", "execute_sql"],
+        "tool_choice": "auto",
+        "max_iterations": 2,
+        "auto_execute": true,
+        "system_prompt": "Use the Supabase tools to explore what the three providers accomplished. Look for any tables or data they created. Summarize what each provider (anthropic, openai, gemini) was able to achieve with the tools."
+      },
+      "inputs": {
+        "anthropic_results": "test_anthropic_tools",
+        "openai_results": "test_openai_tools",
+        "gemini_results": "test_gemini_tools"
+      },
+      "outputs": ["verification_results"]
+    },
+    {
+      "id": "memory_retrieval_test",
+      "type": "memory_retrieve",
+      "description": "Test memory retrieval functionality across providers",
+      "config": {
+        "memory_type": "contextual",
+        "query": "tool functionality test providers anthropic openai gemini",
+        "max_results": 10,
+        "similarity_threshold": 0.7
+      },
+      "inputs": {
+        "query": "tool functionality test providers anthropic openai gemini",
+        "verification_results": "cross_provider_verification"
+      },
+      "outputs": ["retrieved_memories"]
+    },
+    {
+      "id": "llm_comparison_analysis",
+      "type": "llm_chat",
+      "description": "Analyze and compare tool execution results across providers",
+      "config": {
+        "provider": "anthropic",
+        "model": "claude-3-5-sonnet-20241022",
+        "temperature": 0.2,
+        "max_tokens": 1200,
+        "system_prompt": "Analyze the tool execution results from all three LLM providers (Anthropic, OpenAI, Gemini) and provide a comprehensive comparison. Focus on:\n1. Tool execution success rates\n2. Response quality and accuracy\n3. Error handling capabilities\n4. Performance characteristics\n5. Any provider-specific differences or advantages"
+      },
+      "inputs": {
+        "message": "Analyze the tool execution results from all three LLM providers. Here are the results:\n\nAnthropic: {{anthropic_results}}\nOpenAI: {{openai_results}}\nGemini: {{gemini_results}}\nVerification: {{verification_results}}\nMemory Context: {{memory_context}}",
+        "anthropic_results": "test_anthropic_tools",
+        "openai_results": "test_openai_tools", 
+        "gemini_results": "test_gemini_tools",
+        "verification_results": "cross_provider_verification",
+        "memory_context": "memory_retrieval_test"
+      },
+      "outputs": ["analysis_results"]
+    },
+    {
+      "id": "store_final_results",
+      "type": "memory_store",
+      "description": "Store comprehensive test results in memory",
+      "config": {
+        "memory_type": "episodic",
+        "content": "{{analysis_results}}",
+        "metadata": {
+          "test_completed": "{{current_timestamp}}",
+          "test_type": "cross_provider_tool_functionality",
+          "providers_tested": ["anthropic", "openai", "gemini"],
+          "tool_tested": "supabase_mcp",
+          "test_status": "completed"
+        }
+      },
+      "inputs": {
+        "analysis_results": "llm_comparison_analysis"
+      },
+      "outputs": ["final_memory_stored"]
+    },
+    {
+      "id": "debug_information",
+      "type": "output",
+      "description": "Output detailed debug information for troubleshooting",
+      "config": {
+        "message": "🔍 Debug Information:\n\nTest Execution Summary:\n- Anthropic Test: {{anthropic_test_results}}\n- OpenAI Test: {{openai_test_results}}\n- Gemini Test: {{gemini_test_results}}\n- Cross-Provider Verification: {{verification_results}}\n- Memory Retrieval: {{retrieved_memories}}\n- Analysis Results: {{analysis_results}}\n\nMemory Storage: {{final_memory_stored}}\n\n✅ Tool functionality test completed across all providers"
+      },
+      "inputs": {
+        "anthropic_test_results": "test_anthropic_tools",
+        "openai_test_results": "test_openai_tools",
+        "gemini_test_results": "test_gemini_tools",
+        "verification_results": "cross_provider_verification",
+        "retrieved_memories": "memory_retrieval_test",
+        "analysis_results": "llm_comparison_analysis",
+        "final_memory_stored": "store_final_results"
+      },
+      "outputs": ["debug_output"]
+    },
+    {
+      "id": "final_report",
+      "type": "llm_chat",
+      "description": "Generate final comprehensive test report",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-pro",
+        "temperature": 0.1,
+        "max_tokens": 1500,
+        "system_prompt": "Generate a comprehensive final report summarizing the tool functionality test across all three LLM providers. Include:\n1. Executive summary\n2. Individual provider performance\n3. Tool execution statistics\n4. Key findings and insights\n5. Recommendations for optimal provider selection\n6. Any issues encountered and resolutions\n7. Overall test success status"
+      },
+      "inputs": {
+        "message": "Generate a comprehensive final report based on this debug information:\n\n{{debug_output}}",
+        "debug_output": "debug_information"
+      },
+      "outputs": ["final_report"]
+    }
+  ]
+}

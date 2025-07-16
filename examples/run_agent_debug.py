@@ -86,8 +86,26 @@ def main():
             if args.debug_level >= 2:
                 print(f"   Global Config: {json.dumps(config.get('config', {}), indent=4)}")
         
-        # Create orchestrator and load workflow
+        # Create orchestrator and inject credential manager
         orchestrator = AgentOrchestrator()
+        
+        # Initialize credential manager for .env support
+        try:
+            from credentials import CredentialManager
+            orchestrator._credential_manager = CredentialManager(load_env=True)
+            print("✅ Credential manager initialized")
+            
+            # Check which credentials are available
+            test_keys = ["ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY", "SUPABASE_URL", "SUPABASE_ANON_KEY"]
+            print("🔍 Available credentials:")
+            for key in test_keys:
+                value = orchestrator._credential_manager.get_credential(key)
+                status = "✅" if value else "❌"
+                print(f"   {status} {key}")
+                
+        except ImportError:
+            print("⚠️  Credential manager not available")
+        
         workflow = orchestrator.load_workflow_from_file(args.agent_file)
         
         # Prepare inputs

@@ -1,63 +1,97 @@
-# Claude Code Guidelines for AI Lego Bricks
+# AI Lego Bricks - Modular Building Blocks for LLM Agents
 
 ## Project Overview
-AI Lego Bricks is a modular library of building blocks for LLM agentic work, designed to be combined and configured like building blocks.
+AI Lego Bricks is a modular library of building blocks for LLM agentic work, designed to be combined and configured like building blocks. The core philosophy is **JSON-driven configuration over Python code** - almost all behavior should be driven through agent orchestrator JSON files rather than writing Python to configure them.
 
-## Development Style
-The goal here is to have Claude assist the user in learning how to utilise the tools in this project, so each task should be broken down and steppe through so that the user has an opportunity to learn whats going on and could feasibly continue development themselves without Claude afterward
+## The Lego Bricks
 
-## Partnership Approach
-Claude Code should act as a thoughtful development partner, not just executing instructions blindly. Always:
-- Critically evaluate each task for context and potential unintended impacts
-- Ask clarifying questions when requirements are unclear or seem problematic
-- Consider how changes fit within the broader application architecture
-- Start every task by crafting a todo list to clarify intentions and next steps
+### 🎯 Agent Orchestrator (Core Brick)
+**The central nervous system** - A JSON-driven workflow orchestration system that combines all other bricks into sophisticated AI agents. Define complex multi-step workflows, conditional logic, loops, and human-in-the-loop interactions entirely through configuration files.
 
-## Implementation Standards
-- Consider upcoming work during implementation but avoid leaving TODO comments in code
-- Avoid mocking data unless explicitly instructed
-- Write production-ready code, not placeholders
-- Follow existing code patterns and conventions
+**Key Features:**
+- JSON-driven workflows (no Python required for most use cases)
+- Conditional routing and loops
+- Multi-modal processing pipelines
+- Streaming support with real-time responses
+- Human approval workflows
 
-## Completing Tasks
-- Finish work during a task, if there is an error or compatibility issue, seek to fix it now rather than put it off or fake the passing of a test
+### 💬 Chat Services
+**Conversation engine** - Unified chat interfaces supporting multiple LLM providers (Gemini, Ollama, OpenAI, Anthropic). Choose between stateless quick interactions or stateful multi-turn conversations with full history management.
 
-## Context Gathering
-- There is a claude-knlowleddge folder that is a folder built for claude to gather and store context about the repo
-- For tool use, always check context7 for information on how to utilise an API or tool
-- Check MCP/tools available and make use of them when need be
+### 🧠 Memory Services  
+**Long-term knowledge** - Semantic memory system with vector embeddings and graph storage. Automatically store and retrieve relevant context using similarity search across Neo4j and Supabase backends.
 
-## MCP Integration
-AI Lego Bricks now includes full MCP (Model Context Protocol) integration:
-- **Server Management**: Start/stop MCP servers with process lifecycle management
-- **Tool Discovery**: Automatic discovery and conversion of MCP tools to universal format
-- **Credential Integration**: Secure credential management using CredentialManager
-- **Multi-Provider**: MCP tools work with all LLM providers (OpenAI, Anthropic, Gemini, Ollama)
-- **Agent Integration**: MCP tools automatically available in agent workflows
+### 🛠️ Tools & MCP Integration
+**External capabilities** - Universal tool execution framework with full MCP (Model Context Protocol) integration. Automatically discover and use external tools with secure credential management.
 
-### Key Components
-- `tools/mcp_types.py` - MCP protocol types and interfaces
-- `tools/mcp_server_manager.py` - Process management and JSON-RPC communication
-- `tools/mcp_tool_executor.py` - Integration with existing tool system
-- `tools/mcp_config.py` - Configuration management with credential support
+### 🗣️ Text-to-Speech (TTS)
+**Voice output** - Multi-provider TTS with streaming support. Convert LLM responses to natural speech using OpenAI, Google, or local Coqui-XTTS models.
 
-### Usage Pattern
-```python
-# Configure MCP server with credentials
-config = MCPServerConfig(
-    name="github",
-    command=["npx", "-y", "@modelcontextprotocol/server-github"],
-    env_credentials={"GITHUB_PERSONAL_ACCESS_TOKEN": "GITHUB_TOKEN"},
-    required_credentials=["GITHUB_TOKEN"]
-)
+### 🎤 Speech-to-Text (STT)
+**Voice input** - Speech recognition services for audio-based interactions. Transform voice input into text for processing by other bricks.
 
-# Initialize with credential manager
-await initialize_mcp_servers_from_config(credential_manager=cred_manager)
-await register_mcp_tools_globally()
+### 📄 PDF & Visual Processing
+**Document intelligence** - Extract text from PDFs, images, and visual content. Supports OCR, bounding box extraction, table parsing, and AI-powered visual analysis.
+
+### 🔤 Text Chunking
+**Content preparation** - Intelligent text segmentation for large documents. Optimize content for vector storage and LLM context windows.
+
+### 🎨 Image Generation
+**Visual creation** - AI-powered image generation using multiple providers. Create visual content programmatically within agent workflows.
+
+### 📝 Prompt Management
+**Prompt engineering** - Versioned prompt templates with A/B testing, execution tracking, and dynamic variable substitution using Jinja2.
+
+### 🔐 Credential Management
+**Secure configuration** - Centralized, secure storage and retrieval of API keys and sensitive configuration across all services.
+
+### 📊 Visualizer
+**Workflow debugging** - Generate visual diagrams of agent workflows for debugging and documentation purposes.
+
+## Core Design Principle: JSON-Driven Configuration
+
+The fundamental principle of AI Lego Bricks is that **behavior should be driven through agent orchestrator JSON files**, not Python code. This means:
+
+✅ **Preferred Approach**: Define agents in JSON configuration files
+```json
+{
+  "name": "DocumentAnalysisAgent",
+  "steps": [
+    {"type": "pdf_to_text", "input": "document_path"},
+    {"type": "chunking", "chunk_size": 1000},
+    {"type": "memory_store", "metadata": {"type": "document"}},
+    {"type": "llm_analysis", "provider": "gemini", "model": "gemini-1.5-flash"},
+    {"type": "tts", "voice": "alloy"}
+  ]
+}
 ```
 
-### Security Note
-MCP servers use the same secure credential patterns as other tools - no hardcoded API keys in config files.
+❌ **Avoid**: Writing Python code to configure each agent manually
 
-## Debugging
-When debugging requires generating .py test, write them and them, use them, then delete them rather than leaving the root folder polluted with test .pys
+This approach provides:
+- **Rapid prototyping** - Create new agents in minutes
+- **Non-technical accessibility** - Business users can modify agent behavior  
+- **Version control** - Track agent evolution through JSON diffs
+- **Reusability** - Share and compose agent templates
+- **Debugging** - Clear workflow visualization and step-by-step execution
+
+## Getting Started
+
+1. **Explore The Brick Books** - Each brick has detailed documentation in `/The Brick Books/` folder
+2. **Check examples** - See `/agent_orchestration/examples/` for JSON workflow templates
+3. **Use the CLI** - `ailego` command provides scaffolding and templates
+4. **Start with JSON** - Build agents through configuration, not code
+
+## Documentation Structure
+
+- **CLAUDE.md** files in each brick folder contain detailed technical guides for Claude
+- **The Brick Books/** contains user-facing documentation for each brick
+- **claude-knowledge/** contains general guides and architectural overviews
+
+## Security & Credentials
+
+All bricks follow secure credential patterns - no hardcoded API keys in configuration files. Use the credential management brick for secure, centralized credential storage.
+
+## Philosophy
+
+Think of this as "Infrastructure as Configuration" for AI agents - the power of complex agentic workflows through simple, declarative JSON files that combine pre-built, tested building blocks.

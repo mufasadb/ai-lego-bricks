@@ -1,0 +1,96 @@
+{
+  "name": "multi_turn_chat_demo",
+  "description": "Demonstrates multi-turn conversation with Ollama, maintaining conversation history and context",
+  "config": {
+    "default_llm_provider": "ollama",
+    "default_model": "gemma3:4b"
+  },
+  "_alternatives": {
+    "gemini_config": {
+      "default_llm_provider": "gemini",
+      "default_model": "gemini-1.5-flash"
+    },
+    "anthropic_config": {
+      "default_llm_provider": "anthropic", 
+      "default_model": "claude-3-5-sonnet-20241022"
+    }
+  },
+  "steps": [
+    {
+      "id": "introduction",
+      "type": "llm_chat",
+      "description": "Start conversation with introduction",
+      "config": {
+        "provider": "ollama",
+        "model": "gemma3:4b",
+        "use_conversation": true,
+        "conversation_id": "demo_conversation_001",
+        "system_message": "You are a helpful assistant. Remember details about the user throughout our conversation.",
+        "temperature": 0.7,
+        "max_tokens": 1000
+      },
+      "inputs": {
+        "message": "Hello! My name is Alice and I work as a software engineer at TechCorp. I'm interested in learning about AI agents. Please remember these details about me."
+      },
+      "outputs": ["response", "conversation_id", "total_messages"]
+    },
+    {
+      "id": "follow_up_question",
+      "type": "llm_chat",
+      "description": "Ask a follow-up question that requires remembering context",
+      "config": {
+        "provider": "ollama",
+        "model": "gemma3:4b", 
+        "use_conversation": true,
+        "conversation_id": "demo_conversation_001",
+        "temperature": 0.7
+      },
+      "inputs": {
+        "message": "What do you remember about my job and interests?"
+      },
+      "outputs": ["response", "conversation_summary"]
+    },
+    {
+      "id": "technical_question",
+      "type": "llm_chat",
+      "description": "Ask a technical question related to the conversation context",
+      "config": {
+        "provider": "ollama",
+        "model": "gemma3:4b",
+        "use_conversation": true,
+        "conversation_id": "demo_conversation_001",
+        "temperature": 0.7
+      },
+      "inputs": {
+        "message": "Given my background, can you suggest some AI agent projects I could work on at my company?"
+      },
+      "outputs": ["response", "conversation_id", "first_prompt", "last_response", "total_messages"]
+    },
+    {
+      "id": "conversation_summary",
+      "type": "output",
+      "description": "Output the complete conversation summary",
+      "config": {
+        "format": "json"
+      },
+      "inputs": {
+        "conversation_id": {
+          "from_step": "technical_question",
+          "field": "conversation_id"
+        },
+        "total_messages": {
+          "from_step": "technical_question", 
+          "field": "total_messages"
+        },
+        "first_prompt": {
+          "from_step": "technical_question",
+          "field": "first_prompt"
+        },
+        "final_response": {
+          "from_step": "technical_question",
+          "field": "response"
+        }
+      }
+    }
+  ]
+}

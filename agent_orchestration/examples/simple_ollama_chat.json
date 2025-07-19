@@ -1,0 +1,83 @@
+{
+  "name": "simple_ollama_chat",
+  "description": "Simple working example of chat with Ollama showing both single and multi-turn conversations",
+  "config": {
+    "default_llm_provider": "ollama",
+    "default_model": "gemma3:4b"
+  },
+  "steps": [
+    {
+      "id": "single_chat",
+      "type": "llm_chat",
+      "description": "Single turn chat without conversation history",
+      "config": {
+        "provider": "ollama",
+        "model": "gemma3:4b",
+        "use_conversation": false,
+        "temperature": 0.7,
+        "max_tokens": 500
+      },
+      "inputs": {
+        "message": "What is 2 + 2? Please give a brief answer."
+      },
+      "outputs": ["response"]
+    },
+    {
+      "id": "start_conversation",
+      "type": "llm_chat", 
+      "description": "Start a multi-turn conversation",
+      "config": {
+        "provider": "ollama",
+        "model": "gemma3:4b",
+        "use_conversation": true,
+        "conversation_id": "math_conversation",
+        "system_message": "You are a helpful math tutor.",
+        "temperature": 0.7,
+        "max_tokens": 500
+      },
+      "inputs": {
+        "message": "Hi, I'm learning math. Can you help me with basic arithmetic?"
+      },
+      "outputs": ["response", "conversation_id"]
+    },
+    {
+      "id": "continue_conversation",
+      "type": "llm_chat",
+      "description": "Continue the conversation with context",
+      "config": {
+        "provider": "ollama", 
+        "model": "gemma3:4b",
+        "use_conversation": true,
+        "conversation_id": "math_conversation",
+        "temperature": 0.7,
+        "max_tokens": 500
+      },
+      "inputs": {
+        "message": "What's 5 + 3?"
+      },
+      "outputs": ["response", "total_messages"]
+    },
+    {
+      "id": "final_output",
+      "type": "output",
+      "description": "Show the results",
+      "config": {
+        "format": "json"
+      },
+      "inputs": {
+        "single_response": {
+          "from_step": "single_chat",
+          "field": "response"
+        },
+        "conversation_response": {
+          "from_step": "continue_conversation", 
+          "field": "response"
+        },
+        "total_messages": {
+          "from_step": "continue_conversation",
+          "field": "total_messages"
+        }
+      }
+    }
+  ]
+}

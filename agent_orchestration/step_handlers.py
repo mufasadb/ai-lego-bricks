@@ -4,9 +4,11 @@ Step handlers for different workflow step types
 
 from typing import Any, Dict, Callable, Type, List
 try:
-    from .models import StepConfig, StepType, ExecutionContext, ThinkingTokensMode
+    from .models import StepConfig, StepType, ExecutionContext, ThinkingTokensMode, StreamBufferConfig
+    from .streaming_buffer import StreamBuffer, enhance_step_streaming
 except ImportError:
-    from models import StepConfig, StepType, ExecutionContext, ThinkingTokensMode
+    from models import StepConfig, StepType, ExecutionContext, ThinkingTokensMode, StreamBufferConfig
+    from streaming_buffer import StreamBuffer, enhance_step_streaming
 from pydantic import BaseModel
 import importlib
 import json
@@ -1129,13 +1131,41 @@ class StepHandlerRegistry:
             
             # Send message and get response (streaming or regular)
             if use_streaming:
-                # For streaming, we need to handle it differently in orchestration
-                # For now, we'll collect the full response but indicate it was streamed
-                response_chunks = []
-                for chunk in conversation_service.send_message_stream(message):
-                    response_chunks.append(chunk)
-                response = ''.join(response_chunks)
-                streaming_info = {"chunks": response_chunks, "streamed": True}
+                # Enhanced streaming with intelligent buffering
+                stream_generator = conversation_service.send_message_stream(message)
+                
+                # Check for enhanced streaming buffer configuration
+                if step.stream_buffer:
+                    buffer = StreamBuffer(step.stream_buffer)
+                    response_chunks = []
+                    buffered_chunks = []
+                    
+                    for chunk in stream_generator:
+                        response_chunks.append(chunk)
+                        
+                        # Process through buffer for intelligent forwarding
+                        ready_chunks = buffer.process_chunk(chunk)
+                        buffered_chunks.extend(ready_chunks)
+                    
+                    # Flush any remaining content
+                    final_chunks = buffer.flush()
+                    buffered_chunks.extend(final_chunks)
+                    
+                    response = ''.join(response_chunks)
+                    streaming_info = {
+                        "chunks": response_chunks,
+                        "buffered_chunks": buffered_chunks,
+                        "streamed": True,
+                        "buffer_strategy": step.stream_buffer.forward_on,
+                        "buffer_stats": buffer.get_stats()
+                    }
+                else:
+                    # Legacy streaming - collect all chunks
+                    response_chunks = []
+                    for chunk in stream_generator:
+                        response_chunks.append(chunk)
+                    response = ''.join(response_chunks)
+                    streaming_info = {"chunks": response_chunks, "streamed": True}
             else:
                 response = conversation_service.send_message(message)
                 streaming_info = {"streamed": False}
@@ -1174,18 +1204,44 @@ class StepHandlerRegistry:
             system_prompt = step.config.get("system_message")
             
             if use_streaming:
-                # Use streaming generation methods
+                # Enhanced streaming with intelligent buffering
                 if system_prompt:
-                    response_chunks = []
-                    for chunk in gen_service.generate_with_system_prompt_stream(message, system_prompt):
-                        response_chunks.append(chunk)
-                    response = ''.join(response_chunks)
+                    stream_generator = gen_service.generate_with_system_prompt_stream(message, system_prompt)
                 else:
+                    stream_generator = gen_service.generate_stream(message)
+                
+                # Check for enhanced streaming buffer configuration
+                if step.stream_buffer:
+                    buffer = StreamBuffer(step.stream_buffer)
                     response_chunks = []
-                    for chunk in gen_service.generate_stream(message):
+                    buffered_chunks = []
+                    
+                    for chunk in stream_generator:
+                        response_chunks.append(chunk)
+                        
+                        # Process through buffer for intelligent forwarding
+                        ready_chunks = buffer.process_chunk(chunk)
+                        buffered_chunks.extend(ready_chunks)
+                    
+                    # Flush any remaining content
+                    final_chunks = buffer.flush()
+                    buffered_chunks.extend(final_chunks)
+                    
+                    response = ''.join(response_chunks)
+                    streaming_info = {
+                        "chunks": response_chunks,
+                        "buffered_chunks": buffered_chunks,
+                        "streamed": True,
+                        "buffer_strategy": step.stream_buffer.forward_on,
+                        "buffer_stats": buffer.get_stats()
+                    }
+                else:
+                    # Legacy streaming - collect all chunks
+                    response_chunks = []
+                    for chunk in stream_generator:
                         response_chunks.append(chunk)
                     response = ''.join(response_chunks)
-                streaming_info = {"chunks": response_chunks, "streamed": True}
+                    streaming_info = {"chunks": response_chunks, "streamed": True}
             else:
                 # Use regular generation methods
                 if system_prompt:

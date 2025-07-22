@@ -143,6 +143,18 @@ class StepParallelizationConfig(BaseModel):
     timeout: Optional[int] = None  # Step-specific timeout in seconds
 
 
+class StreamBufferConfig(BaseModel):
+    """Enhanced streaming buffer configuration for intelligent forwarding"""
+    forward_on: str = Field(default="sentence", description="When to forward buffered content: 'sentence', 'time', 'chunk_size', 'word_count', 'immediate'")
+    max_buffer_time: float = Field(default=2.0, description="Maximum time to buffer before forcing forward (seconds)")
+    chunk_size: int = Field(default=50, description="Forward after N characters (for chunk_size strategy)")
+    word_count: int = Field(default=10, description="Forward after N words (for word_count strategy)")
+    sentence_count: int = Field(default=1, description="Forward after N complete sentences (for sentence strategy)")
+    min_chunk_length: int = Field(default=10, description="Minimum characters before considering forwarding")
+    pass_through_streams: bool = Field(default=False, description="For multi-agent: forward underlying agent streams")
+    buffer_overflow_strategy: str = Field(default="force_forward", description="What to do when buffer is full: 'force_forward', 'drop_oldest', 'block'")
+
+
 class ToolCallConfig(BaseModel):
     """Configuration for tool calling steps"""
     provider: str = Field(description="LLM provider (openai, anthropic, gemini, ollama)")
@@ -184,6 +196,8 @@ class StepConfig(BaseModel):
     json_props: Optional[Dict[str, Dict[str, Any]]] = Field(default_factory=dict)
     # Parallelization configuration
     parallelization: Optional[StepParallelizationConfig] = None
+    # Enhanced streaming buffer configuration
+    stream_buffer: Optional[StreamBufferConfig] = None
     # Agent reference for multi-agent workflows
     agent_ref: Optional[AgentReference] = None
 

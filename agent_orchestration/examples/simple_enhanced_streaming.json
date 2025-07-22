@@ -1,0 +1,174 @@
+{
+  "name": "Simple Enhanced Streaming Demo",
+  "description": "Basic demonstration of enhanced buffered streaming",
+  "steps": [
+    {
+      "id": "user_input",
+      "type": "input",
+      "description": "Get user question",
+      "config": {},
+      "inputs": {
+        "message": "Tell me a short story about a robot learning to paint"
+      },
+      "outputs": ["message"]
+    },
+    {
+      "id": "story_generator",
+      "type": "llm_chat",
+      "description": "Generate a creative story with sentence-level streaming",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "stream": true,
+        "system_message": "You are a creative storyteller. Write engaging, imaginative stories with vivid descriptions."
+      },
+      "stream_buffer": {
+        "forward_on": "sentence",
+        "sentence_count": 2,
+        "max_buffer_time": 1.5,
+        "min_chunk_length": 15
+      },
+      "inputs": {
+        "message": {
+          "from_step": "user_input",
+          "field": "message"
+        }
+      },
+      "outputs": ["response", "buffered_chunks", "buffer_stats"]
+    },
+    {
+      "id": "word_count_analyzer",
+      "type": "llm_chat", 
+      "description": "Analyze story with word-count streaming",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "stream": true,
+        "system_message": "You are a literary analyst. Provide thoughtful analysis of stories, themes, and writing techniques."
+      },
+      "stream_buffer": {
+        "forward_on": "word_count",
+        "word_count": 12,
+        "max_buffer_time": 2.0,
+        "min_chunk_length": 20
+      },
+      "inputs": {
+        "message": {
+          "template": "Analyze this story for themes and writing techniques:\\n\\n{story}",
+          "story": {
+            "from_step": "story_generator",
+            "field": "response"
+          }
+        }
+      },
+      "outputs": ["response", "buffered_chunks", "buffer_stats"]
+    },
+    {
+      "id": "time_based_summary",
+      "type": "llm_chat",
+      "description": "Create summary with time-based streaming",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash", 
+        "stream": true,
+        "system_message": "You are a concise summarizer. Create clear, informative summaries."
+      },
+      "stream_buffer": {
+        "forward_on": "time",
+        "max_buffer_time": 1.0,
+        "min_chunk_length": 25
+      },
+      "inputs": {
+        "message": {
+          "template": "Create a brief summary of this story and analysis:\\n\\nStory: {story}\\n\\nAnalysis: {analysis}",
+          "story": {
+            "from_step": "story_generator",
+            "field": "response"
+          },
+          "analysis": {
+            "from_step": "word_count_analyzer",
+            "field": "response"
+          }
+        }
+      },
+      "outputs": ["response", "buffered_chunks", "buffer_stats"]
+    },
+    {
+      "id": "immediate_pass_through",
+      "type": "llm_chat",
+      "description": "Final thoughts with immediate streaming",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "stream": true,
+        "system_message": "Provide brief, thoughtful final comments."
+      },
+      "stream_buffer": {
+        "forward_on": "immediate"
+      },
+      "inputs": {
+        "message": "What are your final thoughts on this creative exercise?"
+      },
+      "outputs": ["response", "buffered_chunks", "buffer_stats"]
+    },
+    {
+      "id": "streaming_comparison",
+      "type": "output",
+      "description": "Display streaming strategy comparison",
+      "inputs": {
+        "message": {
+          "template": "🌊 Enhanced Streaming Comparison\\n\\n📝 Story (Sentence-based):\\n{story}\\n\\nBuffering: {story_strategy} | Chunks: {story_chunks}\\n\\n🔍 Analysis (Word-count-based):\\n{analysis}\\n\\nBuffering: {analysis_strategy} | Chunks: {analysis_chunks}\\n\\n📋 Summary (Time-based):\\n{summary}\\n\\nBuffering: {summary_strategy} | Chunks: {summary_chunks}\\n\\n💭 Final (Immediate):\\n{final}\\n\\nBuffering: {final_strategy} | Chunks: {final_chunks}",
+          "story": {
+            "from_step": "story_generator",
+            "field": "response"
+          },
+          "story_strategy": "sentence (2 sentences)",
+          "story_chunks": {
+            "template": "{buffer_stats}",
+            "buffer_stats": {
+              "from_step": "story_generator",
+              "field": "buffer_stats"
+            }
+          },
+          "analysis": {
+            "from_step": "word_count_analyzer",
+            "field": "response"
+          },
+          "analysis_strategy": "word_count (12 words)",
+          "analysis_chunks": {
+            "template": "{buffer_stats}",
+            "buffer_stats": {
+              "from_step": "word_count_analyzer",
+              "field": "buffer_stats"
+            }
+          },
+          "summary": {
+            "from_step": "time_based_summary", 
+            "field": "response"
+          },
+          "summary_strategy": "time (1.0s intervals)",
+          "summary_chunks": {
+            "template": "{buffer_stats}",
+            "buffer_stats": {
+              "from_step": "time_based_summary",
+              "field": "buffer_stats"
+            }
+          },
+          "final": {
+            "from_step": "immediate_pass_through",
+            "field": "response"
+          },
+          "final_strategy": "immediate (pass-through)",
+          "final_chunks": {
+            "template": "{buffer_stats}",
+            "buffer_stats": {
+              "from_step": "immediate_pass_through",
+              "field": "buffer_stats"
+            }
+          }
+        }
+      },
+      "outputs": ["message"]
+    }
+  ]
+}

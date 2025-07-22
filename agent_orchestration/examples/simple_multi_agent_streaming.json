@@ -1,0 +1,179 @@
+{
+  "name": "Simple Multi-Agent Streaming",
+  "description": "Simple multi-agent workflow with enhanced streaming - router selects expert",
+  "steps": [
+    {
+      "id": "user_input",
+      "type": "input",
+      "description": "Get user question",
+      "config": {},
+      "inputs": {
+        "question": "How does quantum computing work?"
+      },
+      "outputs": ["question"]
+    },
+    {
+      "id": "expert_router",
+      "type": "condition",
+      "description": "Route to appropriate expert based on question topic",
+      "config": {
+        "condition_type": "llm_decision",
+        "provider": "gemini",
+        "condition_prompt": "What type of expert should answer this question? Answer with exactly one word: science, technology, general, or creative",
+        "route_options": ["science", "technology", "general", "creative"]
+      },
+      "inputs": {
+        "question_to_route": {
+          "from_step": "user_input",
+          "field": "question"
+        }
+      },
+      "routes": {
+        "science": "science_expert",
+        "technology": "technology_expert", 
+        "general": "general_expert",
+        "creative": "creative_expert"
+      }
+    },
+    {
+      "id": "science_expert",
+      "type": "llm_chat",
+      "description": "Science expert with sentence-level streaming",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "stream": true,
+        "system_message": "You are Dr. Sarah Chen, a physicist with expertise in quantum mechanics, molecular biology, and emerging scientific research. Explain complex scientific concepts clearly using analogies when helpful."
+      },
+      "stream_buffer": {
+        "forward_on": "sentence",
+        "sentence_count": 2,
+        "max_buffer_time": 2.0,
+        "min_chunk_length": 20
+      },
+      "inputs": {
+        "message": {
+          "from_step": "user_input",
+          "field": "question"
+        }
+      },
+      "outputs": ["response", "buffered_chunks", "buffer_stats"]
+    },
+    {
+      "id": "technology_expert",
+      "type": "llm_chat", 
+      "description": "Technology expert with word-count streaming",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "stream": true,
+        "system_message": "You are Alex Rodriguez, a senior technology architect. Focus on practical applications, implementation details, and real-world technology impacts."
+      },
+      "stream_buffer": {
+        "forward_on": "word_count",
+        "word_count": 15,
+        "max_buffer_time": 2.5,
+        "min_chunk_length": 25
+      },
+      "inputs": {
+        "message": {
+          "from_step": "user_input",
+          "field": "question"
+        }
+      },
+      "outputs": ["response", "buffered_chunks", "buffer_stats"]
+    },
+    {
+      "id": "general_expert",
+      "type": "llm_chat",
+      "description": "General expert with time-based streaming", 
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "stream": true,
+        "system_message": "You are Morgan Kim, a knowledgeable generalist. Break down any topic into clear, digestible explanations suitable for a broad audience."
+      },
+      "stream_buffer": {
+        "forward_on": "time",
+        "max_buffer_time": 1.5,
+        "min_chunk_length": 30
+      },
+      "inputs": {
+        "message": {
+          "from_step": "user_input",
+          "field": "question"
+        }
+      },
+      "outputs": ["response", "buffered_chunks", "buffer_stats"]
+    },
+    {
+      "id": "creative_expert",
+      "type": "llm_chat",
+      "description": "Creative expert with chunk-size streaming",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash", 
+        "stream": true,
+        "system_message": "You are River Nakamura, a creative communicator. Explain any topic through engaging stories, vivid metaphors, and memorable analogies."
+      },
+      "stream_buffer": {
+        "forward_on": "chunk_size",
+        "chunk_size": 80,
+        "max_buffer_time": 2.0,
+        "min_chunk_length": 15
+      },
+      "inputs": {
+        "message": {
+          "from_step": "user_input",
+          "field": "question"
+        }
+      },
+      "outputs": ["response", "buffered_chunks", "buffer_stats"]
+    },
+    {
+      "id": "response_synthesizer",
+      "type": "llm_chat",
+      "description": "Synthesize final response with immediate streaming (TTS-ready)",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "stream": true,
+        "system_message": "You are a helpful AI assistant. Present the expert's response clearly to the user with a brief introduction."
+      },
+      "stream_buffer": {
+        "forward_on": "immediate",
+        "max_buffer_time": 0.3
+      },
+      "inputs": {
+        "message": {
+          "template": "Here's the expert response to your question: {question}\\n\\n{expert_response}",
+          "question": {
+            "from_step": "user_input",
+            "field": "question"
+          },
+          "expert_response": "{{AUTO_COLLECT_EXPERT_RESPONSE}}"
+        }
+      },
+      "outputs": ["response", "buffered_chunks", "buffer_stats"]
+    },
+    {
+      "id": "streaming_summary",
+      "type": "output",
+      "description": "Show streaming performance across the multi-agent workflow",
+      "inputs": {
+        "message": {
+          "template": "🤖 Multi-Agent Streaming Demo Results\\n\\n📋 Question: {question}\\n\\n👤 Final Response:\\n{final_response}\\n\\n🌊 Streaming Performance:\\n- Router: Intelligent agent selection\\n- Expert: Used appropriate buffering strategy\\n- Synthesizer: Immediate forwarding (TTS-ready)\\n\\n✅ Multi-agent streaming workflow completed successfully!",
+          "question": {
+            "from_step": "user_input",
+            "field": "question"
+          },
+          "final_response": {
+            "from_step": "response_synthesizer",
+            "field": "response"
+          }
+        }
+      },
+      "outputs": ["message"]
+    }
+  ]
+}

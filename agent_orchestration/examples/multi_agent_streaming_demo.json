@@ -1,0 +1,298 @@
+{
+  "name": "Multi-Agent Streaming Demo",
+  "description": "Demonstrates multi-agent workflow with enhanced streaming buffers",
+  "steps": [
+    {
+      "id": "user_input",
+      "type": "input",
+      "description": "Get user question",
+      "config": {},
+      "inputs": {
+        "question": "How does quantum computing work and what are its applications?"
+      },
+      "outputs": ["question"]
+    },
+    {
+      "id": "agent_router",
+      "type": "llm_chat",
+      "description": "Intelligent agent router that selects the best specialist",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "stream": true,
+        "system_message": "You are an intelligent routing agent. Based on the user's question, decide which specialist should handle it. Respond with ONLY one of these exact words: 'science', 'technology', 'general', 'creative'. Then on a new line, briefly explain your choice in one sentence."
+      },
+      "stream_buffer": {
+        "forward_on": "immediate",
+        "max_buffer_time": 0.5
+      },
+      "inputs": {
+        "message": {
+          "template": "Route this question to the best specialist: {question}",
+          "question": {
+            "from_step": "user_input",
+            "field": "question"
+          }
+        }
+      },
+      "outputs": ["response", "buffered_chunks", "buffer_stats"]
+    },
+    {
+      "id": "science_expert",
+      "type": "llm_chat",
+      "description": "Science expert with sentence-level streaming",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "stream": true,
+        "system_message": "You are Dr. Sarah Chen, a quantum physicist with 15 years of research experience. Explain complex scientific concepts clearly and accurately. Use analogies when helpful. Be enthusiastic about science discoveries."
+      },
+      "stream_buffer": {
+        "forward_on": "sentence",
+        "sentence_count": 2,
+        "max_buffer_time": 2.0,
+        "min_chunk_length": 20
+      },
+      "condition": {
+        "if": "science in router_response",
+        "router_response": {
+          "from_step": "agent_router",
+          "field": "response"
+        }
+      },
+      "inputs": {
+        "message": {
+          "from_step": "user_input",
+          "field": "question"
+        }
+      },
+      "outputs": ["response", "buffered_chunks", "buffer_stats"]
+    },
+    {
+      "id": "technology_expert", 
+      "type": "llm_chat",
+      "description": "Technology expert with word-count streaming",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "stream": true,
+        "system_message": "You are Alex Rodriguez, a senior technology architect specializing in emerging technologies. Focus on practical applications, implementation challenges, and real-world impact. Be pragmatic and solution-oriented."
+      },
+      "stream_buffer": {
+        "forward_on": "word_count",
+        "word_count": 15,
+        "max_buffer_time": 2.5,
+        "min_chunk_length": 25
+      },
+      "condition": {
+        "if": "technology in router_response",
+        "router_response": {
+          "from_step": "agent_router",
+          "field": "response"
+        }
+      },
+      "inputs": {
+        "message": {
+          "from_step": "user_input",
+          "field": "question"
+        }
+      },
+      "outputs": ["response", "buffered_chunks", "buffer_stats"]
+    },
+    {
+      "id": "general_expert",
+      "type": "llm_chat",
+      "description": "General knowledge expert with time-based streaming",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "stream": true,
+        "system_message": "You are Morgan Kim, a knowledgeable generalist who can explain any topic clearly to a broad audience. Break down complex ideas into digestible parts. Be friendly and encouraging."
+      },
+      "stream_buffer": {
+        "forward_on": "time",
+        "max_buffer_time": 1.5,
+        "min_chunk_length": 30
+      },
+      "condition": {
+        "if": "general in router_response",
+        "router_response": {
+          "from_step": "agent_router",
+          "field": "response"
+        }
+      },
+      "inputs": {
+        "message": {
+          "from_step": "user_input",
+          "field": "question"
+        }
+      },
+      "outputs": ["response", "buffered_chunks", "buffer_stats"]
+    },
+    {
+      "id": "creative_expert",
+      "type": "llm_chat",
+      "description": "Creative expert with chunk-size streaming",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "stream": true,
+        "system_message": "You are River Nakamura, a creative communicator who makes any topic engaging through storytelling, metaphors, and vivid descriptions. Make learning fun and memorable."
+      },
+      "stream_buffer": {
+        "forward_on": "chunk_size",
+        "chunk_size": 80,
+        "max_buffer_time": 2.0,
+        "min_chunk_length": 15
+      },
+      "condition": {
+        "if": "creative in router_response",
+        "router_response": {
+          "from_step": "agent_router",
+          "field": "response"
+        }
+      },
+      "inputs": {
+        "message": {
+          "from_step": "user_input",
+          "field": "question"
+        }
+      },
+      "outputs": ["response", "buffered_chunks", "buffer_stats"]
+    },
+    {
+      "id": "collect_expert_response",
+      "type": "python_function",
+      "description": "Collect the response from whichever expert was activated",
+      "config": {
+        "function_code": "def collect_response(science_response=None, technology_response=None, general_response=None, creative_response=None, science_chunks=None, technology_chunks=None, general_chunks=None, creative_chunks=None, science_stats=None, technology_stats=None, general_stats=None, creative_stats=None):\n    experts = {\n        'science': {'response': science_response, 'chunks': science_chunks, 'stats': science_stats},\n        'technology': {'response': technology_response, 'chunks': technology_chunks, 'stats': technology_stats},\n        'general': {'response': general_response, 'chunks': general_chunks, 'stats': general_stats},\n        'creative': {'response': creative_response, 'chunks': creative_chunks, 'stats': creative_stats}\n    }\n    \n    for expert_type, data in experts.items():\n        if data['response'] is not None:\n            return {\n                'expert_response': data['response'],\n                'expert_type': expert_type,\n                'streaming_chunks': data['chunks'] or [],\n                'buffer_stats': data['stats'] or {},\n                'total_chunks': len(data['chunks'] or []),\n                'response_length': len(data['response'] or '')\n            }\n    \n    return {\n        'expert_response': 'No expert response generated',\n        'expert_type': 'none',\n        'streaming_chunks': [],\n        'buffer_stats': {},\n        'total_chunks': 0,\n        'response_length': 0\n    }"
+      },
+      "inputs": {
+        "science_response": {
+          "from_step": "science_expert",
+          "field": "response",
+          "optional": true
+        },
+        "technology_response": {
+          "from_step": "technology_expert", 
+          "field": "response",
+          "optional": true
+        },
+        "general_response": {
+          "from_step": "general_expert",
+          "field": "response",
+          "optional": true
+        },
+        "creative_response": {
+          "from_step": "creative_expert",
+          "field": "response",
+          "optional": true
+        },
+        "science_chunks": {
+          "from_step": "science_expert",
+          "field": "buffered_chunks",
+          "optional": true
+        },
+        "technology_chunks": {
+          "from_step": "technology_expert",
+          "field": "buffered_chunks",
+          "optional": true
+        },
+        "general_chunks": {
+          "from_step": "general_expert",
+          "field": "buffered_chunks",
+          "optional": true
+        },
+        "creative_chunks": {
+          "from_step": "creative_expert",
+          "field": "buffered_chunks",
+          "optional": true
+        },
+        "science_stats": {
+          "from_step": "science_expert",
+          "field": "buffer_stats",
+          "optional": true
+        },
+        "technology_stats": {
+          "from_step": "technology_expert",
+          "field": "buffer_stats",
+          "optional": true
+        },
+        "general_stats": {
+          "from_step": "general_expert",
+          "field": "buffer_stats",
+          "optional": true
+        },
+        "creative_stats": {
+          "from_step": "creative_expert",
+          "field": "buffer_stats",
+          "optional": true
+        }
+      },
+      "outputs": ["expert_response", "expert_type", "streaming_chunks", "buffer_stats", "total_chunks", "response_length"]
+    },
+    {
+      "id": "response_synthesizer",
+      "type": "llm_chat",
+      "description": "Synthesize final response with immediate streaming for TTS",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "stream": true,
+        "system_message": "You are a helpful AI assistant. Take the expert's response and present it clearly to the user. Add a brief introduction mentioning which expert answered."
+      },
+      "stream_buffer": {
+        "forward_on": "immediate",
+        "max_buffer_time": 0.3
+      },
+      "inputs": {
+        "message": {
+          "template": "Present this {expert_type} expert's response to the user:\\n\\nExpert Response: {expert_response}\\n\\nMake it clear and well-formatted.",
+          "expert_type": {
+            "from_step": "collect_expert_response",
+            "field": "expert_type"
+          },
+          "expert_response": {
+            "from_step": "collect_expert_response",
+            "field": "expert_response"
+          }
+        }
+      },
+      "outputs": ["response", "buffered_chunks", "buffer_stats"]
+    },
+    {
+      "id": "final_output",
+      "type": "output",
+      "description": "Display comprehensive multi-agent streaming results",
+      "inputs": {
+        "message": {
+          "template": "🤖 Multi-Agent Streaming Results\\n\\n📍 Router Decision: Selected '{expert_type}' expert\\n\\n👤 Expert Response:\\n{final_response}\\n\\n🌊 Streaming Analysis:\\n- Router Strategy: immediate (fast routing)\\n- Expert Strategy: {expert_strategy}\\n- Synthesizer Strategy: immediate (TTS ready)\\n\\n📊 Buffer Performance:\\n- Expert Chunks: {expert_chunks}\\n- Expert Response Length: {expert_length} chars\\n- Total Processing: Multi-stage streaming successful",
+          "expert_type": {
+            "from_step": "collect_expert_response",
+            "field": "expert_type"
+          },
+          "final_response": {
+            "from_step": "response_synthesizer",
+            "field": "response"
+          },
+          "expert_strategy": {
+            "template": "{expert_type} used appropriate streaming strategy",
+            "expert_type": {
+              "from_step": "collect_expert_response",
+              "field": "expert_type"
+            }
+          },
+          "expert_chunks": {
+            "from_step": "collect_expert_response",
+            "field": "total_chunks"
+          },
+          "expert_length": {
+            "from_step": "collect_expert_response",
+            "field": "response_length"
+          }
+        }
+      },
+      "outputs": ["message"]
+    }
+  ]
+}

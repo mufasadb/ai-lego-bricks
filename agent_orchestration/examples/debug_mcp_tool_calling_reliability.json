@@ -1,0 +1,67 @@
+{
+  "name": "debug_mcp_tool_calling_reliability",
+  "description": "EDUCATIONAL EXAMPLE: Demonstrates the 'second attempt' MCP tool calling reliability issue with Llama models. This example shows sequential tool calls where the first typically succeeds but the second often fails with Llama/Ollama agents.",
+  "config": {
+    "default_llm_provider": "ollama",
+    "default_model": "llama3.1:8b",
+    "max_iterations": 3
+  },
+  "steps": [
+    {
+      "id": "first_attempt",
+      "type": "tool_call",
+      "description": "First attempt - get states and try to turn off living room/lounge lights",
+      "config": {
+        "provider": "ollama",
+        "model": "llama3.1:8b",
+        "temperature": 0.1,
+        "max_tokens": 600,
+        "tools": ["get_states", "call_service"],
+        "tool_choice": "auto",
+        "max_iterations": 3,
+        "auto_execute": true,
+        "retry_on_failure": true,
+        "system_prompt": "EDUCATIONAL EXAMPLE: This tests MCP tool calling reliability. Your task:\n1. Use get_states tool to simulate checking device states\n2. Use call_service tool to simulate device control actions\n3. Report what actions you attempted (Note: This is a demonstration of tool calling patterns, not actual device control)"
+      },
+      "inputs": {
+        "message": "EDUCATIONAL EXAMPLE: Simulate finding and controlling devices (first attempt should typically work)."
+      },
+      "outputs": ["first_attempt_result"]
+    },
+    {
+      "id": "second_attempt",
+      "type": "tool_call", 
+      "description": "Second attempt - this is where tool calling issues typically occur with Llama",
+      "config": {
+        "provider": "ollama",
+        "model": "llama3.1:8b",
+        "temperature": 0.1,
+        "max_tokens": 600,
+        "tools": ["get_states", "call_service"],
+        "tool_choice": "auto",
+        "max_iterations": 3,
+        "auto_execute": true,
+        "retry_on_failure": true,
+        "system_prompt": "EDUCATIONAL EXAMPLE: This is the second attempt where Llama models typically fail. Your task:\n1. Use get_states tool again to simulate state checking\n2. Use call_service tool to simulate additional actions\n3. Report what you attempted (Note: This demonstrates the sequential tool calling reliability issue)"
+      },
+      "inputs": {
+        "message": "EDUCATIONAL EXAMPLE: Make a second sequential tool call (this is where Llama typically fails). Previous attempt: {{first_attempt_result}}",
+        "first_attempt_result": "first_attempt"
+      },
+      "outputs": ["second_attempt_result"]
+    },
+    {
+      "id": "debug_summary",
+      "type": "output",
+      "description": "Summary of both attempts to identify tool calling issues",
+      "config": {
+        "message": "🔍 DEBUG SUMMARY - MCP Tool Calling Reliability Test\n\n**EDUCATIONAL PURPOSE:** This example demonstrates the common 'second attempt' tool calling reliability issue that occurs with Llama/Ollama models when making sequential MCP tool calls.\n\n**First Attempt:**\n{{first_attempt_result}}\n\n**Second Attempt:**\n{{second_attempt_result}}\n\n**Analysis Questions:**\n- Did both attempts complete successfully?\n- Were tool calls made in both attempts?\n- Any errors or hanging on the second attempt?\n- This pattern helps identify MCP tool calling reliability issues with Llama agents.\n\n**Note:** This is a demonstration of tool calling patterns, not actual device control."
+      },
+      "inputs": {
+        "first_attempt_result": "first_attempt",
+        "second_attempt_result": "second_attempt"
+      },
+      "outputs": ["debug_complete"]
+    }
+  ]
+}

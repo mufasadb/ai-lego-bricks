@@ -1,0 +1,311 @@
+{
+  "name": "Enhanced Streaming Multi-Agent Demo",
+  "description": "Demonstrates enhanced buffered streaming with multi-agent selector -> chat -> TTS pipeline",
+  "steps": [
+    {
+      "id": "user_input",
+      "type": "input",
+      "description": "Get user question or request",
+      "config": {},
+      "inputs": {
+        "message": "What's the weather like in San Francisco today?"
+      },
+      "outputs": ["message"]
+    },
+    {
+      "id": "agent_selector", 
+      "type": "llm_chat",
+      "description": "Intelligent agent selector that decides which specialist to route to",
+      "config": {
+        "provider": "gemini",
+        "model": "gemini-1.5-flash",
+        "stream": true,
+        "system_message": "You are an intelligent routing agent. Based on the user's request, decide which specialist agent should handle it. Respond with just the agent name: 'weather_agent', 'general_chat_agent', 'technical_agent', or 'creative_agent'. Then briefly explain your reasoning."
+      },
+      "stream_buffer": {
+        "forward_on": "immediate",
+        "max_buffer_time": 0.5
+      },
+      "inputs": {
+        "message": {
+          "from_step": "user_input",
+          "field": "message"
+        }
+      },
+      "outputs": ["response", "buffered_chunks", "buffer_stats"]
+    },
+    {
+      "id": "parse_agent_selection",
+      "type": "llm_structured",
+      "description": "Parse the agent selection from the routing decision",
+      "config": {
+        "provider": "gemini", 
+        "response_schema": {
+          "name": "AgentSelection",
+          "fields": {
+            "selected_agent": {"type": "string", "description": "Name of selected agent"},
+            "reasoning": {"type": "string", "description": "Brief reasoning for selection"}
+          }
+        }
+      },
+      "inputs": {
+        "message": {
+          "template": "Parse this agent routing decision and extract the selected agent name: {routing_decision}",
+          "routing_decision": {
+            "from_step": "agent_selector",
+            "field": "response"
+          }
+        }
+      },
+      "outputs": ["selected_agent", "reasoning"]
+    },
+    {
+      "id": "weather_specialist",
+      "type": "llm_chat",
+      "description": "Weather specialist agent with streaming response",
+      "config": {
+        "provider": "ollama",
+        "model": "gemma2:2b",
+        "stream": true,
+        "system_message": "You are a weather specialist. Provide detailed, accurate weather information and forecasts. Be conversational and helpful."
+      },
+      "stream_buffer": {
+        "forward_on": "sentence",
+        "sentence_count": 2,
+        "max_buffer_time": 1.5,
+        "min_chunk_length": 15
+      },
+      "condition": {
+        "condition_type": "simple_comparison",
+        "left_value": {
+          "from_step": "parse_agent_selection",
+          "field": "selected_agent"
+        },
+        "operator": "contains",
+        "right_value": "weather"
+      },
+      "inputs": {
+        "message": {
+          "from_step": "user_input", 
+          "field": "message"
+        }
+      },
+      "outputs": ["response", "buffered_chunks", "buffer_stats"]
+    },
+    {
+      "id": "general_chat_specialist",
+      "type": "llm_chat", 
+      "description": "General conversation agent with streaming",
+      "config": {
+        "provider": "ollama",
+        "model": "gemma2:2b",
+        "stream": true,
+        "system_message": "You are a friendly, helpful general conversation assistant. Engage naturally and provide thoughtful responses to any topic."
+      },
+      "stream_buffer": {
+        "forward_on": "sentence",
+        "sentence_count": 1,
+        "max_buffer_time": 1.0,
+        "min_chunk_length": 10
+      },
+      "condition": {
+        "condition_type": "simple_comparison",
+        "left_value": {
+          "from_step": "parse_agent_selection",
+          "field": "selected_agent"  
+        },
+        "operator": "contains",
+        "right_value": "general_chat"
+      },
+      "inputs": {
+        "message": {
+          "from_step": "user_input",
+          "field": "message"
+        }
+      },
+      "outputs": ["response", "buffered_chunks", "buffer_stats"]
+    },
+    {
+      "id": "technical_specialist",
+      "type": "llm_chat",
+      "description": "Technical expert agent with streaming",
+      "config": {
+        "provider": "ollama", 
+        "model": "gemma2:2b",
+        "stream": true,
+        "system_message": "You are a technical expert specializing in programming, engineering, and technical topics. Provide detailed, accurate technical information with examples where helpful."
+      },
+      "stream_buffer": {
+        "forward_on": "word_count",
+        "word_count": 15,
+        "max_buffer_time": 2.0,
+        "min_chunk_length": 20
+      },
+      "condition": {
+        "condition_type": "simple_comparison",
+        "left_value": {
+          "from_step": "parse_agent_selection",
+          "field": "selected_agent"
+        },
+        "operator": "contains", 
+        "right_value": "technical"
+      },
+      "inputs": {
+        "message": {
+          "from_step": "user_input",
+          "field": "message"
+        }
+      },
+      "outputs": ["response", "buffered_chunks", "buffer_stats"]
+    },
+    {
+      "id": "creative_specialist",
+      "type": "llm_chat",
+      "description": "Creative content agent with streaming",
+      "config": {
+        "provider": "ollama",
+        "model": "gemma2:2b", 
+        "stream": true,
+        "system_message": "You are a creative assistant specializing in writing, storytelling, brainstorming, and artistic content. Be imaginative and inspiring in your responses."
+      },
+      "stream_buffer": {
+        "forward_on": "time",
+        "max_buffer_time": 1.0,
+        "min_chunk_length": 25
+      },
+      "condition": {
+        "condition_type": "simple_comparison",
+        "left_value": {
+          "from_step": "parse_agent_selection", 
+          "field": "selected_agent"
+        },
+        "operator": "contains",
+        "right_value": "creative"
+      },
+      "inputs": {
+        "message": {
+          "from_step": "user_input",
+          "field": "message"
+        }
+      },
+      "outputs": ["response", "buffered_chunks", "buffer_stats"]
+    },
+    {
+      "id": "collect_specialist_response",
+      "type": "python_function",
+      "description": "Collect the response from whichever specialist agent was selected",
+      "config": {
+        "function_code": "def collect_response(weather_response=None, general_response=None, technical_response=None, creative_response=None, weather_chunks=None, general_chunks=None, technical_chunks=None, creative_chunks=None):\n    # Find which response is not None\n    responses = {\n        'weather': {'response': weather_response, 'chunks': weather_chunks},\n        'general': {'response': general_response, 'chunks': general_chunks},\n        'technical': {'response': technical_response, 'chunks': technical_chunks},\n        'creative': {'response': creative_response, 'chunks': creative_chunks}\n    }\n    \n    for agent_type, data in responses.items():\n        if data['response'] is not None:\n            return {\n                'final_response': data['response'],\n                'agent_used': agent_type,\n                'streaming_chunks': data['chunks'] or [],\n                'chunk_count': len(data['chunks'] or [])\n            }\n    \n    return {\n        'final_response': 'No response generated',\n        'agent_used': 'none',\n        'streaming_chunks': [],\n        'chunk_count': 0\n    }"
+      },
+      "inputs": {
+        "weather_response": {
+          "from_step": "weather_specialist",
+          "field": "response",
+          "optional": true
+        },
+        "general_response": {
+          "from_step": "general_chat_specialist", 
+          "field": "response",
+          "optional": true
+        },
+        "technical_response": {
+          "from_step": "technical_specialist",
+          "field": "response", 
+          "optional": true
+        },
+        "creative_response": {
+          "from_step": "creative_specialist",
+          "field": "response",
+          "optional": true
+        },
+        "weather_chunks": {
+          "from_step": "weather_specialist",
+          "field": "buffered_chunks",
+          "optional": true
+        },
+        "general_chunks": {
+          "from_step": "general_chat_specialist",
+          "field": "buffered_chunks", 
+          "optional": true
+        },
+        "technical_chunks": {
+          "from_step": "technical_specialist",
+          "field": "buffered_chunks",
+          "optional": true
+        },
+        "creative_chunks": {
+          "from_step": "creative_specialist", 
+          "field": "buffered_chunks",
+          "optional": true
+        }
+      },
+      "outputs": ["final_response", "agent_used", "streaming_chunks", "chunk_count"]
+    },
+    {
+      "id": "stream_to_tts",
+      "type": "tts",
+      "description": "Convert the streamed response to speech with sentence-level streaming",
+      "config": {
+        "provider": "openai",
+        "voice": "alloy",
+        "output_format": "mp3",
+        "enable_streaming": true
+      },
+      "inputs": {
+        "text": {
+          "from_step": "collect_specialist_response",
+          "field": "final_response"
+        },
+        "streaming_chunks": {
+          "from_step": "collect_specialist_response", 
+          "field": "streaming_chunks"
+        }
+      },
+      "outputs": ["audio_file_path", "duration_ms", "streaming_audio_files"]
+    },
+    {
+      "id": "output_results",
+      "type": "output",
+      "description": "Display comprehensive streaming results",
+      "inputs": {
+        "message": {
+          "template": "🤖 Enhanced Streaming Multi-Agent Results:\\n\\n📍 Agent Selection: {selected_agent}\\n💭 Reasoning: {reasoning}\\n\\n🗣️ Selected Agent: {agent_used}\\n📝 Response: {final_response}\\n\\n🌊 Streaming Stats:\\n- Buffer Strategy: {buffer_strategy}\\n- Chunks Generated: {chunk_count}\\n- Buffered Chunks: {buffered_chunk_count}\\n\\n🎵 Audio Generated: {audio_file}\\n⏱️ Duration: {duration_ms}ms",
+          "selected_agent": {
+            "from_step": "parse_agent_selection",
+            "field": "selected_agent"
+          },
+          "reasoning": {
+            "from_step": "parse_agent_selection",
+            "field": "reasoning"
+          },
+          "agent_used": {
+            "from_step": "collect_specialist_response",
+            "field": "agent_used"
+          },
+          "final_response": {
+            "from_step": "collect_specialist_response", 
+            "field": "final_response"
+          },
+          "buffer_strategy": "sentence/word/time-based (varies by agent)",
+          "chunk_count": {
+            "from_step": "collect_specialist_response",
+            "field": "chunk_count"
+          },
+          "buffered_chunk_count": {
+            "from_step": "collect_specialist_response",
+            "field": "chunk_count"
+          },
+          "audio_file": {
+            "from_step": "stream_to_tts",
+            "field": "audio_file_path"
+          },
+          "duration_ms": {
+            "from_step": "stream_to_tts",
+            "field": "duration_ms"
+          }
+        }
+      },
+      "outputs": ["message"]
+    }
+  ]
+}

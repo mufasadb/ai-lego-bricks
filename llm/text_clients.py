@@ -6,7 +6,15 @@ from typing import List, Optional, Union, Type, TypeVar, Dict, Any, Generator
 import httpx
 from pydantic import BaseModel
 from .llm_types import TextLLMClient, ChatMessage, LLMConfig, StructuredLLMWrapper
-from credentials import CredentialManager, default_credential_manager
+# Conditional import for credentials
+try:
+    from ..credentials import CredentialManager, default_credential_manager
+except ImportError:
+    try:
+        from credentials import CredentialManager, default_credential_manager
+    except ImportError:
+        CredentialManager = None
+        default_credential_manager = None
 
 try:
     import anthropic

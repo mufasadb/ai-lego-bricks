@@ -12,7 +12,7 @@ from .templates import list_all_templates
 
 __all__ = [
     "init_project",
-    "verify_setup", 
+    "verify_setup",
     "run_workflow",
     "create_agent",
     "list_all_templates",

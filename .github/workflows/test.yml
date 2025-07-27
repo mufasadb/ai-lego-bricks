@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.9", "3.10", "3.11"]
 
     steps:
     - uses: actions/checkout@v4
@@ -36,14 +36,12 @@ jobs:
 
     - name: Run linting
       run: |
-        echo "Linting checks disabled - skipping black and flake8"
-        # black --check .
-        # flake8 ailego/ agent_orchestration/ llm/ memory/ chat/ prompt/ tts/ chunking/
+        black --check .
+        flake8 ailego/ agent_orchestration/ llm/ memory/ chat/ prompt/ tts/ chunking/
 
     - name: Run type checking
       run: |
-        echo "Type checking disabled - skipping mypy"
-        # mypy ailego/ agent_orchestration/ llm/ memory/ chat/ prompt/ tts/
+        mypy ailego/ agent_orchestration/ llm/ memory/ chat/ prompt/ tts/
 
     - name: Test CLI installation
       run: |

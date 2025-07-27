@@ -25,7 +25,7 @@ from .llm_types import (
 
 __all__ = [
     "quick_generate_gemini",
-    "quick_generate_anthropic", 
+    "quick_generate_anthropic",
     "quick_generate_ollama",
     "quick_generate_ollama_stream",
     "create_generation_service",

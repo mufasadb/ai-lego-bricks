@@ -19,12 +19,12 @@ from .core import (
 )
 
 # Agent orchestration
-from agent_orchestration import AgentOrchestrator
+from ..agent_orchestration import AgentOrchestrator
 
 __all__ = [
     "__version__",
     "create_memory_service",
-    "create_generation_service", 
+    "create_generation_service",
     "create_conversation_service",
     "create_tts_service",
     "create_prompt_service",

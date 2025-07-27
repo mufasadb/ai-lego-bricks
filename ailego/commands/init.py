@@ -17,40 +17,41 @@ console = Console()
 def init_project(project_name: str, template: str = "basic", force: bool = False):
     """
     Initialize a new AI Lego Bricks project.
-    
+
     Args:
         project_name: Name of the project to create
         template: Template to use (basic, advanced, research)
         force: Whether to overwrite existing project
     """
     project_path = Path(project_name)
-    
+
     # Check if project already exists
     if project_path.exists() and not force:
         if not Confirm.ask(f"Project '{project_name}' already exists. Overwrite?"):
             console.print("[yellow]Project initialization cancelled[/yellow]")
             return
-    
+
     # Create project directory
     project_path.mkdir(exist_ok=True)
-    
+
     console.print(f"[green]Initializing project: {project_name}[/green]")
     console.print(f"[blue]Using template: {template}[/blue]")
-    
+
     # Copy template files
     _copy_template_files(project_path, template)
-    
+
     # Create .env file
     _create_env_file(project_path)
-    
+
     # Create project structure
     _create_project_structure(project_path)
-    
+
     # Create sample agents
     _create_sample_agents(project_path, template)
-    
-    console.print(Panel(
-        f"""[bold green]Project '{project_name}' initialized successfully![/bold green]
+
+    console.print(
+        Panel(
+            f"""[bold green]Project '{project_name}' initialized successfully![/bold green]
 
 Next steps:
 1. cd {project_name}
@@ -65,9 +66,10 @@ Next steps:
 • ailego create <type> - Create new agents
 • ailego status - Check system status
 """,
-        title="Project Ready",
-        border_style="green"
-    ))
+            title="Project Ready",
+            border_style="green",
+        )
+    )
 
 
 def _copy_template_files(project_path: Path, template: str):
@@ -77,11 +79,11 @@ def _copy_template_files(project_path: Path, template: str):
     (project_path / "data").mkdir(exist_ok=True)
     (project_path / "output").mkdir(exist_ok=True)
     (project_path / "prompts").mkdir(exist_ok=True)
-    
+
     # Create README
     readme_content = _get_readme_template(project_path.name, template)
     (project_path / "README.md").write_text(readme_content)
-    
+
     # Create CLAUDE.md for project instructions
     claude_md_content = _get_claude_md_template(project_path.name)
     (project_path / "CLAUDE.md").write_text(claude_md_content)
@@ -111,9 +113,9 @@ GOOGLE_APPLICATION_CREDENTIALS=path/to/google-credentials.json
 # Ollama (Optional)
 OLLAMA_URL=http://localhost:11434
 """
-    
+
     (project_path / ".env").write_text(env_content)
-    
+
     # Create .env.example
     (project_path / ".env.example").write_text(env_content)
 
@@ -139,9 +141,9 @@ dev = [
     "black>=23.0.0",
 ]
 """
-    
+
     (project_path / "pyproject.toml").write_text(pyproject_content)
-    
+
     # Create .gitignore
     gitignore_content = """# AI Lego Bricks
 .env
@@ -183,27 +185,25 @@ ENV/
 *.swp
 *.swo
 """
-    
+
     (project_path / ".gitignore").write_text(gitignore_content)
 
 
 def _create_sample_agents(project_path: Path, template: str):
     """Create sample agent configurations."""
     agents_dir = project_path / "agents"
-    
+
     # Simple chat agent
     simple_chat = {
         "name": "simple_chat",
         "description": "A basic conversational agent",
-        "config": {
-            "default_llm_provider": "gemini"
-        },
+        "config": {"default_llm_provider": "gemini"},
         "steps": [
             {
                 "id": "get_input",
                 "type": "input",
                 "config": {"prompt": "What can I help you with?"},
-                "outputs": ["user_query"]
+                "outputs": ["user_query"],
             },
             {
                 "id": "generate_response",
@@ -211,38 +211,33 @@ def _create_sample_agents(project_path: Path, template: str):
                 "inputs": {
                     "message": {"from_step": "get_input", "field": "user_query"}
                 },
-                "config": {
-                    "system_message": "You are a helpful AI assistant."
-                },
-                "outputs": ["response"]
+                "config": {"system_message": "You are a helpful AI assistant."},
+                "outputs": ["response"],
             },
             {
                 "id": "output",
                 "type": "output",
                 "inputs": {
                     "result": {"from_step": "generate_response", "field": "response"}
-                }
-            }
-        ]
+                },
+            },
+        ],
     }
-    
+
     (agents_dir / "simple_chat.json").write_text(json.dumps(simple_chat, indent=2))
-    
+
     if template == "advanced":
         # Memory-enabled agent
         memory_agent = {
             "name": "memory_chat",
             "description": "Chat agent with memory capabilities",
-            "config": {
-                "default_llm_provider": "gemini",
-                "memory_provider": "supabase"
-            },
+            "config": {"default_llm_provider": "gemini", "memory_provider": "supabase"},
             "steps": [
                 {
                     "id": "get_input",
                     "type": "input",
                     "config": {"prompt": "Ask me anything:"},
-                    "outputs": ["user_query"]
+                    "outputs": ["user_query"],
                 },
                 {
                     "id": "retrieve_memory",
@@ -250,38 +245,47 @@ def _create_sample_agents(project_path: Path, template: str):
                     "inputs": {
                         "query": {"from_step": "get_input", "field": "user_query"}
                     },
-                    "outputs": ["relevant_memories"]
+                    "outputs": ["relevant_memories"],
                 },
                 {
                     "id": "generate_response",
                     "type": "llm_chat",
                     "inputs": {
                         "message": {"from_step": "get_input", "field": "user_query"},
-                        "context": {"from_step": "retrieve_memory", "field": "relevant_memories"}
+                        "context": {
+                            "from_step": "retrieve_memory",
+                            "field": "relevant_memories",
+                        },
                     },
                     "config": {
                         "system_message": "You are a helpful assistant with access to previous conversations."
                     },
-                    "outputs": ["response"]
+                    "outputs": ["response"],
                 },
                 {
                     "id": "store_memory",
                     "type": "memory_store",
                     "inputs": {
-                        "content": {"from_step": "generate_response", "field": "response"},
-                        "metadata": {"conversation_id": "user_session"}
-                    }
+                        "content": {
+                            "from_step": "generate_response",
+                            "field": "response",
+                        },
+                        "metadata": {"conversation_id": "user_session"},
+                    },
                 },
                 {
                     "id": "output",
                     "type": "output",
                     "inputs": {
-                        "result": {"from_step": "generate_response", "field": "response"}
-                    }
-                }
-            ]
+                        "result": {
+                            "from_step": "generate_response",
+                            "field": "response",
+                        }
+                    },
+                },
+            ],
         }
-        
+
         (agents_dir / "memory_chat.json").write_text(json.dumps(memory_agent, indent=2))
 
 
@@ -346,7 +350,7 @@ def _get_template_description(template: str) -> str:
     descriptions = {
         "basic": "Simple chat and text processing agents with minimal dependencies.",
         "advanced": "Full-featured setup with memory, multi-modal, and advanced orchestration.",
-        "research": "Specialized for document analysis, research, and knowledge extraction."
+        "research": "Specialized for document analysis, research, and knowledge extraction.",
     }
     return descriptions.get(template, "Custom template configuration.")
 

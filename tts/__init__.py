@@ -34,25 +34,33 @@ Usage:
 from .tts_types import TTSProvider, TTSConfig, TTSResponse
 from .tts_service import TTSService
 from .tts_factory import TTSServiceFactory
-from .streaming_tts_service import StreamingTTSService, StreamingLLMToTTSPipeline, create_streaming_pipeline
+from .streaming_tts_service import (
+    StreamingTTSService,
+    StreamingLLMToTTSPipeline,
+    create_streaming_pipeline,
+)
+
 
 # Convenience functions
 def create_tts_service(provider: str = "auto", **kwargs) -> TTSService:
     """Create a TTS service instance (convenience function)"""
     return TTSServiceFactory.create_tts_service(provider, **kwargs)
 
+
 def get_available_providers():
     """Get available TTS providers"""
     return TTSServiceFactory.get_available_providers()
+
 
 def get_provider_info():
     """Get detailed provider information"""
     return TTSServiceFactory.get_provider_info()
 
+
 # Export main classes and functions
 __all__ = [
     "TTSService",
-    "TTSProvider", 
+    "TTSProvider",
     "TTSConfig",
     "TTSResponse",
     "TTSServiceFactory",
@@ -61,5 +69,5 @@ __all__ = [
     "create_tts_service",
     "create_streaming_pipeline",
     "get_available_providers",
-    "get_provider_info"
+    "get_provider_info",
 ]

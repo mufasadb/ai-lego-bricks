@@ -14,7 +14,7 @@ class ImageGenerationProvider(str, Enum):
 
 class ImageSize(str, Enum):
     SQUARE_256 = "256x256"
-    SQUARE_512 = "512x512" 
+    SQUARE_512 = "512x512"
     SQUARE_1024 = "1024x1024"
     PORTRAIT_512_768 = "512x768"
     PORTRAIT_768_1024 = "768x1024"
@@ -79,14 +79,16 @@ class ImageGenerationResponse(BaseModel):
 class ImageGenerationClient(ABC):
     def __init__(self, config: ImageGenerationConfig):
         self.config = config
-        
+
     @abstractmethod
-    def generate_image(self, request: ImageGenerationRequest) -> ImageGenerationResponse:
+    def generate_image(
+        self, request: ImageGenerationRequest
+    ) -> ImageGenerationResponse:
         pass
-    
+
     @abstractmethod
     def is_available(self) -> bool:
         pass
-    
+
     def _ensure_output_dir(self) -> None:
         os.makedirs(self.config.output_dir, exist_ok=True)

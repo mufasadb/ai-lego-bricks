@@ -1,12 +1,12 @@
 from .image_generation_factory import (
-    ImageGenerationServiceFactory, 
+    ImageGenerationServiceFactory,
     create_image_generation_service,
     create_openai_image_service,
     create_stability_image_service,
     create_google_image_service,
     create_local_image_service,
     quick_image_generation,
-    get_available_providers
+    get_available_providers,
 )
 from .image_generation_service import ImageGenerationService
 from .image_generation_types import (
@@ -16,14 +16,14 @@ from .image_generation_types import (
     ImageGenerationResponse,
     ImageSize,
     ImageQuality,
-    ImageStyle
+    ImageStyle,
 )
 
 __all__ = [
     "ImageGenerationServiceFactory",
     "create_image_generation_service",
     "create_openai_image_service",
-    "create_stability_image_service", 
+    "create_stability_image_service",
     "create_google_image_service",
     "create_local_image_service",
     "quick_image_generation",
@@ -31,9 +31,9 @@ __all__ = [
     "ImageGenerationService",
     "ImageGenerationProvider",
     "ImageGenerationConfig",
-    "ImageGenerationRequest", 
+    "ImageGenerationRequest",
     "ImageGenerationResponse",
     "ImageSize",
     "ImageQuality",
-    "ImageStyle"
+    "ImageStyle",
 ]

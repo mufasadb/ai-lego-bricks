@@ -15,7 +15,7 @@ from .chunking_factory import (
 )
 
 __all__ = [
-    "ChunkingService", 
+    "ChunkingService",
     "ChunkingServiceFactory",
     "create_chunking_service",
 ]

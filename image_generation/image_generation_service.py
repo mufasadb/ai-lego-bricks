@@ -6,7 +6,7 @@ from .image_generation_types import (
     ImageGenerationResponse,
     ImageSize,
     ImageQuality,
-    ImageStyle
+    ImageStyle,
 )
 
 
@@ -14,7 +14,7 @@ class ImageGenerationService:
     def __init__(self, client: ImageGenerationClient):
         self.client = client
         self.config = client.config
-    
+
     def generate_image(
         self,
         prompt: str,
@@ -26,7 +26,7 @@ class ImageGenerationService:
         seed: Optional[int] = None,
         guidance_scale: Optional[float] = None,
         steps: Optional[int] = None,
-        **kwargs
+        **kwargs,
     ) -> ImageGenerationResponse:
         request = ImageGenerationRequest(
             prompt=prompt,
@@ -38,52 +38,49 @@ class ImageGenerationService:
             seed=seed,
             guidance_scale=guidance_scale,
             steps=steps,
-            extra_params=kwargs
+            extra_params=kwargs,
         )
-        
+
         return self.client.generate_image(request)
-    
-    def generate_image_from_request(self, request: ImageGenerationRequest) -> ImageGenerationResponse:
+
+    def generate_image_from_request(
+        self, request: ImageGenerationRequest
+    ) -> ImageGenerationResponse:
         return self.client.generate_image(request)
-    
+
     def is_available(self) -> bool:
         return self.client.is_available()
-    
+
     def get_provider_info(self) -> Dict[str, Any]:
         return {
             "provider": self.config.provider.value,
-            "model": getattr(self.client, 'model', None),
+            "model": getattr(self.client, "model", None),
             "output_dir": self.config.output_dir,
             "default_size": self.config.size.value,
             "default_quality": self.config.quality.value,
             "default_style": self.config.style.value,
-            "available": self.is_available()
+            "available": self.is_available(),
         }
-    
+
     def generate_variations(
-        self,
-        base_prompt: str,
-        variations: List[str],
-        **kwargs
+        self, base_prompt: str, variations: List[str], **kwargs
     ) -> List[ImageGenerationResponse]:
         responses = []
-        
+
         for variation in variations:
             full_prompt = f"{base_prompt}, {variation}"
             response = self.generate_image(prompt=full_prompt, **kwargs)
             responses.append(response)
-        
+
         return responses
-    
+
     def batch_generate(
-        self,
-        prompts: List[str],
-        **kwargs
+        self, prompts: List[str], **kwargs
     ) -> List[ImageGenerationResponse]:
         responses = []
-        
+
         for prompt in prompts:
             response = self.generate_image(prompt=prompt, **kwargs)
             responses.append(response)
-        
+
         return responses

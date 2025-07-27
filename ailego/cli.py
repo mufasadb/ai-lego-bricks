@@ -12,6 +12,7 @@ from rich.panel import Panel
 from typing import Optional
 
 from ailego.core import get_version, get_available_providers
+
 # Import commands will be done locally to avoid redefinition issues
 
 app = typer.Typer(
@@ -32,41 +33,47 @@ def version():
 def status():
     """Show system status and available providers."""
     providers = get_available_providers()
-    
+
     console.print("\n[bold blue]AI Lego Bricks System Status[/bold blue]")
     console.print(f"Version: {get_version()}")
-    
+
     # Create provider status table
     table = Table(title="Available Providers")
     table.add_column("Service", style="cyan")
     table.add_column("Providers", style="green")
     table.add_column("Status", style="yellow")
-    
+
     for service, provider_list in providers.items():
         status_text = "✓ Ready" if provider_list else "⚠ Not configured"
         provider_text = ", ".join(provider_list) if provider_list else "None"
         table.add_row(service.upper(), provider_text, status_text)
-    
+
     console.print(table)
 
 
 @app.command()
 def init(
     project_name: str = typer.Argument(..., help="Name of the project to initialize"),
-    template: str = typer.Option("basic", help="Template to use (basic, advanced, research)"),
+    template: str = typer.Option(
+        "basic", help="Template to use (basic, advanced, research)"
+    ),
     force: bool = typer.Option(False, "--force", help="Overwrite existing project"),
 ):
     """Initialize a new AI Lego Bricks project."""
     from ailego.commands.init import init_project
+
     init_project(project_name, template, force)
 
 
 @app.command()
 def verify(
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed verification"),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Show detailed verification"
+    ),
 ):
     """Verify system setup and configuration."""
     from ailego.commands.verify import verify_setup
+
     verify_setup(verbose)
 
 
@@ -75,10 +82,13 @@ def run(
     workflow_file: str = typer.Argument(..., help="Path to workflow JSON file"),
     input_data: Optional[str] = typer.Option(None, help="Input data as JSON string"),
     output_file: Optional[str] = typer.Option(None, help="Output file path"),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed execution"),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Show detailed execution"
+    ),
 ):
     """Run an AI agent workflow."""
     from ailego.commands.run import run_workflow
+
     run_workflow(workflow_file, input_data, output_file, verbose)
 
 
@@ -90,6 +100,7 @@ def create(
 ):
     """Create a new AI agent configuration."""
     from ailego.commands.create import create_agent
+
     create_agent(agent_type, name, interactive)
 
 
@@ -97,6 +108,7 @@ def create(
 def list_templates():
     """List available project and agent templates."""
     from ailego.commands.templates import list_all_templates
+
     list_all_templates()
 
 
@@ -104,7 +116,7 @@ def list_templates():
 def examples():
     """Show example workflows and usage patterns."""
     console.print("\n[bold blue]AI Lego Bricks Examples[/bold blue]")
-    
+
     examples_text = """
 [bold green]Quick Start Examples:[/bold green]
 
@@ -132,7 +144,7 @@ def examples():
 
 Use 'ailego create --help' to see all available agent types.
 """
-    
+
     console.print(Panel(examples_text, title="Examples", border_style="blue"))
 
 

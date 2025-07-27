@@ -28,12 +28,23 @@ from datetime import datetime
 import sys
 import os
 
-# Add parent directory to path for imports
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from llm.llm_types import LLMProvider, VisionProvider
-from pdf_to_text.pdf_to_text_service import PDFExtractOptions
-from pdf_to_text.visual_to_text_service import VisualToTextService, VisualExtractOptions
+# Conditional imports that work both as package and standalone
+try:
+    from ..llm.llm_types import LLMProvider, VisionProvider
+    from ..pdf_to_text.pdf_to_text_service import PDFExtractOptions
+    from ..pdf_to_text.visual_to_text_service import VisualToTextService, VisualExtractOptions
+except ImportError:
+    try:
+        from llm.llm_types import LLMProvider, VisionProvider
+        from pdf_to_text.pdf_to_text_service import PDFExtractOptions
+        from pdf_to_text.visual_to_text_service import VisualToTextService, VisualExtractOptions
+    except ImportError:
+        # Fallback when dependencies not available
+        LLMProvider = None
+        VisionProvider = None
+        PDFExtractOptions = None
+        VisualToTextService = None
+        VisualExtractOptions = None
 
 
 def _serialize_for_json(obj):
@@ -116,11 +127,7 @@ class StepHandlerRegistry:
             return inputs
 
         # Import JsonStructure class for processing
-        import sys
-        import os
-
-        sys.path.append(os.path.join(os.path.dirname(__file__), "..", "prompt"))
-        from prompt_models import JsonStructure
+        from ..prompt.prompt_models import JsonStructure
 
         # Build template context for JSON prop rendering
         template_context = {}
@@ -215,9 +222,8 @@ class StepHandlerRegistry:
         """Handle concept evaluation step - run prompt evaluation using LLM judge"""
         try:
             # Import concept evaluation components
-            sys.path.append(os.path.join(os.path.dirname(__file__), "..", "prompt"))
-            from concept_eval_storage import create_concept_eval_storage
-            from concept_evaluation_service import ConceptEvaluationService
+            from ..prompt.concept_eval_storage import create_concept_eval_storage
+            from ..prompt.concept_evaluation_service import ConceptEvaluationService
 
             # Get configuration
             eval_id = step.config.get("eval_id")
@@ -398,8 +404,7 @@ class StepHandlerRegistry:
             # If provider is specified and different from current, create new service
             if provider and provider != tts_service.config.provider.value:
                 # Import TTS factory to create new service
-                sys.path.append(os.path.join(os.path.dirname(__file__), "..", "tts"))
-                from tts.tts_factory import create_tts_service
+                from ..tts.tts_factory import create_tts_service
 
                 tts_service = create_tts_service(provider, **tts_params)
 
@@ -483,8 +488,7 @@ class StepHandlerRegistry:
             # If provider is specified and different from current, create new service
             if provider and provider != stt_service.config.provider.value:
                 # Import STT factory to create new service
-                sys.path.append(os.path.join(os.path.dirname(__file__), "..", "stt"))
-                from stt.stt_factory import create_stt_service
+                from ..stt.stt_factory import create_stt_service
 
                 stt_service = create_stt_service(provider, **stt_params)
 
@@ -3012,9 +3016,8 @@ class StepHandlerRegistry:
             import sys
             import os
 
-            # Add tools to path
-            sys.path.append(os.path.join(os.path.dirname(__file__), "..", "tools"))
-            from tool_service import ToolService
+            # Import tool service
+            from ..tools.tool_service import ToolService
 
             # Get configuration from step
             provider = step.config.get("provider", "gemini")
@@ -3190,8 +3193,7 @@ class StepHandlerRegistry:
         """Handle HTTP request step"""
         try:
             # Import HTTP request service
-            sys.path.append(os.path.join(os.path.dirname(__file__), "..", "services"))
-            from services.http_request_service import (
+            from ..services.http_request_service import (
                 HttpRequestService,
                 HttpRequestConfig,
                 HttpMethod,

@@ -3062,22 +3062,35 @@ class StepHandlerRegistry:
             tool_service = ToolService(credential_manager=credential_manager)
 
             # Get LLM service based on provider
+            from llm.llm_types import LLMConfig, LLMProvider
+            
             if provider == "gemini":
                 from llm.text_clients import GeminiTextClient
-
-                llm_client = GeminiTextClient(temperature=temperature)
+                
+                config = LLMConfig(
+                    provider=LLMProvider.GEMINI,
+                    model=model,
+                    temperature=temperature
+                )
+                llm_client = GeminiTextClient(config)
             elif provider == "ollama":
                 from llm.text_clients import OllamaTextClient
-
-                llm_client = OllamaTextClient(
-                    model=model or "llama3.1:8b", temperature=temperature
+                
+                config = LLMConfig(
+                    provider=LLMProvider.OLLAMA,
+                    model=model or "llama3.1:8b",
+                    temperature=temperature
                 )
+                llm_client = OllamaTextClient(config)
             elif provider == "openai":
                 from llm.text_clients import OpenAITextClient
-
-                llm_client = OpenAITextClient(
-                    model=model or "gpt-4", temperature=temperature
+                
+                config = LLMConfig(
+                    provider=LLMProvider.OPENAI,
+                    model=model or "gpt-4",
+                    temperature=temperature
                 )
+                llm_client = OpenAITextClient(config)
             else:
                 raise ValueError(f"Unsupported provider: {provider}")
 

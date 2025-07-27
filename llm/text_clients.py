@@ -5,46 +5,50 @@ import json
 from typing import List, Optional, Union, Type, TypeVar, Dict, Any, Generator
 import httpx
 from pydantic import BaseModel
-from .llm_types import (
-    TextLLMClient, ChatMessage, LLMConfig, StructuredLLMWrapper
-)
+from .llm_types import TextLLMClient, ChatMessage, LLMConfig, StructuredLLMWrapper
 from credentials import CredentialManager, default_credential_manager
 
 try:
     import anthropic
+
     ANTHROPIC_AVAILABLE = True
 except ImportError:
     ANTHROPIC_AVAILABLE = False
 
-T = TypeVar('T', bound=BaseModel)
+T = TypeVar("T", bound=BaseModel)
 
 
 class OllamaTextClient(TextLLMClient):
     """Ollama text client implementation"""
-    
-    def __init__(self, config: LLMConfig, credential_manager: Optional[CredentialManager] = None):
+
+    def __init__(
+        self, config: LLMConfig, credential_manager: Optional[CredentialManager] = None
+    ):
         self.config = config
         self.credential_manager = credential_manager or default_credential_manager
-        self.base_url = self.credential_manager.get_credential("OLLAMA_URL", "http://localhost:11434")
-        self.model = config.model or self.credential_manager.get_credential("OLLAMA_DEFAULT_MODEL", "llama2")
-    
-    def chat(self, message: str, chat_history: Optional[List[ChatMessage]] = None) -> str:
+        self.base_url = self.credential_manager.get_credential(
+            "OLLAMA_URL", "http://localhost:11434"
+        )
+        self.model = config.model or self.credential_manager.get_credential(
+            "OLLAMA_DEFAULT_MODEL", "llama2"
+        )
+
+    def chat(
+        self, message: str, chat_history: Optional[List[ChatMessage]] = None
+    ) -> str:
         """Send a chat message and get response"""
         messages = []
         if chat_history:
             messages.extend(chat_history)
-        messages.append(ChatMessage(role='user', content=message))
+        messages.append(ChatMessage(role="user", content=message))
         return self.chat_with_messages(messages)
-    
+
     def chat_with_messages(self, messages: List[ChatMessage]) -> str:
         """Send multiple messages and get response"""
         ollama_messages = []
         for msg in messages:
-            ollama_messages.append({
-                "role": msg.role,
-                "content": msg.content
-            })
-        
+            ollama_messages.append({"role": msg.role, "content": msg.content})
+
         payload = {
             "model": self.model,
             "messages": ollama_messages,
@@ -52,52 +56,49 @@ class OllamaTextClient(TextLLMClient):
             "options": {
                 "temperature": self.config.temperature,
                 "num_predict": self.config.max_tokens,
-                **self.config.extra_params
-            }
+                **self.config.extra_params,
+            },
         }
-        
+
         with httpx.Client(timeout=self.config.timeout) as client:
-            response = client.post(
-                f"{self.base_url}/api/chat",
-                json=payload
-            )
+            response = client.post(f"{self.base_url}/api/chat", json=payload)
             response.raise_for_status()
             return response.json()["message"]["content"]
-    
+
     def switch_model(self, new_model: str) -> bool:
         """
         Switch to a different model
-        
+
         Args:
             new_model: The new model name to switch to
-            
+
         Returns:
             True if successful, False otherwise
         """
         if not self._validate_model(new_model):
             raise ValueError(f"Model '{new_model}' is not available in Ollama")
-        
+
         old_model = self.model
         self.model = new_model
         print(f"Switched from '{old_model}' to '{new_model}'")
         return True
-    
+
     def get_current_model(self) -> str:
         """
         Get the current model name
-        
+
         Returns:
             Current model name
         """
         return self.model
-    
+
     def _validate_model(self, model_name: str) -> bool:
         """
         Check if a model exists in Ollama
-        
+
         Args:
             model_name: Name of the model to validate
-            
+
         Returns:
             True if model exists, False otherwise
         """
@@ -110,9 +111,13 @@ class OllamaTextClient(TextLLMClient):
                 return model_name in available_models
         except Exception:
             return False
-    
-    def chat_structured(self, message: str, schema: Union[Type[BaseModel], Dict[str, Any]], 
-                       chat_history: Optional[List[ChatMessage]] = None) -> Union[BaseModel, Dict[str, Any]]:
+
+    def chat_structured(
+        self,
+        message: str,
+        schema: Union[Type[BaseModel], Dict[str, Any]],
+        chat_history: Optional[List[ChatMessage]] = None,
+    ) -> Union[BaseModel, Dict[str, Any]]:
         """Chat with structured output using JSON schema prompting"""
         if isinstance(schema, type) and issubclass(schema, BaseModel):
             # Pydantic model
@@ -135,34 +140,35 @@ JSON Response:
                 return json.loads(response)
             except json.JSONDecodeError:
                 # Fallback - try to extract JSON from response
-                start_idx = response.find('{')
-                end_idx = response.rfind('}')
+                start_idx = response.find("{")
+                end_idx = response.rfind("}")
                 if start_idx != -1 and end_idx != -1:
                     json_str = response[start_idx:end_idx + 1]
                     return json.loads(json_str)
                 raise ValueError(f"Could not parse JSON from response: {response}")
-    
+
     def with_structured_output(self, schema: Type[T]) -> StructuredLLMWrapper[T]:
         """Return a wrapper that ensures structured output of specified type"""
         return StructuredLLMWrapper(self, schema)
-    
-    def chat_stream(self, message: str, chat_history: Optional[List[ChatMessage]] = None) -> Generator[str, None, str]:
+
+    def chat_stream(
+        self, message: str, chat_history: Optional[List[ChatMessage]] = None
+    ) -> Generator[str, None, str]:
         """Send a chat message and get streaming response"""
         messages = []
         if chat_history:
             messages.extend(chat_history)
-        messages.append(ChatMessage(role='user', content=message))
+        messages.append(ChatMessage(role="user", content=message))
         return self.chat_with_messages_stream(messages)
-    
-    def chat_with_messages_stream(self, messages: List[ChatMessage]) -> Generator[str, None, str]:
+
+    def chat_with_messages_stream(
+        self, messages: List[ChatMessage]
+    ) -> Generator[str, None, str]:
         """Send multiple messages and get streaming response"""
         ollama_messages = []
         for msg in messages:
-            ollama_messages.append({
-                "role": msg.role,
-                "content": msg.content
-            })
-        
+            ollama_messages.append({"role": msg.role, "content": msg.content})
+
         payload = {
             "model": self.model,
             "messages": ollama_messages,
@@ -170,16 +176,18 @@ JSON Response:
             "options": {
                 "temperature": self.config.temperature,
                 "num_predict": self.config.max_tokens,
-                **self.config.extra_params
-            }
+                **self.config.extra_params,
+            },
         }
-        
+
         full_response = ""
         try:
             with httpx.Client(timeout=self.config.timeout) as client:
-                with client.stream("POST", f"{self.base_url}/api/chat", json=payload) as response:
+                with client.stream(
+                    "POST", f"{self.base_url}/api/chat", json=payload
+                ) as response:
                     response.raise_for_status()
-                    
+
                     for line in response.iter_lines():
                         if line.strip():
                             try:
@@ -189,91 +197,103 @@ JSON Response:
                                     if content:
                                         full_response += content
                                         yield content
-                                
+
                                 # Check if this is the final chunk
                                 if chunk.get("done", False):
                                     break
-                                    
+
                             except json.JSONDecodeError:
                                 # Skip malformed JSON lines
                                 continue
-                                
+
         except Exception:
             # If streaming fails, fall back to regular response
             full_response = self.chat_with_messages(messages)
             yield full_response
-        
+
         return full_response
 
 
 class GeminiTextClient(TextLLMClient):
     """Gemini text client implementation"""
-    
-    def __init__(self, config: LLMConfig, credential_manager: Optional[CredentialManager] = None):
+
+    def __init__(
+        self, config: LLMConfig, credential_manager: Optional[CredentialManager] = None
+    ):
         self.config = config
         self.credential_manager = credential_manager or default_credential_manager
-        self.api_key = self.credential_manager.require_credential("GOOGLE_AI_STUDIO_KEY", "Gemini")
-        
-        self.api_base_url = self.credential_manager.get_credential("GEMINI_API_BASE_URL", 
-                                                                  "https://generativelanguage.googleapis.com/v1beta")
-        self.model = config.model or self.credential_manager.get_credential("GEMINI_DEFAULT_MODEL", "gemini-1.5-flash")
-    
-    def chat(self, message: str, chat_history: Optional[List[ChatMessage]] = None) -> str:
+        self.api_key = self.credential_manager.require_credential(
+            "GOOGLE_AI_STUDIO_KEY", "Gemini"
+        )
+
+        self.api_base_url = self.credential_manager.get_credential(
+            "GEMINI_API_BASE_URL", "https://generativelanguage.googleapis.com/v1beta"
+        )
+        self.model = config.model or self.credential_manager.get_credential(
+            "GEMINI_DEFAULT_MODEL", "gemini-1.5-flash"
+        )
+
+    def chat(
+        self, message: str, chat_history: Optional[List[ChatMessage]] = None
+    ) -> str:
         """Send a chat message and get response"""
         messages = []
         if chat_history:
             messages.extend(chat_history)
-        messages.append(ChatMessage(role='user', content=message))
+        messages.append(ChatMessage(role="user", content=message))
         return self.chat_with_messages(messages)
-    
+
     def chat_with_messages(self, messages: List[ChatMessage]) -> str:
         """Send multiple messages and get response"""
         gemini_messages = []
         for msg in messages:
             role = "user" if msg.role == "user" else "model"
-            gemini_messages.append({
-                "role": role,
-                "parts": [{"text": msg.content}]
-            })
-        
+            gemini_messages.append({"role": role, "parts": [{"text": msg.content}]})
+
         payload = {
             "contents": gemini_messages,
             "generationConfig": {
                 "temperature": self.config.temperature,
                 "maxOutputTokens": self.config.max_tokens,
-                **self.config.extra_params
-            }
+                **self.config.extra_params,
+            },
         }
-        
+
         max_retries = 3
         base_delay = 1.0
-        
+
         for attempt in range(max_retries):
             try:
                 with httpx.Client(timeout=self.config.timeout) as client:
                     response = client.post(
                         f"{self.api_base_url}/models/{self.model}:generateContent",
                         json=payload,
-                        headers={"x-goog-api-key": self.api_key}
+                        headers={"x-goog-api-key": self.api_key},
                     )
-                    
+
                     # Handle specific error codes
                     if response.status_code == 503:
-                        print(f"503 Service Unavailable error on attempt {attempt + 1}/{max_retries}")
+                        print(
+                            f"503 Service Unavailable error on attempt {attempt + 1}/{max_retries}"
+                        )
                         print(f"Response: {response.text}")
                         if attempt < max_retries - 1:
-                            delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
+                            delay = base_delay * (2**attempt) + random.uniform(0, 1)
                             print(f"Retrying in {delay:.2f} seconds...")
                             time.sleep(delay)
                             continue
-                    
+
                     response.raise_for_status()
-                    return response.json()["candidates"][0]["content"]["parts"][0]["text"]
-                    
+                    return response.json()["candidates"][0]["content"]["parts"][0][
+                        "text"
+                    ]
+
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 503 and attempt < max_retries - 1:
-                    delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
-                    print(f"503 error on attempt {attempt + 1}/{max_retries}, retrying in {delay:.2f}s")
+                    delay = base_delay * (2**attempt) + random.uniform(0, 1)
+                    print(
+                        f"503 error on attempt {attempt + 1}/{max_retries}, retrying in {delay:.2f}s"
+                    )
                     time.sleep(delay)
                     continue
                 elif e.response.status_code == 429:
@@ -287,12 +307,20 @@ class GeminiTextClient(TextLLMClient):
                     print("💰 BILLING ALERT:")
                     print("   • You have exceeded your Gemini API quota limits")
                     print("   • This may result in unexpected charges if on paid tier")
-                    print("   • Consider implementing rate limiting or usage monitoring")
+                    print(
+                        "   • Consider implementing rate limiting or usage monitoring"
+                    )
                     print()
                     print("🤖 AGENT WARNING:")
-                    print("   • IF THIS IS BEING CONSUMED BY AN AGENT, PLEASE INFORM THE USER")
-                    print("   • Agents can rapidly consume API quotas without user awareness")
-                    print("   • Consider pausing automated workflows until limits reset")
+                    print(
+                        "   • IF THIS IS BEING CONSUMED BY AN AGENT, PLEASE INFORM THE USER"
+                    )
+                    print(
+                        "   • Agents can rapidly consume API quotas without user awareness"
+                    )
+                    print(
+                        "   • Consider pausing automated workflows until limits reset"
+                    )
                     print()
                     print("📊 Next Steps:")
                     print("   1. Check your Google AI Studio billing dashboard")
@@ -307,42 +335,56 @@ class GeminiTextClient(TextLLMClient):
             except Exception as e:
                 print(f"Unexpected error on attempt {attempt + 1}/{max_retries}: {e}")
                 if attempt < max_retries - 1:
-                    delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
+                    delay = base_delay * (2**attempt) + random.uniform(0, 1)
                     time.sleep(delay)
                     continue
                 else:
                     raise
-        
+
         raise RuntimeError("Max retries exceeded for Gemini API request")
-    
-    def chat_structured(self, message: str, schema: Union[Type[BaseModel], Dict[str, Any]], 
-                       chat_history: Optional[List[ChatMessage]] = None) -> Union[BaseModel, Dict[str, Any]]:
+
+    def chat_structured(
+        self,
+        message: str,
+        schema: Union[Type[BaseModel], Dict[str, Any]],
+        chat_history: Optional[List[ChatMessage]] = None,
+    ) -> Union[BaseModel, Dict[str, Any]]:
         """Chat with structured output using prompting-based approach"""
         # Use structured wrapper for both Pydantic models and raw schemas
-        wrapper = StructuredLLMWrapper(self, schema if isinstance(schema, type) else type('DynamicSchema', (BaseModel,), {}))
+        wrapper = StructuredLLMWrapper(
+            self,
+            (
+                schema
+                if isinstance(schema, type)
+                else type("DynamicSchema", (BaseModel,), {})
+            ),
+        )
         return wrapper.chat(message, chat_history)
-    
-    
+
     def with_structured_output(self, schema: Type[T]) -> StructuredLLMWrapper[T]:
         """Return a wrapper that ensures structured output of specified type"""
         return StructuredLLMWrapper(self, schema)
-    
-    def chat_stream(self, message: str, chat_history: Optional[List[ChatMessage]] = None) -> Generator[str, None, str]:
+
+    def chat_stream(
+        self, message: str, chat_history: Optional[List[ChatMessage]] = None
+    ) -> Generator[str, None, str]:
         """Send a chat message and get streaming response"""
         messages = []
         if chat_history:
             messages.extend(chat_history)
-        messages.append(ChatMessage(role='user', content=message))
+        messages.append(ChatMessage(role="user", content=message))
         return self.chat_with_messages_stream(messages)
-    
-    def chat_with_messages_stream(self, messages: List[ChatMessage]) -> Generator[str, None, str]:
+
+    def chat_with_messages_stream(
+        self, messages: List[ChatMessage]
+    ) -> Generator[str, None, str]:
         """Send multiple messages and get streaming response"""
         # Gemini doesn't have a simple streaming API like Ollama
         # So we'll simulate streaming by chunking the response
         try:
             # Get the full response first
             full_response = self.chat_with_messages(messages)
-            
+
             # Simulate streaming by yielding words in chunks
             words = full_response.split()
             current_chunk = ""
@@ -352,9 +394,9 @@ class GeminiTextClient(TextLLMClient):
                     yield current_chunk.strip()
                     current_chunk = ""
                     time.sleep(0.03)  # Small delay to simulate streaming
-            
+
             return full_response
-            
+
         except Exception:
             # Fall back to regular response
             full_response = self.chat_with_messages(messages)
@@ -364,55 +406,62 @@ class GeminiTextClient(TextLLMClient):
 
 class AnthropicTextClient(TextLLMClient):
     """Anthropic Claude text client implementation"""
-    
-    def __init__(self, config: LLMConfig, credential_manager: Optional[CredentialManager] = None):
+
+    def __init__(
+        self, config: LLMConfig, credential_manager: Optional[CredentialManager] = None
+    ):
         if not ANTHROPIC_AVAILABLE:
-            raise ValueError("Anthropic package not available. Install with: pip install anthropic")
-        
+            raise ValueError(
+                "Anthropic package not available. Install with: pip install anthropic"
+            )
+
         self.config = config
         self.credential_manager = credential_manager or default_credential_manager
-        self.api_key = self.credential_manager.require_credential("ANTHROPIC_API_KEY", "Anthropic")
-        
+        self.api_key = self.credential_manager.require_credential(
+            "ANTHROPIC_API_KEY", "Anthropic"
+        )
+
         self.client = anthropic.Anthropic(api_key=self.api_key)
-        self.model = config.model or self.credential_manager.get_credential("ANTHROPIC_DEFAULT_MODEL", "claude-3-5-sonnet-20241022")
-    
-    def chat(self, message: str, chat_history: Optional[List[ChatMessage]] = None) -> str:
+        self.model = config.model or self.credential_manager.get_credential(
+            "ANTHROPIC_DEFAULT_MODEL", "claude-3-5-sonnet-20241022"
+        )
+
+    def chat(
+        self, message: str, chat_history: Optional[List[ChatMessage]] = None
+    ) -> str:
         """Send a chat message and get response"""
         messages = []
         if chat_history:
             messages.extend(chat_history)
-        messages.append(ChatMessage(role='user', content=message))
+        messages.append(ChatMessage(role="user", content=message))
         return self.chat_with_messages(messages)
-    
+
     def chat_with_messages(self, messages: List[ChatMessage]) -> str:
         """Send multiple messages and get response"""
         anthropic_messages = []
         system_message = None
-        
+
         for msg in messages:
             if msg.role == "system":
                 system_message = msg.content
             else:
-                anthropic_messages.append({
-                    "role": msg.role,
-                    "content": msg.content
-                })
-        
+                anthropic_messages.append({"role": msg.role, "content": msg.content})
+
         try:
             kwargs = {
                 "model": self.model,
                 "max_tokens": self.config.max_tokens,
                 "temperature": self.config.temperature,
                 "messages": anthropic_messages,
-                **self.config.extra_params
+                **self.config.extra_params,
             }
-            
+
             if system_message:
                 kwargs["system"] = system_message
-            
+
             response = self.client.messages.create(**kwargs)
             return response.content[0].text
-            
+
         except anthropic.APIError as e:
             if e.status_code == 429:
                 print("=" * 80)
@@ -422,12 +471,18 @@ class AnthropicTextClient(TextLLMClient):
                 print()
                 print("💰 BILLING ALERT:")
                 print("   • You have exceeded your Anthropic API rate limits")
-                print("   • This may result in unexpected charges or service interruption")
+                print(
+                    "   • This may result in unexpected charges or service interruption"
+                )
                 print("   • Consider implementing rate limiting or usage monitoring")
                 print()
                 print("🤖 AGENT WARNING:")
-                print("   • IF THIS IS BEING CONSUMED BY AN AGENT, PLEASE INFORM THE USER")
-                print("   • Agents can rapidly consume API quotas without user awareness")
+                print(
+                    "   • IF THIS IS BEING CONSUMED BY AN AGENT, PLEASE INFORM THE USER"
+                )
+                print(
+                    "   • Agents can rapidly consume API quotas without user awareness"
+                )
                 print("   • Consider pausing automated workflows until limits reset")
                 print()
                 print("📊 Next Steps:")
@@ -443,14 +498,14 @@ class AnthropicTextClient(TextLLMClient):
         except Exception as e:
             print(f"Unexpected error with Anthropic API: {e}")
             raise
-    
+
     def switch_model(self, new_model: str) -> bool:
         """
         Switch to a different Anthropic model
-        
+
         Args:
             new_model: The new model name to switch to
-            
+
         Returns:
             True if successful, False otherwise
         """
@@ -458,18 +513,22 @@ class AnthropicTextClient(TextLLMClient):
         self.model = new_model
         print(f"Switched from '{old_model}' to '{new_model}'")
         return True
-    
+
     def get_current_model(self) -> str:
         """
         Get the current model name
-        
+
         Returns:
             Current model name
         """
         return self.model
-    
-    def chat_structured(self, message: str, schema: Union[Type[BaseModel], Dict[str, Any]], 
-                       chat_history: Optional[List[ChatMessage]] = None) -> Union[BaseModel, Dict[str, Any]]:
+
+    def chat_structured(
+        self,
+        message: str,
+        schema: Union[Type[BaseModel], Dict[str, Any]],
+        chat_history: Optional[List[ChatMessage]] = None,
+    ) -> Union[BaseModel, Dict[str, Any]]:
         """Chat with structured output using JSON schema prompting"""
         if isinstance(schema, type) and issubclass(schema, BaseModel):
             # Pydantic model - use wrapper
@@ -492,38 +551,40 @@ JSON Response:
                 return json.loads(response)
             except json.JSONDecodeError:
                 # Fallback - try to extract JSON from response
-                start_idx = response.find('{')
-                end_idx = response.rfind('}')
+                start_idx = response.find("{")
+                end_idx = response.rfind("}")
                 if start_idx != -1 and end_idx != -1:
                     json_str = response[start_idx:end_idx + 1]
                     return json.loads(json_str)
                 raise ValueError(f"Could not parse JSON from response: {response}")
-    
+
     def with_structured_output(self, schema: Type[T]) -> StructuredLLMWrapper[T]:
         """Return a wrapper that ensures structured output of specified type"""
         return StructuredLLMWrapper(self, schema)
-    def chat_stream(self, message: str, chat_history: Optional[List[ChatMessage]] = None) -> Generator[str, None, str]:
+
+    def chat_stream(
+        self, message: str, chat_history: Optional[List[ChatMessage]] = None
+    ) -> Generator[str, None, str]:
         """Send a chat message and get streaming response"""
         messages = []
         if chat_history:
             messages.extend(chat_history)
         messages.append(ChatMessage(role="user", content=message))
         return self.chat_with_messages_stream(messages)
-    
-    def chat_with_messages_stream(self, messages: List[ChatMessage]) -> Generator[str, None, str]:
+
+    def chat_with_messages_stream(
+        self, messages: List[ChatMessage]
+    ) -> Generator[str, None, str]:
         """Send multiple messages and get streaming response"""
         anthropic_messages = []
         system_message = None
-        
+
         for msg in messages:
             if msg.role == "system":
                 system_message = msg.content
             else:
-                anthropic_messages.append({
-                    "role": msg.role,
-                    "content": msg.content
-                })
-        
+                anthropic_messages.append({"role": msg.role, "content": msg.content})
+
         try:
             kwargs = {
                 "model": self.model,
@@ -531,12 +592,12 @@ JSON Response:
                 "temperature": self.config.temperature,
                 "messages": anthropic_messages,
                 "stream": True,  # Enable streaming
-                **self.config.extra_params
+                **self.config.extra_params,
             }
-            
+
             if system_message:
                 kwargs["system"] = system_message
-            
+
             full_response = ""
             with self.client.messages.stream(**kwargs) as stream:
                 for chunk in stream:
@@ -545,12 +606,12 @@ JSON Response:
                             text_chunk = chunk.delta.text
                             full_response += text_chunk
                             yield text_chunk
-            
+
             return full_response
-            
+
         except anthropic.APIError as e:
             if e.status_code == 429:
-                print("🚨 CRITICAL: ANTHROPIC API RATE LIMIT EXCEEDED\! 🚨")
+                print("🚨 CRITICAL: ANTHROPIC API RATE LIMIT EXCEEDED! 🚨")
                 raise
             else:
                 # Fall back to regular API

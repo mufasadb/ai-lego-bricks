@@ -1,0 +1,21 @@
+[flake8]
+max-line-length = 88
+extend-ignore = 
+    # Allow longer lines (black default is 88)
+    E501,
+    # Allow blank lines with whitespace (black handles this)
+    W293,
+    # Allow trailing whitespace (black handles this)  
+    W291,
+    # Allow imported but unused (F401)
+    F401,
+    # Allow module level import not at top of file (E402)
+    E402
+exclude = 
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    .pytest_cache,
+    build,
+    dist

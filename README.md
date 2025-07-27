@@ -27,18 +27,64 @@ A modular library of building blocks for LLM agentic work, designed to be combin
 ## ⚡ Quick Start (5 minutes)
 
 ### Install
+
+**Option 1: Automated Setup (Recommended)**
 ```bash
 git clone https://github.com/callmebeachy/ai-lego-bricks.git
 cd ai-lego-bricks
-pip install -e .
+
+# Quick setup script - handles pip upgrade and dependency management
+./setup_ai_lego_bricks.sh minimal    # Minimal install
+./setup_ai_lego_bricks.sh ollama     # For local Ollama models
+./setup_ai_lego_bricks.sh openai     # For OpenAI only
+./setup_ai_lego_bricks.sh all        # Full installation
+```
+
+**Option 2: Manual Setup**
+```bash
+git clone https://github.com/callmebeachy/ai-lego-bricks.git
+cd ai-lego-bricks
+
+# Upgrade pip first (prevents editable install issues)
+pip install --upgrade pip
+
+# Lightweight install with just core dependencies
+pip install -e ".[minimal]"
+```
+
+**Option 3: Provider-Specific Install**
+```bash
+# For Ollama (local models, no API keys needed)
+pip install -e ".[ollama]"
+
+# For OpenAI only
+pip install -e ".[openai]"
+
+# For Google Gemini only  
+pip install -e ".[gemini]"
+
+# For all LLM providers
+pip install -e ".[llm]"
+```
+
+**Option 4: Full Install (All Features)**
+```bash
+# Complete installation with all optional dependencies
+pip install -e ".[all]"
+```
+
+### Setup Environment
+```bash
+# Copy environment template
+cp .env.example .env
+
+# Edit .env with your API keys
+# For Ollama: Set OLLAMA_URL=http://localhost:11434
+# For others: Add respective API keys (see .env.example for guidance)
 ```
 
 ### Run Your First Agent
 ```bash
-# Copy environment template
-cp .env.example .env
-# Edit .env with your API keys (at minimum: GOOGLE_AI_STUDIO_KEY)
-
 # Run a simple chat agent
 ailego run agent_orchestration/examples/basic_chat_agent.json
 ```
@@ -46,6 +92,29 @@ ailego run agent_orchestration/examples/basic_chat_agent.json
 ### Verify Setup
 ```bash
 ailego verify
+```
+
+### 🔧 Installation Troubleshooting
+
+**Editable install fails with older pip:**
+```bash
+# Fix: Upgrade pip first
+pip install --upgrade pip
+pip install -e ".[minimal]"
+```
+
+**Too many dependencies installing:**
+```bash
+# Fix: Use provider-specific installs
+pip install -e ".[ollama]"    # Minimal dependencies
+pip install -e ".[openai]"    # Only OpenAI dependencies
+```
+
+**Missing API key warnings on import:**
+```bash
+# Fix: Set up only what you need in .env
+# For Ollama: Just set OLLAMA_URL=http://localhost:11434
+# See .env.example for complete guidance
 ```
 
 **✅ That's it!** You now have a working AI agent system. 

@@ -3006,10 +3006,25 @@ class StepHandlerRegistry:
     def _handle_tool_call(
         self, step: StepConfig, inputs: Dict[str, Any], context: ExecutionContext
     ) -> Any:
-        """Handle tool calling step - simplified version for testing"""
+        """Handle tool calling step - executes tools as configured in workflow"""
         try:
             import asyncio
+            import sys
+            import os
 
+            # Add tools to path
+            sys.path.append(os.path.join(os.path.dirname(__file__), "..", "tools"))
+            from tool_service import ToolService
+
+            # Get configuration from step
+            provider = step.config.get("provider", "gemini")
+            model = step.config.get("model")
+            tools = step.config.get("tools", [])
+            tool_choice = step.config.get("tool_choice", "auto")
+            auto_execute = step.config.get("auto_execute", True)
+            max_iterations = step.config.get("max_iterations", 3)
+            temperature = step.config.get("temperature", 0.1)
+            
             # Get user message from inputs
             user_message = inputs.get("message", inputs.get("user_input", ""))
             if not user_message:
@@ -3020,105 +3035,144 @@ class StepHandlerRegistry:
                     "responses": [],
                 }
 
-            # For testing, simulate a tool call for calculator
-            if any(
-                word in user_message.lower()
-                for word in [
-                    "multiply",
-                    "multiplied",
-                    "calculate",
-                    "*",
-                    "times",
-                    "x",
-                    "+",
-                    "-",
-                    "/",
-                ]
-            ):
-                # Simulate executing calculator tool
-                from tools.example_tools import CalculatorExecutor
-                from tools import ToolCall
+            # Get system prompt/message
+            system_message = step.config.get("prompt", "You are a helpful assistant.")
+            
+            # Process previous step results if any
+            if "previous_result" in inputs:
+                previous_result = inputs["previous_result"]
+                if isinstance(previous_result, dict) and "tool_results" in previous_result:
+                    # Include context from previous tool executions
+                    user_message = f"Previous context: {previous_result['tool_results']}\n\nCurrent request: {user_message}"
 
-                # Extract numbers if possible (simple pattern)
-                import re
+            # Create tool service
+            credential_manager = getattr(context, "credential_manager", None)
+            tool_service = ToolService(credential_manager=credential_manager)
 
-                numbers = re.findall(r"\d+", user_message)
-                if len(numbers) >= 2:
-                    expression = f"{numbers[0]} * {numbers[1]}"
+            # Get LLM service based on provider
+            if provider == "gemini":
+                from llm.text_clients import GeminiTextClient
+                llm_client = GeminiTextClient(temperature=temperature)
+            elif provider == "ollama":
+                from llm.text_clients import OllamaTextClient
+                llm_client = OllamaTextClient(model=model or "llama3.1:8b", temperature=temperature)
+            elif provider == "openai":
+                from llm.text_clients import OpenAITextClient
+                llm_client = OpenAITextClient(model=model or "gpt-4", temperature=temperature)
+            else:
+                raise ValueError(f"Unsupported provider: {provider}")
 
-                    # Execute tool
-                    executor = CalculatorExecutor()
-                    tool_call = ToolCall(
-                        id="test_calc_1",
-                        name="calculate",
-                        parameters={"expression": expression},
-                    )
-
-                    # Run async in sync context
-                    try:
-                        # Try to get existing loop first
-                        loop = asyncio.get_event_loop()
-                        if loop.is_running():
-                            # If we're in an async context, create a new thread
-                            import concurrent.futures
-
-                            with concurrent.futures.ThreadPoolExecutor() as executor_pool:
-                                future = executor_pool.submit(
-                                    asyncio.run, executor.execute(tool_call)
-                                )
-                                result = future.result()
+            # Prepare tools for the provider
+            async def run_tool_call():
+                prepared_tools = await tool_service.prepare_tools_for_provider(provider, tools)
+                prepared_tool_choice = await tool_service.prepare_tool_choice_for_provider(provider, tool_choice)
+                
+                # Build conversation with system message
+                conversation = []
+                if system_message:
+                    conversation.append({"role": "system", "content": system_message})
+                conversation.append({"role": "user", "content": user_message})
+                
+                tool_calls_made = []
+                all_responses = []
+                iterations = 0
+                
+                while iterations < max_iterations:
+                    iterations += 1
+                    
+                    # Make LLM call with tools
+                    if prepared_tools:
+                        if provider == "gemini":
+                            response = llm_client.chat_with_tools(
+                                conversation,
+                                list(prepared_tools.values()) if isinstance(prepared_tools, dict) else prepared_tools,
+                                tool_choice=prepared_tool_choice
+                            )
                         else:
-                            result = asyncio.run(executor.execute(tool_call))
-                    except RuntimeError:
-                        # No event loop, safe to use asyncio.run
-                        result = asyncio.run(executor.execute(tool_call))
+                            response = llm_client.chat_with_tools(
+                                conversation,
+                                prepared_tools,
+                                tool_choice=prepared_tool_choice
+                            )
+                    else:
+                        # No tools available, regular chat
+                        response = llm_client.chat(conversation)
+                    
+                    all_responses.append(response)
+                    
+                    # Parse tool calls from response
+                    tool_calls = await tool_service.parse_tool_calls_from_response(provider, response)
+                    
+                    if not tool_calls:
+                        # No tool calls, we're done
+                        break
+                    
+                    # Execute tool calls if auto_execute is enabled
+                    if auto_execute:
+                        tool_results = await tool_service.execute_tool_calls(tool_calls)
+                        tool_calls_made.extend([{"tool_call": tc.dict(), "result": tr.dict()} for tc, tr in zip(tool_calls, tool_results)])
+                        
+                        # Add assistant message with tool calls to conversation
+                        assistant_message = {"role": "assistant"}
+                        if "content" in response:
+                            assistant_message["content"] = response["content"]
+                        if tool_calls:
+                            # Add tool call info to assistant message based on provider
+                            if provider == "gemini":
+                                assistant_message["tool_calls"] = [tc.dict() for tc in tool_calls]
+                            else:
+                                assistant_message["tool_calls"] = [tc.dict() for tc in tool_calls]
+                        conversation.append(assistant_message)
+                        
+                        # Add tool results to conversation
+                        for tool_call, tool_result in zip(tool_calls, tool_results):
+                            conversation.append({
+                                "role": "tool", 
+                                "content": str(tool_result.result),
+                                "tool_call_id": tool_call.id
+                            })
+                    else:
+                        # Just record the tool calls without executing
+                        tool_calls_made.extend([{"tool_call": tc.dict(), "result": None} for tc in tool_calls])
+                        break
+                
+                # Get final response content
+                final_response_content = ""
+                if all_responses:
+                    last_response = all_responses[-1]
+                    if isinstance(last_response, dict) and "content" in last_response:
+                        final_response_content = last_response["content"]
+                    elif isinstance(last_response, str):
+                        final_response_content = last_response
+                
+                return {
+                    "success": True,
+                    "response": final_response_content,
+                    "tool_calls": tool_calls_made,
+                    "tool_results": [tc["result"] for tc in tool_calls_made if tc["result"] is not None],
+                    "conversation_history": conversation,
+                    "iterations": iterations,
+                    "provider": provider,
+                    "model": model,
+                    "tools_used": len(tool_calls_made),
+                    "auto_execute": auto_execute,
+                }
 
-                    return {
-                        "success": True,
-                        "final_response": f"I calculated {expression} = {result.result['result']}",
-                        "tool_calls": [
-                            {"tool_call": tool_call.dict(), "result": result.dict()}
-                        ],
-                        "conversation_history": [
-                            {"role": "user", "content": user_message},
-                            {
-                                "role": "assistant",
-                                "content": f"I'll calculate {expression} for you.",
-                            },
-                            {
-                                "role": "tool",
-                                "content": f"Result: {result.result['result']}",
-                            },
-                            {
-                                "role": "assistant",
-                                "content": f"The answer is {result.result['result']}",
-                            },
-                        ],
-                        "iterations": 1,
-                        "provider": step.config.get("provider", "test"),
-                        "model": step.config.get("model", "test"),
-                        "tools_used": 1,
-                        "auto_execute": True,
-                    }
-
-            # Default response for non-calculation queries
-            return {
-                "success": True,
-                "final_response": f"I received your message: '{user_message}'. Tool calling is working, but I can only handle simple calculations right now.",
-                "tool_calls": [],
-                "conversation_history": [
-                    {"role": "user", "content": user_message},
-                    {
-                        "role": "assistant",
-                        "content": "Tool calling system is working! For calculations, ask me to multiply numbers.",
-                    },
-                ],
-                "iterations": 1,
-                "provider": step.config.get("provider", "test"),
-                "model": step.config.get("model", "test"),
-                "tools_used": 0,
-                "auto_execute": True,
-            }
+            # Run async function in sync context
+            try:
+                # Try to get existing loop first
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # If we're in an async context, create a new thread
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as executor_pool:
+                        future = executor_pool.submit(asyncio.run, run_tool_call())
+                        return future.result()
+                else:
+                    return asyncio.run(run_tool_call())
+            except RuntimeError:
+                # No event loop, safe to use asyncio.run
+                return asyncio.run(run_tool_call())
 
         except Exception as e:
             return {

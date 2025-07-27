@@ -3016,7 +3016,16 @@ class StepHandlerRegistry:
     def _handle_tool_call(
         self, step: StepConfig, inputs: Dict[str, Any], context: ExecutionContext
     ) -> Any:
-        """Handle tool calling step - executes tools as configured in workflow"""
+        """Handle tool calling step - executes tools as configured in workflow
+        
+        CURRENT STATUS: Tool calling functionality is temporarily disabled due to 
+        architectural changes. The old chat_with_tools methods no longer exist in 
+        LLM clients. This method currently provides basic chat functionality with 
+        warnings about tool requests.
+        
+        TODO: Complete architectural rewrite to use the new ToolService properly
+        for full tool calling functionality.
+        """
         try:
             import asyncio
             import sys
@@ -3062,169 +3071,89 @@ class StepHandlerRegistry:
             tool_service = ToolService(credential_manager=credential_manager)
 
             # Get LLM service based on provider
+            from llm.llm_types import LLMConfig, LLMProvider
+            
             if provider == "gemini":
                 from llm.text_clients import GeminiTextClient
-
-                llm_client = GeminiTextClient(temperature=temperature)
+                
+                config = LLMConfig(
+                    provider=LLMProvider.GEMINI,
+                    model=model or "gemini-1.5-flash",
+                    temperature=temperature
+                )
+                llm_client = GeminiTextClient(config)
             elif provider == "ollama":
                 from llm.text_clients import OllamaTextClient
-
-                llm_client = OllamaTextClient(
-                    model=model or "llama3.1:8b", temperature=temperature
+                
+                config = LLMConfig(
+                    provider=LLMProvider.OLLAMA,
+                    model=model or "llama3.1:8b",
+                    temperature=temperature
                 )
+                llm_client = OllamaTextClient(config)
             elif provider == "openai":
                 from llm.text_clients import OpenAITextClient
-
-                llm_client = OpenAITextClient(
-                    model=model or "gpt-4", temperature=temperature
+                
+                config = LLMConfig(
+                    provider=LLMProvider.OPENAI,
+                    model=model or "gpt-4",
+                    temperature=temperature
                 )
+                llm_client = OpenAITextClient(config)
             else:
                 raise ValueError(f"Unsupported provider: {provider}")
 
-            # Prepare tools for the provider
-            async def run_tool_call():
-                prepared_tools = await tool_service.prepare_tools_for_provider(
-                    provider, tools
-                )
-                prepared_tool_choice = (
-                    await tool_service.prepare_tool_choice_for_provider(
-                        provider, tool_choice
-                    )
-                )
-
-                # Build conversation with system message
-                conversation = []
-                if system_message:
-                    conversation.append({"role": "system", "content": system_message})
-                conversation.append({"role": "user", "content": user_message})
-
-                tool_calls_made = []
-                all_responses = []
-                iterations = 0
-
-                while iterations < max_iterations:
-                    iterations += 1
-
-                    # Make LLM call with tools
-                    if prepared_tools:
-                        if provider == "gemini":
-                            response = llm_client.chat_with_tools(
-                                conversation,
-                                (
-                                    list(prepared_tools.values())
-                                    if isinstance(prepared_tools, dict)
-                                    else prepared_tools
-                                ),
-                                tool_choice=prepared_tool_choice,
-                            )
-                        else:
-                            response = llm_client.chat_with_tools(
-                                conversation,
-                                prepared_tools,
-                                tool_choice=prepared_tool_choice,
-                            )
-                    else:
-                        # No tools available, regular chat
-                        response = llm_client.chat(conversation)
-
-                    all_responses.append(response)
-
-                    # Parse tool calls from response
-                    tool_calls = await tool_service.parse_tool_calls_from_response(
-                        provider, response
-                    )
-
-                    if not tool_calls:
-                        # No tool calls, we're done
-                        break
-
-                    # Execute tool calls if auto_execute is enabled
-                    if auto_execute:
-                        tool_results = await tool_service.execute_tool_calls(tool_calls)
-                        tool_calls_made.extend(
-                            [
-                                {"tool_call": tc.dict(), "result": tr.dict()}
-                                for tc, tr in zip(tool_calls, tool_results)
-                            ]
-                        )
-
-                        # Add assistant message with tool calls to conversation
-                        assistant_message = {"role": "assistant"}
-                        if "content" in response:
-                            assistant_message["content"] = response["content"]
-                        if tool_calls:
-                            # Add tool call info to assistant message based on provider
-                            if provider == "gemini":
-                                assistant_message["tool_calls"] = [
-                                    tc.dict() for tc in tool_calls
-                                ]
-                            else:
-                                assistant_message["tool_calls"] = [
-                                    tc.dict() for tc in tool_calls
-                                ]
-                        conversation.append(assistant_message)
-
-                        # Add tool results to conversation
-                        for tool_call, tool_result in zip(tool_calls, tool_results):
-                            conversation.append(
-                                {
-                                    "role": "tool",
-                                    "content": str(tool_result.result),
-                                    "tool_call_id": tool_call.id,
-                                }
-                            )
-                    else:
-                        # Just record the tool calls without executing
-                        tool_calls_made.extend(
-                            [
-                                {"tool_call": tc.dict(), "result": None}
-                                for tc in tool_calls
-                            ]
-                        )
-                        break
-
-                # Get final response content
-                final_response_content = ""
-                if all_responses:
-                    last_response = all_responses[-1]
-                    if isinstance(last_response, dict) and "content" in last_response:
-                        final_response_content = last_response["content"]
-                    elif isinstance(last_response, str):
-                        final_response_content = last_response
-
+            # TEMPORARY WORKAROUND: Tool calling functionality requires rewrite
+            # The old chat_with_tools method no longer exists in the LLM clients
+            # For now, provide basic chat functionality and warn about tools
+            
+            if tools:
+                print(f"WARNING: Tool calling is currently disabled due to architectural changes.")
+                print(f"Requested tools: {tools}")
+                print(f"Processing as regular chat without tools for now.")
+            
+            # Build conversation messages for LLM client
+            from llm.llm_types import ChatMessage
+            
+            chat_history = []
+            if system_message:
+                chat_history.append(ChatMessage(role="system", content=system_message))
+            
+            # Use the LLM client for basic chat
+            try:
+                response = llm_client.chat(user_message, chat_history=chat_history)
+                
                 return {
                     "success": True,
-                    "response": final_response_content,
-                    "tool_calls": tool_calls_made,
-                    "tool_results": [
-                        tc["result"]
-                        for tc in tool_calls_made
-                        if tc["result"] is not None
+                    "response": response,
+                    "tool_calls": [],  # No tool calls until rewrite
+                    "tool_results": [],
+                    "conversation_history": [
+                        msg for msg in [
+                            {"role": "system", "content": system_message} if system_message else None,
+                            {"role": "user", "content": user_message},
+                            {"role": "assistant", "content": response}
+                        ] if msg is not None
                     ],
-                    "conversation_history": conversation,
-                    "iterations": iterations,
+                    "iterations": 1,
                     "provider": provider,
-                    "model": model,
-                    "tools_used": len(tool_calls_made),
+                    "model": config.model,
+                    "tools_used": 0,
                     "auto_execute": auto_execute,
+                    "warning": "Tool calling temporarily disabled - architectural rewrite needed"
+                }
+                
+            except Exception as e:
+                return {
+                    "success": False,
+                    "error": f"LLM chat failed: {str(e)}",
+                    "error_type": type(e).__name__,
+                    "tool_calls": [],
+                    "conversation_history": [],
+                    "iterations": 0,
                 }
 
-            # Run async function in sync context
-            try:
-                # Try to get existing loop first
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    # If we're in an async context, create a new thread
-                    import concurrent.futures
-
-                    with concurrent.futures.ThreadPoolExecutor() as executor_pool:
-                        future = executor_pool.submit(asyncio.run, run_tool_call())
-                        return future.result()
-                else:
-                    return asyncio.run(run_tool_call())
-            except RuntimeError:
-                # No event loop, safe to use asyncio.run
-                return asyncio.run(run_tool_call())
+            # The above logic is now synchronous, no async handling needed
 
         except Exception as e:
             return {

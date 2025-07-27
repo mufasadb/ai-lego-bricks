@@ -3016,33 +3016,23 @@ class StepHandlerRegistry:
     def _handle_tool_call(
         self, step: StepConfig, inputs: Dict[str, Any], context: ExecutionContext
     ) -> Any:
-        """Handle tool calling step - executes tools as configured in workflow
-        
-        CURRENT STATUS: Tool calling functionality is temporarily disabled due to 
-        architectural changes. The old chat_with_tools methods no longer exist in 
-        LLM clients. This method currently provides basic chat functionality with 
-        warnings about tool requests.
-        
-        TODO: Complete architectural rewrite to use the new ToolService properly
-        for full tool calling functionality.
-        """
+        """Handle tool calling step - executes tools as configured in workflow"""
         try:
             import asyncio
-            import sys
-            import os
-
-            # Import tool service
+            import uuid
             from tools.tool_service import ToolService
+            from llm.llm_types import LLMConfig, LLMProvider, ChatMessage
 
             # Get configuration from step
             provider = step.config.get("provider", "gemini")
             model = step.config.get("model")
             tools = step.config.get("tools", [])
+            tool_category = step.config.get("tool_category")
             tool_choice = step.config.get("tool_choice", "auto")
             auto_execute = step.config.get("auto_execute", True)
-            max_iterations = step.config.get("max_iterations", 3)
+            max_iterations = step.config.get("max_iterations", 5)
             temperature = step.config.get("temperature", 0.1)
-
+            
             # Get user message from inputs
             user_message = inputs.get("message", inputs.get("user_input", ""))
             if not user_message:
@@ -3052,115 +3042,239 @@ class StepHandlerRegistry:
                     "tool_calls": [],
                     "responses": [],
                 }
-
+            
             # Get system prompt/message
             system_message = step.config.get("prompt", "You are a helpful assistant.")
-
-            # Process previous step results if any
-            if "previous_result" in inputs:
-                previous_result = inputs["previous_result"]
-                if (
-                    isinstance(previous_result, dict)
-                    and "tool_results" in previous_result
-                ):
-                    # Include context from previous tool executions
-                    user_message = f"Previous context: {previous_result['tool_results']}\n\nCurrent request: {user_message}"
-
+            
             # Create tool service
             credential_manager = getattr(context, "credential_manager", None)
             tool_service = ToolService(credential_manager=credential_manager)
-
-            # Get LLM service based on provider
-            from llm.llm_types import LLMConfig, LLMProvider
             
+            # Create LLM client
             if provider == "gemini":
                 from llm.text_clients import GeminiTextClient
-                
                 config = LLMConfig(
                     provider=LLMProvider.GEMINI,
                     model=model or "gemini-1.5-flash",
                     temperature=temperature
                 )
-                llm_client = GeminiTextClient(config)
+                llm_client = GeminiTextClient(config, credential_manager=credential_manager)
             elif provider == "ollama":
                 from llm.text_clients import OllamaTextClient
-                
                 config = LLMConfig(
                     provider=LLMProvider.OLLAMA,
                     model=model or "llama3.1:8b",
                     temperature=temperature
                 )
-                llm_client = OllamaTextClient(config)
-            elif provider == "openai":
-                from llm.text_clients import OpenAITextClient
-                
+                llm_client = OllamaTextClient(config, credential_manager=credential_manager)
+            elif provider == "anthropic":
+                from llm.text_clients import AnthropicTextClient
                 config = LLMConfig(
-                    provider=LLMProvider.OPENAI,
-                    model=model or "gpt-4",
+                    provider=LLMProvider.ANTHROPIC,
+                    model=model or "claude-3-5-sonnet-20241022",
                     temperature=temperature
                 )
-                llm_client = OpenAITextClient(config)
+                llm_client = AnthropicTextClient(config, credential_manager=credential_manager)
+            elif provider == "openrouter":
+                from llm.text_clients import OpenRouterTextClient
+                config = LLMConfig(
+                    provider=LLMProvider.OPENROUTER,
+                    model=model or "anthropic/claude-3.5-sonnet",
+                    temperature=temperature
+                )
+                llm_client = OpenRouterTextClient(config, credential_manager=credential_manager)
             else:
                 raise ValueError(f"Unsupported provider: {provider}")
-
-            # TEMPORARY WORKAROUND: Tool calling functionality requires rewrite
-            # The old chat_with_tools method no longer exists in the LLM clients
-            # For now, provide basic chat functionality and warn about tools
             
-            if tools:
-                print(f"WARNING: Tool calling is currently disabled due to architectural changes.")
-                print(f"Requested tools: {tools}")
-                print(f"Processing as regular chat without tools for now.")
-            
-            # Build conversation messages for LLM client
-            from llm.llm_types import ChatMessage
-            
-            chat_history = []
+            # Set up conversation history
+            conversation_history = []
             if system_message:
-                chat_history.append(ChatMessage(role="system", content=system_message))
+                conversation_history.append(ChatMessage(role="system", content=system_message))
             
-            # Use the LLM client for basic chat
-            try:
-                response = llm_client.chat(user_message, chat_history=chat_history)
+            # Initialize tracking variables
+            all_tool_calls = []
+            all_tool_results = []
+            all_responses = []
+            current_message = user_message
+            iterations = 0
+            
+            # Run the conversation loop with tools
+            for iteration in range(max_iterations):
+                iterations += 1
                 
-                return {
-                    "success": True,
-                    "response": response,
-                    "tool_calls": [],  # No tool calls until rewrite
-                    "tool_results": [],
-                    "conversation_history": [
-                        msg for msg in [
-                            {"role": "system", "content": system_message} if system_message else None,
-                            {"role": "user", "content": user_message},
-                            {"role": "assistant", "content": response}
-                        ] if msg is not None
-                    ],
-                    "iterations": 1,
-                    "provider": provider,
-                    "model": config.model,
-                    "tools_used": 0,
-                    "auto_execute": auto_execute,
-                    "warning": "Tool calling temporarily disabled - architectural rewrite needed"
-                }
+                # Prepare tools for this iteration if any are configured
+                formatted_tools = None
+                if tools or tool_category:
+                    try:
+                        # Get tools in provider-specific format - handle async properly
+                        import concurrent.futures
+                        
+                        def run_tool_preparation():
+                            return asyncio.run(
+                                tool_service.prepare_tools_for_provider(
+                                    provider, tools, tool_category
+                                )
+                            )
+                        
+                        try:
+                            # Try to get existing loop
+                            loop = asyncio.get_running_loop()
+                            # We're in an async context, use ThreadPoolExecutor
+                            with concurrent.futures.ThreadPoolExecutor() as executor:
+                                future = executor.submit(run_tool_preparation)
+                                tool_config = future.result()
+                        except RuntimeError:
+                            # No running loop, we can run asyncio directly
+                            tool_config = asyncio.run(
+                                tool_service.prepare_tools_for_provider(
+                                    provider, tools, tool_category
+                                )
+                            )
+                        
+                        if tool_config:
+                            # Extract tools in the format expected by each provider
+                            if provider == "gemini":
+                                # For Gemini, extract function declarations from the nested structure
+                                if 'tools' in tool_config and tool_config['tools']:
+                                    if 'functionDeclarations' in tool_config['tools'][0]:
+                                        formatted_tools = tool_config['tools'][0]['functionDeclarations']
+                                    else:
+                                        formatted_tools = tool_config['tools']
+                                else:
+                                    formatted_tools = tool_config
+                            else:
+                                # For other providers, use the tools list directly
+                                formatted_tools = tool_config.get('tools', tool_config)
+                    except Exception as e:
+                        print(f"Warning: Failed to prepare tools: {e}")
+                        formatted_tools = None
                 
-            except Exception as e:
-                return {
-                    "success": False,
-                    "error": f"LLM chat failed: {str(e)}",
-                    "error_type": type(e).__name__,
-                    "tool_calls": [],
-                    "conversation_history": [],
-                    "iterations": 0,
-                }
-
-            # The above logic is now synchronous, no async handling needed
-
+                # Make LLM call with tool support
+                try:
+                    llm_response = llm_client.chat_with_tool_support(
+                        current_message,
+                        tools=formatted_tools,
+                        tool_choice=tool_choice,
+                        chat_history=conversation_history
+                    )
+                    
+                    text_response = llm_response.get("response", "")
+                    tool_calls = llm_response.get("tool_calls", [])
+                    finish_reason = llm_response.get("finish_reason", "stop")
+                    
+                    all_responses.append(text_response)
+                    
+                    # Add this response to conversation history
+                    if text_response:
+                        conversation_history.append(ChatMessage(role="assistant", content=text_response))
+                    
+                    # If no tool calls, we're done
+                    if not tool_calls or not auto_execute:
+                        if not auto_execute and tool_calls:
+                            all_tool_calls.extend(tool_calls)
+                        break
+                    
+                    # Execute tool calls
+                    if tool_calls:
+                        all_tool_calls.extend(tool_calls)
+                        
+                        # Convert tool calls to ToolCall objects and execute them
+                        from tools.tool_types import ToolCall
+                        tool_call_objects = []
+                        for tc in tool_calls:
+                            if 'function' in tc:
+                                func = tc['function']
+                                tool_call_objects.append(ToolCall(
+                                    id=tc.get('id', str(uuid.uuid4())),
+                                    name=func['name'],
+                                    parameters=func.get('arguments', {})
+                                ))
+                        
+                        # Execute tools - handle async properly
+                        try:
+                            def run_tool_execution():
+                                return asyncio.run(
+                                    tool_service.execute_tool_calls(tool_call_objects)
+                                )
+                            
+                            try:
+                                # Try to get existing loop
+                                loop = asyncio.get_running_loop()
+                                # We're in an async context, use ThreadPoolExecutor
+                                import concurrent.futures
+                                with concurrent.futures.ThreadPoolExecutor() as executor:
+                                    future = executor.submit(run_tool_execution)
+                                    tool_results = future.result()
+                            except RuntimeError:
+                                # No running loop, we can run asyncio directly
+                                tool_results = asyncio.run(
+                                    tool_service.execute_tool_calls(tool_call_objects)
+                                )
+                            
+                            all_tool_results.extend(tool_results)
+                            
+                            # Add tool results to conversation
+                            tool_results_text = []
+                            for result in tool_results:
+                                if result.error:
+                                    tool_results_text.append(f"Tool {result.name} failed: {result.error}")
+                                else:
+                                    tool_results_text.append(f"Tool {result.name} result: {result.result}")
+                            
+                            # Continue conversation with tool results
+                            current_message = f"Tool execution results:\n" + "\n".join(tool_results_text) + "\n\nPlease continue or provide a summary based on these results."
+                            
+                        except Exception as e:
+                            print(f"Tool execution failed: {e}")
+                            # Continue with error message
+                            current_message = f"Tool execution failed: {e}. Please respond without using tools."
+                    
+                except Exception as e:
+                    return {
+                        "success": False,
+                        "error": f"LLM call failed: {str(e)}",
+                        "error_type": type(e).__name__,
+                        "tool_calls": all_tool_calls,
+                        "tool_results": all_tool_results,
+                        "conversation_history": [
+                            {"role": msg.role, "content": msg.content} for msg in conversation_history
+                        ],
+                        "iterations": iterations,
+                    }
+            
+            # Format final response
+            final_response = "\n".join(all_responses) if all_responses else "No response generated"
+            
+            return {
+                "success": True,
+                "response": final_response,
+                "tool_calls": all_tool_calls,
+                "tool_results": [
+                    {
+                        "name": tr.name,
+                        "result": tr.result,
+                        "error": tr.error,
+                        "tool_call_id": tr.tool_call_id
+                    } for tr in all_tool_results
+                ],
+                "conversation_history": [
+                    {"role": msg.role, "content": msg.content} for msg in conversation_history
+                ],
+                "iterations": iterations,
+                "provider": provider,
+                "model": config.model,
+                "tools_used": len(all_tool_calls),
+                "auto_execute": auto_execute,
+                "finish_reason": "completed"
+            }
+            
         except Exception as e:
             return {
                 "success": False,
                 "error": str(e),
                 "error_type": type(e).__name__,
                 "tool_calls": [],
+                "tool_results": [],
                 "conversation_history": [],
                 "iterations": 0,
             }

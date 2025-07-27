@@ -20,7 +20,7 @@ def create_memory_service(provider: str = "auto", **kwargs) -> Any:
     Returns:
         Memory service instance
     """
-    from ..memory import create_memory_service as _create_memory_service
+    from memory import create_memory_service as _create_memory_service
 
     return _create_memory_service(provider, **kwargs)
 
@@ -36,7 +36,7 @@ def create_generation_service(provider: str = "auto", **kwargs) -> Any:
     Returns:
         Generation service instance
     """
-    from ..llm.generation_service import (
+    from llm.generation_service import (
         create_generation_service as _create_generation_service,
     )
 
@@ -54,7 +54,7 @@ def create_conversation_service(provider: str = "auto", **kwargs) -> Any:
     Returns:
         Conversation service instance
     """
-    from ..chat.conversation_service import (
+    from chat.conversation_service import (
         create_conversation_service as _create_conversation_service,
     )
 
@@ -72,7 +72,7 @@ def create_tts_service(provider: str = "auto", **kwargs) -> Any:
     Returns:
         TTS service instance
     """
-    from ..tts import create_tts_service as _create_tts_service
+    from tts import create_tts_service as _create_tts_service
 
     return _create_tts_service(provider, **kwargs)
 
@@ -88,7 +88,7 @@ def create_prompt_service(provider: str = "auto", **kwargs) -> Any:
     Returns:
         Prompt service instance
     """
-    from ..prompt import create_prompt_service as _create_prompt_service
+    from prompt import create_prompt_service as _create_prompt_service
 
     return _create_prompt_service(provider, **kwargs)
 

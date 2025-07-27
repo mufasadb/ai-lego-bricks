@@ -15,9 +15,10 @@ from .image_generation_clients import (
     LocalImageGenerationClient,
 )
 from .image_generation_service import ImageGenerationService
+
 # Conditional import for credentials
 try:
-    from ..credentials import CredentialManager, default_credential_manager
+    from credentials import CredentialManager, default_credential_manager
 except ImportError:
     try:
         from credentials import CredentialManager, default_credential_manager

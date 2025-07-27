@@ -12,9 +12,10 @@ from .image_generation_types import (
     ImageGenerationResponse,
     ImageGenerationProvider,
 )
+
 # Conditional import for credentials
 try:
-    from ..credentials import CredentialManager, default_credential_manager
+    from credentials import CredentialManager, default_credential_manager
 except ImportError:
     try:
         from credentials import CredentialManager, default_credential_manager

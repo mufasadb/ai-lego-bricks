@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..credentials import CredentialManager
+    from credentials import CredentialManager
 import uuid
 import os
 from datetime import datetime
@@ -11,8 +11,8 @@ from .memory_service import MemoryService, Memory
 
 # Import shared embedding service
 try:
-    from ..llm.embedding_client import SentenceTransformerEmbeddingClient
-    from ..llm.llm_types import EmbeddingClient
+    from llm.embedding_client import SentenceTransformerEmbeddingClient
+    from llm.llm_types import EmbeddingClient
 
     EMBEDDING_ABSTRACTION_AVAILABLE = True
 except ImportError:
@@ -43,7 +43,7 @@ class SupabaseMemoryService(MemoryService):
             table_name: Name of the table to store memories
             credential_manager: Optional credential manager for explicit credential handling
         """
-        from ..credentials import default_credential_manager
+        from credentials import default_credential_manager
 
         self.credential_manager = credential_manager or default_credential_manager
         self.supabase_url = supabase_url or self.credential_manager.get_credential(

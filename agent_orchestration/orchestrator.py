@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional
 from .models import WorkflowConfig, ExecutionContext, WorkflowResult, StepConfig
 from .step_handlers import StepHandlerRegistry
 
+
 # Import existing services with conditional imports
 def _safe_import(relative_path, absolute_path, item_name):
     """Helper function for safe importing."""
@@ -22,9 +23,10 @@ def _safe_import(relative_path, absolute_path, item_name):
         except ImportError:
             return None
 
+
 # Memory service
 try:
-    from ..memory import create_memory_service
+    from memory import create_memory_service
 except ImportError:
     try:
         from memory import create_memory_service
@@ -33,8 +35,8 @@ except ImportError:
 
 # LLM services
 try:
-    from ..llm.llm_factory import LLMClientFactory
-    from ..llm.generation_service import GenerationService
+    from llm.llm_factory import LLMClientFactory
+    from llm.generation_service import GenerationService
 except ImportError:
     try:
         from llm.llm_factory import LLMClientFactory
@@ -45,7 +47,7 @@ except ImportError:
 
 # PDF processing
 try:
-    from ..pdf_to_text.pdf_to_text_service import PDFToTextService
+    from pdf_to_text.pdf_to_text_service import PDFToTextService
 except ImportError:
     try:
         from pdf_to_text.pdf_to_text_service import PDFToTextService
@@ -54,7 +56,7 @@ except ImportError:
 
 # Chunking service
 try:
-    from ..chunking.chunking_factory import ChunkingServiceFactory
+    from chunking.chunking_factory import ChunkingServiceFactory
 except ImportError:
     try:
         from chunking.chunking_factory import ChunkingServiceFactory
@@ -63,7 +65,7 @@ except ImportError:
 
 # Chat services
 try:
-    from ..chat.conversation_service import ConversationService
+    from chat.conversation_service import ConversationService
 except ImportError:
     try:
         from chat.conversation_service import ConversationService
@@ -72,7 +74,7 @@ except ImportError:
 
 # Prompt service
 try:
-    from ..prompt.prompt_service import create_prompt_service
+    from prompt.prompt_service import create_prompt_service
 except ImportError:
     try:
         from prompt.prompt_service import create_prompt_service
@@ -81,7 +83,7 @@ except ImportError:
 
 # TTS service
 try:
-    from ..tts.tts_factory import create_tts_service
+    from tts.tts_factory import create_tts_service
 except ImportError:
     try:
         from tts.tts_factory import create_tts_service
@@ -90,7 +92,7 @@ except ImportError:
 
 # STT service
 try:
-    from ..stt.stt_factory import create_stt_service
+    from stt.stt_factory import create_stt_service
 except ImportError:
     try:
         from stt.stt_factory import create_stt_service
@@ -99,7 +101,7 @@ except ImportError:
 
 # HTTP service
 try:
-    from ..services.http_request_service import create_http_request_service
+    from services.http_request_service import create_http_request_service
 except ImportError:
     try:
         from services.http_request_service import create_http_request_service

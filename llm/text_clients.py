@@ -6,9 +6,10 @@ from typing import List, Optional, Union, Type, TypeVar, Dict, Any, Generator
 import httpx
 from pydantic import BaseModel
 from .llm_types import TextLLMClient, ChatMessage, LLMConfig, StructuredLLMWrapper
+
 # Conditional import for credentials
 try:
-    from ..credentials import CredentialManager, default_credential_manager
+    from credentials import CredentialManager, default_credential_manager
 except ImportError:
     try:
         from credentials import CredentialManager, default_credential_manager
@@ -151,7 +152,7 @@ JSON Response:
                 start_idx = response.find("{")
                 end_idx = response.rfind("}")
                 if start_idx != -1 and end_idx != -1:
-                    json_str = response[start_idx:end_idx + 1]
+                    json_str = response[start_idx : end_idx + 1]
                     return json.loads(json_str)
                 raise ValueError(f"Could not parse JSON from response: {response}")
 
@@ -562,7 +563,7 @@ JSON Response:
                 start_idx = response.find("{")
                 end_idx = response.rfind("}")
                 if start_idx != -1 and end_idx != -1:
-                    json_str = response[start_idx:end_idx + 1]
+                    json_str = response[start_idx : end_idx + 1]
                     return json.loads(json_str)
                 raise ValueError(f"Could not parse JSON from response: {response}")
 
@@ -626,6 +627,184 @@ JSON Response:
                 full_response = self.chat_with_messages(messages)
                 yield full_response
                 return full_response
+        except Exception:
+            # Fall back to regular API
+            full_response = self.chat_with_messages(messages)
+            yield full_response
+            return full_response
+
+
+class OpenRouterTextClient(TextLLMClient):
+    """OpenRouter text client implementation using OpenAI-compatible API"""
+
+    def __init__(
+        self, config: LLMConfig, credential_manager: Optional[CredentialManager] = None
+    ):
+        self.config = config
+        self.credential_manager = credential_manager or default_credential_manager
+        self.api_key = self.credential_manager.get_credential("OPENROUTER_API_KEY")
+        self.base_url = "https://openrouter.ai/api/v1"
+        self.app_name = self.credential_manager.get_credential(
+            "OPENROUTER_APP_NAME", "AI Lego Bricks"
+        )
+        self.model = config.model or self.credential_manager.get_credential(
+            "OPENROUTER_DEFAULT_MODEL", "anthropic/claude-3.5-sonnet"
+        )
+
+        if not self.api_key:
+            raise ValueError(
+                "OPENROUTER_API_KEY not found. Please set your OpenRouter API key."
+            )
+
+    def chat(
+        self, message: str, chat_history: Optional[List[ChatMessage]] = None
+    ) -> str:
+        """Send a chat message and get response"""
+        messages = []
+        if chat_history:
+            messages.extend(chat_history)
+        messages.append(ChatMessage(role="user", content=message))
+        return self.chat_with_messages(messages)
+
+    def chat_with_messages(self, messages: List[ChatMessage]) -> str:
+        """Send multiple messages and get response"""
+        openai_messages = []
+        for msg in messages:
+            openai_messages.append({"role": msg.role, "content": msg.content})
+
+        payload = {
+            "model": self.model,
+            "messages": openai_messages,
+            "temperature": self.config.temperature,
+            "max_tokens": self.config.max_tokens,
+            **self.config.extra_params,
+        }
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": f"https://{self.app_name.lower().replace(' ', '-')}.com",
+            "X-Title": self.app_name,
+        }
+
+        with httpx.Client(timeout=self.config.timeout) as client:
+            response = client.post(
+                f"{self.base_url}/chat/completions", json=payload, headers=headers
+            )
+            response.raise_for_status()
+            result = response.json()
+            return result["choices"][0]["message"]["content"]
+
+    def switch_model(self, new_model: str) -> bool:
+        """
+        Switch to a different model (key OpenRouter benefit)
+
+        Args:
+            new_model: The new model name to switch to (e.g., "anthropic/claude-3.5-sonnet")
+
+        Returns:
+            True if successful, False otherwise
+        """
+        old_model = self.model
+        self.model = new_model
+        print(f"OpenRouter: Switched from '{old_model}' to '{new_model}'")
+        return True
+
+    def get_current_model(self) -> str:
+        """
+        Get the current model name
+
+        Returns:
+            Current model name
+        """
+        return self.model
+
+    def chat_structured(
+        self,
+        message: str,
+        schema: Type[T],
+        chat_history: Optional[List[ChatMessage]] = None,
+    ) -> T:
+        """Send a chat message and get structured response"""
+        wrapper = StructuredLLMWrapper(self, schema)
+        return wrapper.chat_structured(message, chat_history)
+
+    def with_structured_output(self, schema: Type[T]) -> StructuredLLMWrapper[T]:
+        """Return a wrapper that ensures structured output of specified type"""
+        return StructuredLLMWrapper(self, schema)
+
+    def chat_stream(
+        self, message: str, chat_history: Optional[List[ChatMessage]] = None
+    ) -> Generator[str, None, str]:
+        """Send a chat message and get streaming response"""
+        messages = []
+        if chat_history:
+            messages.extend(chat_history)
+        messages.append(ChatMessage(role="user", content=message))
+        return self.chat_with_messages_stream(messages)
+
+    def chat_with_messages_stream(
+        self, messages: List[ChatMessage]
+    ) -> Generator[str, None, str]:
+        """Send multiple messages and get streaming response"""
+        openai_messages = []
+        for msg in messages:
+            openai_messages.append({"role": msg.role, "content": msg.content})
+
+        payload = {
+            "model": self.model,
+            "messages": openai_messages,
+            "temperature": self.config.temperature,
+            "max_tokens": self.config.max_tokens,
+            "stream": True,  # Enable streaming
+            **self.config.extra_params,
+        }
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": f"https://{self.app_name.lower().replace(' ', '-')}.com",
+            "X-Title": self.app_name,
+        }
+
+        try:
+            with httpx.Client(timeout=self.config.timeout) as client:
+                with client.stream(
+                    "POST",
+                    f"{self.base_url}/chat/completions",
+                    json=payload,
+                    headers=headers,
+                ) as response:
+                    response.raise_for_status()
+                    full_response = ""
+
+                    for line in response.iter_lines():
+                        if line.startswith("data: "):
+                            data = line[6:]  # Remove "data: " prefix
+                            if data == "[DONE]":
+                                break
+                            try:
+                                chunk = json.loads(data)
+                                if (
+                                    "choices" in chunk
+                                    and len(chunk["choices"]) > 0
+                                    and "delta" in chunk["choices"][0]
+                                ):
+                                    delta = chunk["choices"][0]["delta"]
+                                    if "content" in delta:
+                                        text_chunk = delta["content"]
+                                        full_response += text_chunk
+                                        yield text_chunk
+                            except json.JSONDecodeError:
+                                continue
+
+                    return full_response
+
+        except httpx.HTTPError as e:
+            # Fall back to regular API
+            full_response = self.chat_with_messages(messages)
+            yield full_response
+            return full_response
         except Exception:
             # Fall back to regular API
             full_response = self.chat_with_messages(messages)

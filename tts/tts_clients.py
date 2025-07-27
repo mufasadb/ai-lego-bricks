@@ -10,7 +10,7 @@ import base64
 from typing import Optional, Dict, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..credentials import CredentialManager
+    from credentials import CredentialManager
 from .tts_types import (
     TTSClient,
     TTSConfig,
@@ -32,7 +32,7 @@ class CoquiXTTSClient(TTSClient):
         credential_manager: Optional["CredentialManager"] = None,
     ):
         super().__init__(config)
-        from ..credentials import default_credential_manager
+        from credentials import default_credential_manager
 
         self.credential_manager = credential_manager or default_credential_manager
         self.server_url = config.extra_params.get(
@@ -241,7 +241,7 @@ class OpenAITTSClient(TTSClient):
         credential_manager: Optional["CredentialManager"] = None,
     ):
         super().__init__(config)
-        from ..credentials import default_credential_manager
+        from credentials import default_credential_manager
 
         self.credential_manager = credential_manager or default_credential_manager
         self.api_key = self.credential_manager.require_credential(
@@ -384,7 +384,7 @@ class GoogleTTSClient(TTSClient):
         credential_manager: Optional["CredentialManager"] = None,
     ):
         super().__init__(config)
-        from ..credentials import default_credential_manager
+        from credentials import default_credential_manager
 
         self.credential_manager = credential_manager or default_credential_manager
         self.credentials_path = self.credential_manager.require_credential(

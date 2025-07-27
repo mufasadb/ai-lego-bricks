@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..credentials import CredentialManager
+    from credentials import CredentialManager
 import uuid
 import os
 import json
@@ -14,8 +14,8 @@ from .graph_formatter_service import GraphMemoryFormat
 
 # Import shared embedding service
 try:
-    from ..llm.embedding_client import SentenceTransformerEmbeddingClient
-    from ..llm.llm_types import EmbeddingClient
+    from llm.embedding_client import SentenceTransformerEmbeddingClient
+    from llm.llm_types import EmbeddingClient
 
     EMBEDDING_ABSTRACTION_AVAILABLE = True
 except ImportError:
@@ -47,11 +47,11 @@ class Neo4jMemoryService(MemoryService):
             credential_manager: Optional credential manager for explicit credential handling
         """
         try:
-            from ..credentials import default_credential_manager
+            from credentials import default_credential_manager
         except ImportError:
             # Fallback for when running as standalone
             try:
-                from ..credentials import default_credential_manager
+                from credentials import default_credential_manager
             except ImportError:
                 from credentials import default_credential_manager
 

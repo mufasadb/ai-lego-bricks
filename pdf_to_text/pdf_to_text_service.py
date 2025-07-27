@@ -7,8 +7,8 @@ import pymupdf
 
 # Vision processing capabilities for image-heavy PDFs
 try:
-    from ..llm.generation_service import quick_generate_gemini
-    from ..llm.vision_clients import GeminiVisionClient
+    from llm.generation_service import quick_generate_gemini
+    from llm.vision_clients import GeminiVisionClient
 
     VISION_AVAILABLE = True
 except ImportError:
@@ -16,7 +16,7 @@ except ImportError:
 
 # Import existing chunking service
 try:
-    from ..chunking.chunking_service import ChunkingService, ChunkingConfig
+    from chunking.chunking_service import ChunkingService, ChunkingConfig
 
     CHUNKING_AVAILABLE = True
 except ImportError:

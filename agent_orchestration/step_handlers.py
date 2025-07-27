@@ -30,14 +30,20 @@ import os
 
 # Conditional imports that work both as package and standalone
 try:
-    from ..llm.llm_types import LLMProvider, VisionProvider
-    from ..pdf_to_text.pdf_to_text_service import PDFExtractOptions
-    from ..pdf_to_text.visual_to_text_service import VisualToTextService, VisualExtractOptions
+    from llm.llm_types import LLMProvider, VisionProvider
+    from pdf_to_text.pdf_to_text_service import PDFExtractOptions
+    from pdf_to_text.visual_to_text_service import (
+        VisualToTextService,
+        VisualExtractOptions,
+    )
 except ImportError:
     try:
         from llm.llm_types import LLMProvider, VisionProvider
         from pdf_to_text.pdf_to_text_service import PDFExtractOptions
-        from pdf_to_text.visual_to_text_service import VisualToTextService, VisualExtractOptions
+        from pdf_to_text.visual_to_text_service import (
+            VisualToTextService,
+            VisualExtractOptions,
+        )
     except ImportError:
         # Fallback when dependencies not available
         LLMProvider = None
@@ -127,7 +133,7 @@ class StepHandlerRegistry:
             return inputs
 
         # Import JsonStructure class for processing
-        from ..prompt.prompt_models import JsonStructure
+        from prompt.prompt_models import JsonStructure
 
         # Build template context for JSON prop rendering
         template_context = {}
@@ -222,8 +228,8 @@ class StepHandlerRegistry:
         """Handle concept evaluation step - run prompt evaluation using LLM judge"""
         try:
             # Import concept evaluation components
-            from ..prompt.concept_eval_storage import create_concept_eval_storage
-            from ..prompt.concept_evaluation_service import ConceptEvaluationService
+            from prompt.concept_eval_storage import create_concept_eval_storage
+            from prompt.concept_evaluation_service import ConceptEvaluationService
 
             # Get configuration
             eval_id = step.config.get("eval_id")
@@ -404,7 +410,7 @@ class StepHandlerRegistry:
             # If provider is specified and different from current, create new service
             if provider and provider != tts_service.config.provider.value:
                 # Import TTS factory to create new service
-                from ..tts.tts_factory import create_tts_service
+                from tts.tts_factory import create_tts_service
 
                 tts_service = create_tts_service(provider, **tts_params)
 
@@ -488,7 +494,7 @@ class StepHandlerRegistry:
             # If provider is specified and different from current, create new service
             if provider and provider != stt_service.config.provider.value:
                 # Import STT factory to create new service
-                from ..stt.stt_factory import create_stt_service
+                from stt.stt_factory import create_stt_service
 
                 stt_service = create_stt_service(provider, **stt_params)
 
@@ -2469,7 +2475,7 @@ class StepHandlerRegistry:
                 "$iteration_context."
             ):
                 # Extract the context field
-                context_field = input_value[len("$iteration_context."):]
+                context_field = input_value[len("$iteration_context.") :]
                 resolved_inputs[input_key] = iteration_context.get(context_field)
             else:
                 # Use standard input resolution
@@ -3017,7 +3023,7 @@ class StepHandlerRegistry:
             import os
 
             # Import tool service
-            from ..tools.tool_service import ToolService
+            from tools.tool_service import ToolService
 
             # Get configuration from step
             provider = step.config.get("provider", "gemini")
@@ -3027,7 +3033,7 @@ class StepHandlerRegistry:
             auto_execute = step.config.get("auto_execute", True)
             max_iterations = step.config.get("max_iterations", 3)
             temperature = step.config.get("temperature", 0.1)
-            
+
             # Get user message from inputs
             user_message = inputs.get("message", inputs.get("user_input", ""))
             if not user_message:
@@ -3040,11 +3046,14 @@ class StepHandlerRegistry:
 
             # Get system prompt/message
             system_message = step.config.get("prompt", "You are a helpful assistant.")
-            
+
             # Process previous step results if any
             if "previous_result" in inputs:
                 previous_result = inputs["previous_result"]
-                if isinstance(previous_result, dict) and "tool_results" in previous_result:
+                if (
+                    isinstance(previous_result, dict)
+                    and "tool_results" in previous_result
+                ):
                     # Include context from previous tool executions
                     user_message = f"Previous context: {previous_result['tool_results']}\n\nCurrent request: {user_message}"
 
@@ -3055,66 +3064,90 @@ class StepHandlerRegistry:
             # Get LLM service based on provider
             if provider == "gemini":
                 from llm.text_clients import GeminiTextClient
+
                 llm_client = GeminiTextClient(temperature=temperature)
             elif provider == "ollama":
                 from llm.text_clients import OllamaTextClient
-                llm_client = OllamaTextClient(model=model or "llama3.1:8b", temperature=temperature)
+
+                llm_client = OllamaTextClient(
+                    model=model or "llama3.1:8b", temperature=temperature
+                )
             elif provider == "openai":
                 from llm.text_clients import OpenAITextClient
-                llm_client = OpenAITextClient(model=model or "gpt-4", temperature=temperature)
+
+                llm_client = OpenAITextClient(
+                    model=model or "gpt-4", temperature=temperature
+                )
             else:
                 raise ValueError(f"Unsupported provider: {provider}")
 
             # Prepare tools for the provider
             async def run_tool_call():
-                prepared_tools = await tool_service.prepare_tools_for_provider(provider, tools)
-                prepared_tool_choice = await tool_service.prepare_tool_choice_for_provider(provider, tool_choice)
-                
+                prepared_tools = await tool_service.prepare_tools_for_provider(
+                    provider, tools
+                )
+                prepared_tool_choice = (
+                    await tool_service.prepare_tool_choice_for_provider(
+                        provider, tool_choice
+                    )
+                )
+
                 # Build conversation with system message
                 conversation = []
                 if system_message:
                     conversation.append({"role": "system", "content": system_message})
                 conversation.append({"role": "user", "content": user_message})
-                
+
                 tool_calls_made = []
                 all_responses = []
                 iterations = 0
-                
+
                 while iterations < max_iterations:
                     iterations += 1
-                    
+
                     # Make LLM call with tools
                     if prepared_tools:
                         if provider == "gemini":
                             response = llm_client.chat_with_tools(
                                 conversation,
-                                list(prepared_tools.values()) if isinstance(prepared_tools, dict) else prepared_tools,
-                                tool_choice=prepared_tool_choice
+                                (
+                                    list(prepared_tools.values())
+                                    if isinstance(prepared_tools, dict)
+                                    else prepared_tools
+                                ),
+                                tool_choice=prepared_tool_choice,
                             )
                         else:
                             response = llm_client.chat_with_tools(
                                 conversation,
                                 prepared_tools,
-                                tool_choice=prepared_tool_choice
+                                tool_choice=prepared_tool_choice,
                             )
                     else:
                         # No tools available, regular chat
                         response = llm_client.chat(conversation)
-                    
+
                     all_responses.append(response)
-                    
+
                     # Parse tool calls from response
-                    tool_calls = await tool_service.parse_tool_calls_from_response(provider, response)
-                    
+                    tool_calls = await tool_service.parse_tool_calls_from_response(
+                        provider, response
+                    )
+
                     if not tool_calls:
                         # No tool calls, we're done
                         break
-                    
+
                     # Execute tool calls if auto_execute is enabled
                     if auto_execute:
                         tool_results = await tool_service.execute_tool_calls(tool_calls)
-                        tool_calls_made.extend([{"tool_call": tc.dict(), "result": tr.dict()} for tc, tr in zip(tool_calls, tool_results)])
-                        
+                        tool_calls_made.extend(
+                            [
+                                {"tool_call": tc.dict(), "result": tr.dict()}
+                                for tc, tr in zip(tool_calls, tool_results)
+                            ]
+                        )
+
                         # Add assistant message with tool calls to conversation
                         assistant_message = {"role": "assistant"}
                         if "content" in response:
@@ -3122,23 +3155,34 @@ class StepHandlerRegistry:
                         if tool_calls:
                             # Add tool call info to assistant message based on provider
                             if provider == "gemini":
-                                assistant_message["tool_calls"] = [tc.dict() for tc in tool_calls]
+                                assistant_message["tool_calls"] = [
+                                    tc.dict() for tc in tool_calls
+                                ]
                             else:
-                                assistant_message["tool_calls"] = [tc.dict() for tc in tool_calls]
+                                assistant_message["tool_calls"] = [
+                                    tc.dict() for tc in tool_calls
+                                ]
                         conversation.append(assistant_message)
-                        
+
                         # Add tool results to conversation
                         for tool_call, tool_result in zip(tool_calls, tool_results):
-                            conversation.append({
-                                "role": "tool", 
-                                "content": str(tool_result.result),
-                                "tool_call_id": tool_call.id
-                            })
+                            conversation.append(
+                                {
+                                    "role": "tool",
+                                    "content": str(tool_result.result),
+                                    "tool_call_id": tool_call.id,
+                                }
+                            )
                     else:
                         # Just record the tool calls without executing
-                        tool_calls_made.extend([{"tool_call": tc.dict(), "result": None} for tc in tool_calls])
+                        tool_calls_made.extend(
+                            [
+                                {"tool_call": tc.dict(), "result": None}
+                                for tc in tool_calls
+                            ]
+                        )
                         break
-                
+
                 # Get final response content
                 final_response_content = ""
                 if all_responses:
@@ -3147,12 +3191,16 @@ class StepHandlerRegistry:
                         final_response_content = last_response["content"]
                     elif isinstance(last_response, str):
                         final_response_content = last_response
-                
+
                 return {
                     "success": True,
                     "response": final_response_content,
                     "tool_calls": tool_calls_made,
-                    "tool_results": [tc["result"] for tc in tool_calls_made if tc["result"] is not None],
+                    "tool_results": [
+                        tc["result"]
+                        for tc in tool_calls_made
+                        if tc["result"] is not None
+                    ],
                     "conversation_history": conversation,
                     "iterations": iterations,
                     "provider": provider,
@@ -3168,6 +3216,7 @@ class StepHandlerRegistry:
                 if loop.is_running():
                     # If we're in an async context, create a new thread
                     import concurrent.futures
+
                     with concurrent.futures.ThreadPoolExecutor() as executor_pool:
                         future = executor_pool.submit(asyncio.run, run_tool_call())
                         return future.result()
@@ -3193,7 +3242,7 @@ class StepHandlerRegistry:
         """Handle HTTP request step"""
         try:
             # Import HTTP request service
-            from ..services.http_request_service import (
+            from services.http_request_service import (
                 HttpRequestService,
                 HttpRequestConfig,
                 HttpMethod,

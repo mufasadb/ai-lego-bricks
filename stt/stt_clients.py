@@ -8,7 +8,7 @@ import requests
 from typing import Optional, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..credentials import CredentialManager
+    from credentials import CredentialManager
 from .stt_types import STTClient, STTConfig, STTResponse, WordTimestamp, SpeakerSegment
 
 
@@ -23,7 +23,7 @@ class FasterWhisperClient(STTClient):
         credential_manager: Optional["CredentialManager"] = None,
     ):
         super().__init__(config)
-        from ..credentials import default_credential_manager
+        from credentials import default_credential_manager
 
         self.credential_manager = credential_manager or default_credential_manager
         self.server_url = (
@@ -182,7 +182,7 @@ class GoogleSTTClient(STTClient):
         credential_manager: Optional["CredentialManager"] = None,
     ):
         super().__init__(config)
-        from ..credentials import default_credential_manager
+        from credentials import default_credential_manager
 
         self.credential_manager = credential_manager or default_credential_manager
         self._client = None

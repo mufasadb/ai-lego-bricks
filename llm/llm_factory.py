@@ -12,12 +12,18 @@ from .llm_types import (
     StructuredLLMWrapper,
     StructuredResponseConfig,
 )
-from .text_clients import OllamaTextClient, GeminiTextClient, AnthropicTextClient
+from .text_clients import (
+    OllamaTextClient,
+    GeminiTextClient,
+    AnthropicTextClient,
+    OpenRouterTextClient,
+)
 from .vision_clients import GeminiVisionClient, LLaVAClient
 from .embedding_client import SentenceTransformerEmbeddingClient
+
 # Conditional import for credentials
 try:
-    from ..credentials import CredentialManager
+    from credentials import CredentialManager
 except ImportError:
     try:
         from credentials import CredentialManager
@@ -29,7 +35,7 @@ T = TypeVar("T", bound=BaseModel)
 # Import the new services - delay import to avoid circular imports
 if TYPE_CHECKING:
     from .generation_service import GenerationService
-    from ..chat.conversation_service import ConversationService
+    from chat.conversation_service import ConversationService
 
 
 class LLMClientFactory:
@@ -72,6 +78,8 @@ class LLMClientFactory:
             return GeminiTextClient(config, credential_manager)
         elif provider == LLMProvider.ANTHROPIC:
             return AnthropicTextClient(config, credential_manager)
+        elif provider == LLMProvider.OPENROUTER:
+            return OpenRouterTextClient(config, credential_manager)
         else:
             raise ValueError(f"Unsupported text provider: {provider}")
 
@@ -254,9 +262,9 @@ class LLMClientFactory:
         Returns:
             TextLLMClient instance with switching capabilities
         """
-        if provider not in [LLMProvider.OLLAMA, LLMProvider.ANTHROPIC]:
+        if provider not in [LLMProvider.OLLAMA, LLMProvider.ANTHROPIC, LLMProvider.OPENROUTER]:
             raise ValueError(
-                f"Model switching only supported for Ollama and Anthropic providers, not {provider}"
+                f"Model switching only supported for Ollama, Anthropic, and OpenRouter providers, not {provider}"
             )
 
         return LLMClientFactory.create_text_client(
@@ -341,7 +349,10 @@ class LLMClientFactory:
         Returns:
             ConversationService instance
         """
-        from ..chat.conversation_service import ConversationService
+        try:
+            from chat.conversation_service import ConversationService
+        except ImportError:
+            from chat.conversation_service import ConversationService
 
         return ConversationService(
             provider, model, temperature, max_tokens, conversation_id, **kwargs
@@ -474,3 +485,17 @@ def create_anthropic_conversation(
 ) -> "ConversationService":
     """Create Anthropic conversation service"""
     return create_conversation_service("anthropic", model, **kwargs)
+
+
+def create_openrouter_generation(
+    model: Optional[str] = None, **kwargs
+) -> "GenerationService":
+    """Create OpenRouter generation service"""
+    return create_generation_service("openrouter", model, **kwargs)
+
+
+def create_openrouter_conversation(
+    model: Optional[str] = None, **kwargs
+) -> "ConversationService":
+    """Create OpenRouter conversation service"""
+    return create_conversation_service("openrouter", model, **kwargs)

@@ -3,7 +3,7 @@ import os
 from .memory_service import MemoryService
 
 try:
-    from ..credentials import CredentialManager, default_credential_manager
+    from credentials import CredentialManager, default_credential_manager
 except ImportError:
     # Fallback for when running as standalone
     try:

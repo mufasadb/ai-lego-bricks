@@ -11,8 +11,18 @@ import sys
 import os
 
 # Import LLM abstraction layer
-from ..llm.llm_factory import LLMClientFactory
-from ..llm.llm_types import LLMProvider
+try:
+    from llm.llm_factory import LLMClientFactory
+    from llm.llm_types import LLMProvider
+except ImportError:
+    # Fallback for when running as part of the package
+    try:
+        from llm.llm_factory import LLMClientFactory
+        from llm.llm_types import LLMProvider
+    except ImportError:
+        # If LLM factory not available, we'll handle it gracefully
+        LLMClientFactory = None
+        LLMProvider = None
 
 
 class ConversationMessage(BaseModel):

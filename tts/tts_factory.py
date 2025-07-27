@@ -10,7 +10,7 @@ from .tts_service import TTSService
 from .tts_clients import CoquiXTTSClient, OpenAITTSClient, GoogleTTSClient
 
 if TYPE_CHECKING:
-    from ..credentials import CredentialManager
+    from credentials import CredentialManager
 
 
 class TTSServiceFactory:

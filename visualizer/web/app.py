@@ -12,8 +12,8 @@ from werkzeug.utils import secure_filename
 import sys
 
 # Import visualizer components
-from ..workflow_parser import WorkflowParser
-from ..mermaid_generator import MermaidGenerator
+from workflow_parser import WorkflowParser
+from mermaid_generator import MermaidGenerator
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "your-secret-key-here"

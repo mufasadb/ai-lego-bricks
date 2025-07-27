@@ -10,7 +10,7 @@ from .stt_service import STTService
 from .stt_clients import FasterWhisperClient, GoogleSTTClient
 
 if TYPE_CHECKING:
-    from ..credentials import CredentialManager
+    from credentials import CredentialManager
 
 
 class STTServiceFactory:

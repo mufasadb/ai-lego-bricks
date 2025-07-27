@@ -1,0 +1,50 @@
+interactions:
+- request:
+    body: field1=value1&field2=value2&field3=special+chars%3A+%21%40%23%24%25%5E%26%2A%28%29
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate, br, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '82'
+      content-type:
+      - application/x-www-form-urlencoded
+      host:
+      - h
+      user-agent:
+      - python-httpx/0.28.1
+    method: POST
+    uri: https://httpbin.org/post
+  response:
+    body:
+      string: "{\n  \"args\": {}, \n  \"data\": \"\", \n  \"files\": {}, \n  \"form\":
+        {\n    \"field1\": \"value1\", \n    \"field2\": \"value2\", \n    \"field3\":
+        \"special chars: !@#$%^&*()\"\n  }, \n  \"headers\": {\n    \"Accept\": \"*/*\",
+        \n    \"Accept-Encoding\": \"gzip, deflate, br, zstd\", \n    \"Content-Length\":
+        \"82\", \n    \"Content-Type\": \"application/x-www-form-urlencoded\", \n
+        \   \"Host\": \"httpbin.org\", \n    \"User-Agent\": \"python-httpx/0.28.1\",
+        \n    \"X-Amzn-Trace-Id\": \"Root=1-6885d249-58c48ea85e1626756e2893c2\"\n
+        \ }, \n  \"json\": null, \n  \"origin\": \"XXX.XXX.XXX.XXX\", \n  \"url\":
+        \"https://httpbin.org/post\"\n}\n"
+    headers:
+      Access-Control-Allow-Credentials:
+      - 'true'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '560'
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 27 Jul 2025 07:16:25 GMT
+      Server:
+      - gunicorn/19.9.0
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -1,0 +1,42 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate, br, zstd
+      connection:
+      - keep-alive
+      host:
+      - h
+      user-agent:
+      - python-httpx/0.28.1
+    method: GET
+    uri: https://httpbin.org/get?test=integration
+  response:
+    body:
+      string: "{\n  \"args\": {\n    \"test\": \"integration\"\n  }, \n  \"headers\":
+        {\n    \"Accept\": \"*/*\", \n    \"Accept-Encoding\": \"gzip, deflate, br,
+        zstd\", \n    \"Host\": \"httpbin.org\", \n    \"User-Agent\": \"python-httpx/0.28.1\",
+        \n    \"X-Amzn-Trace-Id\": \"Root=1-6885d21a-56d92bbc672407a379ddb220\"\n
+        \ }, \n  \"origin\": \"XXX.XXX.XXX.XXX\", \n  \"url\": \"https://httpbin.org/get?test=integration\"\n}\n"
+    headers:
+      Access-Control-Allow-Credentials:
+      - 'true'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '360'
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 27 Jul 2025 07:15:39 GMT
+      Server:
+      - gunicorn/19.9.0
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -1,0 +1,44 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate, br, zstd
+      connection:
+      - keep-alive
+      host:
+      - h
+      user-agent:
+      - python-httpx/0.28.1
+    method: GET
+    uri: https://httpbin.org/json
+  response:
+    body:
+      string: "{\n  \"slideshow\": {\n    \"author\": \"Yours Truly\", \n    \"date\":
+        \"date of publication\", \n    \"slides\": [\n      {\n        \"title\":
+        \"Wake up to WonderWidgets!\", \n        \"type\": \"all\"\n      }, \n      {\n
+        \       \"items\": [\n          \"Why <em>WonderWidgets</em> are great\",
+        \n          \"Who <em>buys</em> WonderWidgets\"\n        ], \n        \"title\":
+        \"Overview\", \n        \"type\": \"all\"\n      }\n    ], \n    \"title\":
+        \"Sample Slide Show\"\n  }\n}\n"
+    headers:
+      Access-Control-Allow-Credentials:
+      - 'true'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '429'
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 27 Jul 2025 07:16:42 GMT
+      Server:
+      - gunicorn/19.9.0
+    status:
+      code: 200
+      message: OK
+version: 1

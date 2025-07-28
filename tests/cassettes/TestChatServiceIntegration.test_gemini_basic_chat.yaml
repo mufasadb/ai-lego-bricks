@@ -19,7 +19,7 @@ interactions:
       user-agent:
       - python-httpx/0.28.1
       x-goog-api-key:
-      - AIzaSyDNakFvvJOByqWqd14VV1MfCow3ilBljPo
+      - AIzaSy**REDACTED_GOOGLE_API_KEY**
     method: POST
     uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
   response:

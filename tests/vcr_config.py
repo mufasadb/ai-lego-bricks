@@ -28,6 +28,7 @@ def get_vcr_config() -> Dict[str, Any]:
             "anthropic-api-key",
             "x-openai-api-key",
             "x-anthropic-api-key",
+            "x-goog-api-key",  # Google API key header
             "google-api-key",
             "bearer",
             "token",
@@ -175,6 +176,28 @@ def sanitize_response(response):
             return ip
         return "XXX.XXX.XXX.XXX"  # More obvious placeholder for IPs in responses
 
+    # Define API key patterns for sanitization
+    api_key_patterns = [
+        (r"AIza[0-9A-Za-z_-]{35}", "AIzaSy**REDACTED_GOOGLE_API_KEY**"),  # Google API keys
+        (r"sk-[a-zA-Z0-9]{48}", "sk-**REDACTED_OPENAI_API_KEY**"),  # OpenAI API keys
+        (r"anthropic-[a-zA-Z0-9-]{50,}", "anthropic-**REDACTED_ANTHROPIC_API_KEY**"),  # Anthropic API keys
+        (r"[a-zA-Z0-9]{32,}", lambda m: "**REDACTED_API_KEY**" if len(m.group()) > 20 and any(c.isdigit() for c in m.group()) and any(c.isalpha() for c in m.group()) else m.group()),  # Generic long alphanumeric strings
+    ]
+
+    def sanitize_content(content_str):
+        """Apply all sanitization patterns to content string."""
+        # Replace IP addresses
+        content_str = re.sub(ip_pattern, replace_ip, content_str)
+        
+        # Replace API keys
+        for pattern, replacement in api_key_patterns:
+            if callable(replacement):
+                content_str = re.sub(pattern, replacement, content_str)
+            else:
+                content_str = re.sub(pattern, replacement, content_str)
+        
+        return content_str
+
     # Handle dict-style response (VCR internal format)
     if isinstance(response, dict) and "body" in response:
         body = response["body"]
@@ -183,11 +206,11 @@ def sanitize_response(response):
             if isinstance(content, bytes):
                 # Decode bytes, sanitize, then re-encode
                 content_str = content.decode("utf-8")
-                sanitized_str = re.sub(ip_pattern, replace_ip, content_str)
+                sanitized_str = sanitize_content(content_str)
                 response["body"]["string"] = sanitized_str.encode("utf-8")
             elif isinstance(content, str):
                 # Sanitize string directly
-                response["body"]["string"] = re.sub(ip_pattern, replace_ip, content)
+                response["body"]["string"] = sanitize_content(content)
 
     # Handle object-style response (fallback)
     elif hasattr(response, "body") and response.body:
@@ -196,9 +219,9 @@ def sanitize_response(response):
             if isinstance(content, (str, bytes)):
                 if isinstance(content, bytes):
                     content = content.decode("utf-8")
-                response.body["string"] = re.sub(ip_pattern, replace_ip, content)
+                response.body["string"] = sanitize_content(content)
         elif isinstance(response.body, str):
-            response.body = re.sub(ip_pattern, replace_ip, response.body)
+            response.body = sanitize_content(response.body)
 
     return response
 

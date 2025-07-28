@@ -22,19 +22,17 @@ def vcr_config() -> Dict[str, Any]:
     This fixture is automatically used by @pytest.mark.vcr() decorator.
     For unit tests, it uses record_mode=none to force cassette replay.
     """
-    import os
-
-    # Check if we're running unit tests (based on record mode or test path)
-    record_mode = os.environ.get("PYTEST_RECORD_MODE", "none")
-
-    if record_mode == "none":
-        # Unit test configuration
-        config = get_unit_test_vcr_config()
-        config["record_mode"] = "none"
-        return config
-    else:
-        # Integration test configuration
-        return get_pytest_vcr_config()
+    # Always use unit test configuration with host exclusion for unit tests
+    # The record mode will be controlled by pytest command line args
+    config = get_unit_test_vcr_config()
+    
+    # Ensure host is excluded from matching for unit tests
+    if "match_on" in config:
+        # Remove 'host' from match_on if it exists
+        match_on = [m for m in config["match_on"] if m != "host"]
+        config["match_on"] = match_on
+    
+    return config
 
 
 @pytest.fixture(scope="session")

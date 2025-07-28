@@ -26,9 +26,8 @@ from chat.conversation_service import ConversationService
 class TestChatServiceUnit:
     """Unit tests for ChatService using recorded cassettes."""
 
-    @pytest.mark.vcr
+    @pytest.mark.vcr()
     @pytest.mark.unit
-    @pytest.mark.cassette
     def test_ollama_basic_chat(self, mock_credentials):
         """Test basic Ollama chat functionality using recorded response."""
         service = ChatService("ollama", model="llama3.2:3b")

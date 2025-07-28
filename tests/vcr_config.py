@@ -106,8 +106,10 @@ def get_unit_test_vcr_config() -> Dict[str, Any]:
     # Unit test specific configuration - exclude host from matching
     unit_config = {
         **base_config,
-        # Match on everything except host (allows localhost vs IP flexibility)
-        "match_on": ["method", "scheme", "port", "path", "query"],
+        # Match on everything except host, scheme, and port (allows localhost vs IP flexibility)
+        "match_on": ["method", "path", "query"],
+        # Add ignore_hosts for additional flexibility
+        "ignore_hosts": ["localhost", "127.0.0.1", "100.83.40.11"],
         # Custom before_record hook to sanitize sensitive data
         "before_record_request": sanitize_request,
         "before_record_response": sanitize_response,

@@ -25,13 +25,13 @@ def vcr_config() -> Dict[str, Any]:
     # Always use unit test configuration with host exclusion for unit tests
     # The record mode will be controlled by pytest command line args
     config = get_unit_test_vcr_config()
-    
+
     # Ensure host is excluded from matching for unit tests
     if "match_on" in config:
         # Remove 'host' from match_on if it exists
         match_on = [m for m in config["match_on"] if m != "host"]
         config["match_on"] = match_on
-    
+
     return config
 
 

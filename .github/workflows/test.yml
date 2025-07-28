@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
 
     steps:
     - uses: actions/checkout@v4
@@ -38,13 +38,12 @@ jobs:
 
     - name: Run linting
       run: |
-        # Temporarily skip Black check due to version differences between CI and local
-        # black --check .
+        black --check .
         flake8 ailego/ agent_orchestration/ llm/ memory/ chat/ prompt/ tts/ chunking/ services/ tests/
 
     - name: Run type checking
       run: |
-        mypy ailego/ agent_orchestration/ llm/ memory/ chat/ prompt/ tts/
+        mypy ailego/ agent_orchestration/ llm/ memory/ chat/ prompt/ tts/ chunking/ services/
 
     - name: Test CLI installation
       run: |

@@ -225,7 +225,7 @@ class LLMClientFactory:
 
     @staticmethod
     def get_client_model(
-        client: Union[TextLLMClient, VisionLLMClient]
+        client: Union[TextLLMClient, VisionLLMClient],
     ) -> Optional[str]:
         """
         Get the current model name from a client
@@ -262,7 +262,11 @@ class LLMClientFactory:
         Returns:
             TextLLMClient instance with switching capabilities
         """
-        if provider not in [LLMProvider.OLLAMA, LLMProvider.ANTHROPIC, LLMProvider.OPENROUTER]:
+        if provider not in [
+            LLMProvider.OLLAMA,
+            LLMProvider.ANTHROPIC,
+            LLMProvider.OPENROUTER,
+        ]:
             raise ValueError(
                 f"Model switching only supported for Ollama, Anthropic, and OpenRouter providers, not {provider}"
             )

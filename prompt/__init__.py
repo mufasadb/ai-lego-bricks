@@ -1,7 +1,7 @@
 """
 Prompt management service for AI Lego Bricks
 
-Provides externalized prompt management with versioning, templating, 
+Provides externalized prompt management with versioning, templating,
 evaluation, and training data collection capabilities.
 """
 

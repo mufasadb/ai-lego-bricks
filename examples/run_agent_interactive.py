@@ -2,7 +2,7 @@
 """
 Interactive Agent Runner
 
-Handles special input/output scenarios like streaming, file uploads, 
+Handles special input/output scenarios like streaming, file uploads,
 continuous conversations, and real-time interactions.
 
 Usage:

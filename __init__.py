@@ -1,8 +1,8 @@
 """
 AI Lego Bricks - Modular Building Blocks for LLM Agents
 
-A modular library of building blocks for LLM agentic work, designed to be 
-combined and configured like building blocks. The core philosophy is 
+A modular library of building blocks for LLM agentic work, designed to be
+combined and configured like building blocks. The core philosophy is
 JSON-driven configuration over Python code.
 
 ## Quick Start
@@ -23,7 +23,7 @@ result = orchestrator.execute_workflow_from_file("workflow.json")
 ## Available Bricks
 
 - **Agent Orchestrator**: JSON-driven workflow orchestration
-- **Chat Services**: Multi-provider LLM chat interfaces  
+- **Chat Services**: Multi-provider LLM chat interfaces
 - **Memory Services**: Semantic memory with vector search
 - **Tools & MCP**: External tool execution and MCP integration
 - **Text-to-Speech**: Multi-provider TTS with streaming
@@ -71,7 +71,7 @@ except ImportError:
     create_tts_service = None
 
 try:
-    from .stt import create_stt_service  
+    from .stt import create_stt_service
 except ImportError:
     create_stt_service = None
 
@@ -98,18 +98,18 @@ except ImportError:
 # Define what's available when using "from ai_lego_bricks import *"
 __all__ = [
     "__version__",
-    "__author__", 
+    "__author__",
     "__email__",
     "AgentOrchestrator",
     "create_chat_service",
-    "create_conversation", 
+    "create_conversation",
     "create_memory_service",
     "create_text_client",
     "quick_generate_gemini",
     "create_tts_service",
     "create_stt_service",
     "extract_text_from_pdf",
-    "create_chunking_service", 
+    "create_chunking_service",
     "get_tool_service",
     "CredentialManager",
 ]

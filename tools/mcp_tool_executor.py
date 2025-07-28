@@ -202,7 +202,7 @@ class MCPToolDiscovery:
 
     @staticmethod
     def _convert_schema_to_tool_parameter(
-        schema: Dict[str, Any]
+        schema: Dict[str, Any],
     ) -> Optional[ToolParameter]:
         """Convert JSON schema to ToolParameter."""
         if not schema:

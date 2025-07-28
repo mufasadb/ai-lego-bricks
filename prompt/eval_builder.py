@@ -415,7 +415,7 @@ class EvaluationTemplates:
 
     @staticmethod
     def get_summarization_eval(
-        test_cases: List[Dict[str, Any]]
+        test_cases: List[Dict[str, Any]],
     ) -> ConceptEvalDefinition:
         """Template for evaluating summarization prompts"""
         return QuickEvaluationBuilder.create_accuracy_evaluation(

@@ -3,7 +3,7 @@ Text-to-Speech (TTS) module for AI Lego Bricks
 
 This module provides TTS capabilities with support for multiple providers:
 - OpenAI TTS
-- Google Text-to-Speech  
+- Google Text-to-Speech
 - Coqui-XTTS (local instance)
 
 Features:
@@ -14,16 +14,16 @@ Features:
 
 Usage:
     from tts import create_tts_service, TTSProvider
-    
+
     # Create TTS service with auto-detection
     tts = create_tts_service("auto")
-    
+
     # Create specific provider
     tts = create_tts_service("coqui_xtts")
-    
+
     # Generate speech
     audio_path = tts.text_to_speech("Hello world!", voice="default")
-    
+
     # Streaming TTS
     from tts.streaming_tts_service import create_streaming_pipeline
     pipeline = create_streaming_pipeline()

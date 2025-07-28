@@ -4,7 +4,7 @@ Comprehensive end-to-end test of the restored tool calling functionality.
 
 This test demonstrates:
 1. Tool registration in the global registry
-2. Tool preparation for different LLM providers  
+2. Tool preparation for different LLM providers
 3. LLM tool calling with auto-execution
 4. Multi-turn conversations with tools
 5. Full workflow integration through Agent Orchestrator

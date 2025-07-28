@@ -7,6 +7,7 @@ This module provides centralized credential handling with support for:
 - Library-safe credential isolation
 """
 
+from __future__ import annotations
 import os
 from typing import Dict, Optional
 from dotenv import load_dotenv

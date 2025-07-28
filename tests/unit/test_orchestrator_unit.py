@@ -35,7 +35,9 @@ class TestAgentOrchestratorUnit:
         """Get all JSON example files."""
         return list(examples_dir.glob("*.json"))
 
-    @pytest.mark.skip(reason="AssertionError in orchestrator workflow - TODO: Fix workflow logic")
+    @pytest.mark.skip(
+        reason="AssertionError in orchestrator workflow - TODO: Fix workflow logic"
+    )
     @pytest.mark.vcr
     @pytest.mark.unit
     def test_basic_chat_agent(self, orchestrator, examples_dir):
@@ -224,7 +226,9 @@ class TestAgentOrchestratorUnit:
         assert result is not None
         assert hasattr(result, "step_outputs")
 
-    @pytest.mark.skip(reason="ValidationError in enhanced_streaming_multi_agent.json - TODO: Fix JSON schema")
+    @pytest.mark.skip(
+        reason="ValidationError in enhanced_streaming_multi_agent.json - TODO: Fix JSON schema"
+    )
     @pytest.mark.vcr
     @pytest.mark.unit
     @pytest.mark.parametrize(
@@ -294,7 +298,9 @@ class TestAgentOrchestratorUnit:
         assert result is not None
         assert hasattr(result, "step_outputs")
 
-    @pytest.mark.skip(reason="ValidationError in enhanced_streaming_multi_agent.json - TODO: Fix JSON schema")
+    @pytest.mark.skip(
+        reason="ValidationError in enhanced_streaming_multi_agent.json - TODO: Fix JSON schema"
+    )
     @pytest.mark.unit
     def test_all_examples_can_load(self, orchestrator, example_files):
         """Test that all example files can be loaded as valid workflows."""

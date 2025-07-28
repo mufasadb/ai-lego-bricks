@@ -210,7 +210,9 @@ class TestChatServiceUnit:
 class TestConversationServiceUnit:
     """Unit tests for ConversationService using recorded cassettes."""
 
-    @pytest.mark.skip(reason="ConversationService has dependency issues - TODO: Fix imports")
+    @pytest.mark.skip(
+        reason="ConversationService has dependency issues - TODO: Fix imports"
+    )
     @pytest.mark.vcr
     @pytest.mark.unit
     @pytest.mark.cassette
@@ -241,7 +243,9 @@ class TestConversationServiceUnit:
             len(conversation.messages) >= 5
         )  # system + user1 + assistant1 + user2 + assistant2
 
-    @pytest.mark.skip(reason="ConversationService has dependency issues - TODO: Fix imports")
+    @pytest.mark.skip(
+        reason="ConversationService has dependency issues - TODO: Fix imports"
+    )
     @pytest.mark.vcr
     @pytest.mark.unit
     @pytest.mark.cassette
@@ -260,7 +264,9 @@ class TestConversationServiceUnit:
         assert isinstance(response2, str)
         assert "blue" in response2.lower()
 
-    @pytest.mark.skip(reason="ConversationService has dependency issues - TODO: Fix imports")
+    @pytest.mark.skip(
+        reason="ConversationService has dependency issues - TODO: Fix imports"
+    )
     @pytest.mark.vcr
     @pytest.mark.unit
     @pytest.mark.cassette
@@ -277,7 +283,9 @@ class TestConversationServiceUnit:
         # Check that history was trimmed
         assert len(conversation.messages) <= 5
 
-    @pytest.mark.skip(reason="ConversationService has dependency issues - TODO: Fix imports")
+    @pytest.mark.skip(
+        reason="ConversationService has dependency issues - TODO: Fix imports"
+    )
     @pytest.mark.vcr
     @pytest.mark.unit
     @pytest.mark.cassette
@@ -301,7 +309,9 @@ class TestConversationServiceUnit:
         assert stats["user_messages"] == 3
         assert stats["ai_messages"] == 3
 
-    @pytest.mark.skip(reason="ConversationService has dependency issues - TODO: Fix imports")
+    @pytest.mark.skip(
+        reason="ConversationService has dependency issues - TODO: Fix imports"
+    )
     @pytest.mark.vcr
     @pytest.mark.unit
     @pytest.mark.cassette
@@ -324,7 +334,9 @@ class TestConversationServiceUnit:
         assert len(user_messages) == 3
         assert all(msg.role == "user" for msg in user_messages)
 
-    @pytest.mark.skip(reason="ConversationService has dependency issues - TODO: Fix imports")
+    @pytest.mark.skip(
+        reason="ConversationService has dependency issues - TODO: Fix imports"
+    )
     @pytest.mark.vcr
     @pytest.mark.unit
     @pytest.mark.cassette
@@ -449,7 +461,9 @@ class TestChatServiceMocking:
         assert gemini_service.temperature == 0.5
         assert gemini_service.max_tokens == 500
 
-    @pytest.mark.skip(reason="Missing method '_build_message_context' - TODO: Fix implementation")
+    @pytest.mark.skip(
+        reason="Missing method '_build_message_context' - TODO: Fix implementation"
+    )
     @pytest.mark.unit
     def test_message_context_building(self, mock_credentials):
         """Test message context building without network calls."""
@@ -472,7 +486,9 @@ class TestChatServiceMocking:
         assert messages[1].content == "Previous response"
         assert messages[2].content == "New message"
 
-    @pytest.mark.skip(reason="ConversationService dependency issues - TODO: Fix imports")
+    @pytest.mark.skip(
+        reason="ConversationService dependency issues - TODO: Fix imports"
+    )
     @pytest.mark.unit
     def test_conversation_service_state_management(self, mock_credentials):
         """Test conversation state management without network calls."""
@@ -493,7 +509,9 @@ class TestChatServiceMocking:
         assert conversation.conversation_id is not None
         assert len(conversation.conversation_id) > 0
 
-    @pytest.mark.skip(reason="ConversationService dependency issues - TODO: Fix imports")
+    @pytest.mark.skip(
+        reason="ConversationService dependency issues - TODO: Fix imports"
+    )
     @pytest.mark.unit
     def test_message_search_functionality(self, mock_credentials):
         """Test message search without network calls."""

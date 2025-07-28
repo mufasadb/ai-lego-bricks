@@ -43,7 +43,7 @@ interactions:
       date:
       - Mon, 28 Jul 2025 01:05:19 GMT
       sb-gateway-version:
-      - '1'
+      - 'localhost:11434'
       sb-project-ref:
       - cqprcjizvctrenawcnfw
       sb-request-id:
@@ -61,7 +61,7 @@ interactions:
       x-content-type-options:
       - nosniff
       x-envoy-attempt-count:
-      - '1'
+      - 'localhost:11434'
       x-envoy-upstream-service-time:
       - '3'
     status:
@@ -113,7 +113,7 @@ interactions:
       date:
       - Mon, 28 Jul 2025 01:05:19 GMT
       sb-gateway-version:
-      - '1'
+      - 'localhost:11434'
       sb-project-ref:
       - cqprcjizvctrenawcnfw
       sb-request-id:
@@ -127,7 +127,7 @@ interactions:
       x-content-type-options:
       - nosniff
       x-envoy-attempt-count:
-      - '1'
+      - 'localhost:11434'
       x-envoy-upstream-service-time:
       - '2'
     status:
@@ -179,7 +179,7 @@ interactions:
       date:
       - Mon, 28 Jul 2025 01:05:19 GMT
       sb-gateway-version:
-      - '1'
+      - 'localhost:11434'
       sb-project-ref:
       - cqprcjizvctrenawcnfw
       sb-request-id:
@@ -193,9 +193,9 @@ interactions:
       x-content-type-options:
       - nosniff
       x-envoy-attempt-count:
-      - '1'
+      - 'localhost:11434'
       x-envoy-upstream-service-time:
-      - '1'
+      - 'localhost:11434'
     status:
       code: 200
       message: OK

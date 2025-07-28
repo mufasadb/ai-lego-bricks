@@ -25,14 +25,26 @@ def vcr_config() -> Dict[str, Any]:
 
 
 @pytest.fixture(scope="session")
-def unit_vcr_config() -> Dict[str, Any]:
+def vcr_config() -> Dict[str, Any]:
     """
-    Session-scoped VCR configuration fixture specifically for unit tests.
-    
-    Uses relaxed host matching to allow cassettes recorded with localhost
-    to work with tests that use IP addresses (or vice versa).
+    Session-scoped VCR configuration fixture for pytest-recording.
+
+    This fixture is automatically used by @pytest.mark.vcr() decorator.
+    For unit tests, it uses record_mode=none to force cassette replay.
     """
-    return get_unit_test_vcr_config()
+    import os
+
+    # Check if we're running unit tests (based on record mode or test path)
+    record_mode = os.environ.get("PYTEST_RECORD_MODE", "none")
+
+    if record_mode == "none":
+        # Unit test configuration
+        config = get_unit_test_vcr_config()
+        config["record_mode"] = "none"
+        return config
+    else:
+        # Integration test configuration
+        return get_pytest_vcr_config()
 
 
 @pytest.fixture(scope="session")

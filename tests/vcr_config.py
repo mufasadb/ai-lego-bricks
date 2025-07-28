@@ -94,15 +94,15 @@ def get_pytest_vcr_config() -> Dict[str, Any]:
 def get_unit_test_vcr_config() -> Dict[str, Any]:
     """
     Get unit test specific VCR configuration with relaxed host matching.
-    
+
     For unit tests, we don't care about exact host matching since we're testing
     with recorded cassettes and want them to work regardless of local environment.
-    
+
     Returns:
         Dict containing unit test VCR configuration
     """
     base_config = get_vcr_config()
-    
+
     # Unit test specific configuration - exclude host from matching
     unit_config = {
         **base_config,
@@ -112,7 +112,7 @@ def get_unit_test_vcr_config() -> Dict[str, Any]:
         "before_record_request": sanitize_request,
         "before_record_response": sanitize_response,
     }
-    
+
     return unit_config
 
 
@@ -201,24 +201,39 @@ def sanitize_response(response):
 
     # Define API key patterns for sanitization
     api_key_patterns = [
-        (r"AIza[0-9A-Za-z_-]{35}", "AIzaSy**REDACTED_GOOGLE_API_KEY**"),  # Google API keys
+        (
+            r"AIza[0-9A-Za-z_-]{35}",
+            "AIzaSy**REDACTED_GOOGLE_API_KEY**",
+        ),  # Google API keys
         (r"sk-[a-zA-Z0-9]{48}", "sk-**REDACTED_OPENAI_API_KEY**"),  # OpenAI API keys
-        (r"anthropic-[a-zA-Z0-9-]{50,}", "anthropic-**REDACTED_ANTHROPIC_API_KEY**"),  # Anthropic API keys
-        (r"[a-zA-Z0-9]{32,}", lambda m: "**REDACTED_API_KEY**" if len(m.group()) > 20 and any(c.isdigit() for c in m.group()) and any(c.isalpha() for c in m.group()) else m.group()),  # Generic long alphanumeric strings
+        (
+            r"anthropic-[a-zA-Z0-9-]{50,}",
+            "anthropic-**REDACTED_ANTHROPIC_API_KEY**",
+        ),  # Anthropic API keys
+        (
+            r"[a-zA-Z0-9]{32,}",
+            lambda m: (
+                "**REDACTED_API_KEY**"
+                if len(m.group()) > 20
+                and any(c.isdigit() for c in m.group())
+                and any(c.isalpha() for c in m.group())
+                else m.group()
+            ),
+        ),  # Generic long alphanumeric strings
     ]
 
     def sanitize_content(content_str):
         """Apply all sanitization patterns to content string."""
         # Replace IP addresses
         content_str = re.sub(ip_pattern, replace_ip, content_str)
-        
+
         # Replace API keys
         for pattern, replacement in api_key_patterns:
             if callable(replacement):
                 content_str = re.sub(pattern, replacement, content_str)
             else:
                 content_str = re.sub(pattern, replacement, content_str)
-        
+
         return content_str
 
     # Handle dict-style response (VCR internal format)

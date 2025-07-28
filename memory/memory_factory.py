@@ -127,6 +127,7 @@ def get_available_services() -> Dict[str, bool]:
     if os.getenv("NEO4J_URI") or os.getenv("NEO4J_URL"):
         try:
             import importlib.util
+
             spec = importlib.util.find_spec("memory.neo4j_memory_service")
             if spec is not None:
                 services["neo4j"] = True
@@ -137,6 +138,7 @@ def get_available_services() -> Dict[str, bool]:
     if os.getenv("SUPABASE_URL") and os.getenv("SUPABASE_ANON_KEY"):
         try:
             import importlib.util
+
             spec = importlib.util.find_spec("memory.supabase_memory_service")
             if spec is not None:
                 services["supabase"] = True

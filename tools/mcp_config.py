@@ -237,7 +237,7 @@ class MCPConfigManager:
 
 async def initialize_mcp_servers_from_config(
     config_manager: Optional[MCPConfigManager] = None,
-    credential_manager: Optional["CredentialManager"] = None,
+    credential_manager: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """
     Initialize MCP servers from configuration files.

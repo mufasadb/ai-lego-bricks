@@ -4,7 +4,7 @@ Secure tool executor that handles API keys and secrets safely.
 
 from abc import abstractmethod
 from typing import Dict, Any, Optional, List
-from .tool_types import ToolExecutor, ToolCall, ToolResult
+from .tool_types import ToolExecutor, ToolCall, ToolResult, Tool
 
 try:
     from credentials import CredentialManager

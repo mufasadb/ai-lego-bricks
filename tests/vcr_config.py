@@ -62,8 +62,8 @@ def get_vcr_config() -> Dict[str, Any]:
         "cassette_library_dir": os.path.join(os.path.dirname(__file__), "cassettes"),
         # Decode compressed responses for easier inspection
         "decode_compressed_response": True,
-        # Match on method, scheme, host, port, path, and query
-        "match_on": ["method", "scheme", "host", "port", "path", "query"],
+        # Match on method, scheme, port, path, and query (exclude host for flexibility)
+        "match_on": ["method", "scheme", "port", "path", "query"],
         # Custom serializer for better readability
         "serializer": "yaml",
         # Ignore certain hosts that shouldn't be recorded
@@ -86,11 +86,34 @@ def get_pytest_vcr_config() -> Dict[str, Any]:
         # Custom before_record hook to sanitize sensitive data
         "before_record_request": sanitize_request,
         "before_record_response": sanitize_response,
-        # Fail on new cassettes in CI mode (when PYTEST_RECORD_MODE=none)
-        "allow_playback_repeats": True,
     }
 
     return pytest_config
+
+
+def get_unit_test_vcr_config() -> Dict[str, Any]:
+    """
+    Get unit test specific VCR configuration with relaxed host matching.
+    
+    For unit tests, we don't care about exact host matching since we're testing
+    with recorded cassettes and want them to work regardless of local environment.
+    
+    Returns:
+        Dict containing unit test VCR configuration
+    """
+    base_config = get_vcr_config()
+    
+    # Unit test specific configuration - exclude host from matching
+    unit_config = {
+        **base_config,
+        # Match on everything except host (allows localhost vs IP flexibility)
+        "match_on": ["method", "scheme", "port", "path", "query"],
+        # Custom before_record hook to sanitize sensitive data
+        "before_record_request": sanitize_request,
+        "before_record_response": sanitize_response,
+    }
+    
+    return unit_config
 
 
 def sanitize_request(request):

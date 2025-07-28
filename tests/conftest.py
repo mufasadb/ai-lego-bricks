@@ -11,17 +11,28 @@ from typing import Dict, Any
 from pathlib import Path
 
 # Import our VCR configuration
-from .vcr_config import get_pytest_vcr_config
+from .vcr_config import get_pytest_vcr_config, get_unit_test_vcr_config
 
 
 @pytest.fixture(scope="session")
 def vcr_config() -> Dict[str, Any]:
     """
-    Session-scoped VCR configuration fixture.
+    Session-scoped VCR configuration fixture for integration tests.
 
     This ensures all tests use the same VCR settings for security and consistency.
     """
     return get_pytest_vcr_config()
+
+
+@pytest.fixture(scope="session")
+def unit_vcr_config() -> Dict[str, Any]:
+    """
+    Session-scoped VCR configuration fixture specifically for unit tests.
+    
+    Uses relaxed host matching to allow cassettes recorded with localhost
+    to work with tests that use IP addresses (or vice versa).
+    """
+    return get_unit_test_vcr_config()
 
 
 @pytest.fixture(scope="session")

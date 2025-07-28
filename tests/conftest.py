@@ -17,16 +17,6 @@ from .vcr_config import get_pytest_vcr_config, get_unit_test_vcr_config
 @pytest.fixture(scope="session")
 def vcr_config() -> Dict[str, Any]:
     """
-    Session-scoped VCR configuration fixture for integration tests.
-
-    This ensures all tests use the same VCR settings for security and consistency.
-    """
-    return get_pytest_vcr_config()
-
-
-@pytest.fixture(scope="session")
-def vcr_config() -> Dict[str, Any]:
-    """
     Session-scoped VCR configuration fixture for pytest-recording.
 
     This fixture is automatically used by @pytest.mark.vcr() decorator.

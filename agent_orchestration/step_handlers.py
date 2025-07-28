@@ -3032,7 +3032,7 @@ class StepHandlerRegistry:
             auto_execute = step.config.get("auto_execute", True)
             max_iterations = step.config.get("max_iterations", 5)
             temperature = step.config.get("temperature", 0.1)
-            
+
             # Get user message from inputs
             user_message = inputs.get("message", inputs.get("user_input", ""))
             if not user_message:
@@ -3042,83 +3042,97 @@ class StepHandlerRegistry:
                     "tool_calls": [],
                     "responses": [],
                 }
-            
+
             # Get system prompt/message
             system_message = step.config.get("prompt", "You are a helpful assistant.")
-            
+
             # Create tool service
             credential_manager = getattr(context, "credential_manager", None)
             tool_service = ToolService(credential_manager=credential_manager)
-            
+
             # Create LLM client
             if provider == "gemini":
                 from llm.text_clients import GeminiTextClient
+
                 config = LLMConfig(
                     provider=LLMProvider.GEMINI,
                     model=model or "gemini-1.5-flash",
-                    temperature=temperature
+                    temperature=temperature,
                 )
-                llm_client = GeminiTextClient(config, credential_manager=credential_manager)
+                llm_client = GeminiTextClient(
+                    config, credential_manager=credential_manager
+                )
             elif provider == "ollama":
                 from llm.text_clients import OllamaTextClient
+
                 config = LLMConfig(
                     provider=LLMProvider.OLLAMA,
                     model=model or "llama3.1:8b",
-                    temperature=temperature
+                    temperature=temperature,
                 )
-                llm_client = OllamaTextClient(config, credential_manager=credential_manager)
+                llm_client = OllamaTextClient(
+                    config, credential_manager=credential_manager
+                )
             elif provider == "anthropic":
                 from llm.text_clients import AnthropicTextClient
+
                 config = LLMConfig(
                     provider=LLMProvider.ANTHROPIC,
                     model=model or "claude-3-5-sonnet-20241022",
-                    temperature=temperature
+                    temperature=temperature,
                 )
-                llm_client = AnthropicTextClient(config, credential_manager=credential_manager)
+                llm_client = AnthropicTextClient(
+                    config, credential_manager=credential_manager
+                )
             elif provider == "openrouter":
                 from llm.text_clients import OpenRouterTextClient
+
                 config = LLMConfig(
                     provider=LLMProvider.OPENROUTER,
                     model=model or "anthropic/claude-3.5-sonnet",
-                    temperature=temperature
+                    temperature=temperature,
                 )
-                llm_client = OpenRouterTextClient(config, credential_manager=credential_manager)
+                llm_client = OpenRouterTextClient(
+                    config, credential_manager=credential_manager
+                )
             else:
                 raise ValueError(f"Unsupported provider: {provider}")
-            
+
             # Set up conversation history
             conversation_history = []
             if system_message:
-                conversation_history.append(ChatMessage(role="system", content=system_message))
-            
+                conversation_history.append(
+                    ChatMessage(role="system", content=system_message)
+                )
+
             # Initialize tracking variables
             all_tool_calls = []
             all_tool_results = []
             all_responses = []
             current_message = user_message
             iterations = 0
-            
+
             # Run the conversation loop with tools
             for iteration in range(max_iterations):
                 iterations += 1
-                
+
                 # Prepare tools for this iteration if any are configured
                 formatted_tools = None
                 if tools or tool_category:
                     try:
                         # Get tools in provider-specific format - handle async properly
                         import concurrent.futures
-                        
+
                         def run_tool_preparation():
                             return asyncio.run(
                                 tool_service.prepare_tools_for_provider(
                                     provider, tools, tool_category
                                 )
                             )
-                        
+
                         try:
                             # Try to get existing loop
-                            loop = asyncio.get_running_loop()
+                            asyncio.get_running_loop()
                             # We're in an async context, use ThreadPoolExecutor
                             with concurrent.futures.ThreadPoolExecutor() as executor:
                                 future = executor.submit(run_tool_preparation)
@@ -3130,78 +3144,89 @@ class StepHandlerRegistry:
                                     provider, tools, tool_category
                                 )
                             )
-                        
+
                         if tool_config:
                             # Extract tools in the format expected by each provider
                             if provider == "gemini":
                                 # For Gemini, extract function declarations from the nested structure
-                                if 'tools' in tool_config and tool_config['tools']:
-                                    if 'functionDeclarations' in tool_config['tools'][0]:
-                                        formatted_tools = tool_config['tools'][0]['functionDeclarations']
+                                if "tools" in tool_config and tool_config["tools"]:
+                                    if (
+                                        "functionDeclarations"
+                                        in tool_config["tools"][0]
+                                    ):
+                                        formatted_tools = tool_config["tools"][0][
+                                            "functionDeclarations"
+                                        ]
                                     else:
-                                        formatted_tools = tool_config['tools']
+                                        formatted_tools = tool_config["tools"]
                                 else:
                                     formatted_tools = tool_config
                             else:
                                 # For other providers, use the tools list directly
-                                formatted_tools = tool_config.get('tools', tool_config)
+                                formatted_tools = tool_config.get("tools", tool_config)
                     except Exception as e:
                         print(f"Warning: Failed to prepare tools: {e}")
                         formatted_tools = None
-                
+
                 # Make LLM call with tool support
                 try:
                     llm_response = llm_client.chat_with_tool_support(
                         current_message,
                         tools=formatted_tools,
                         tool_choice=tool_choice,
-                        chat_history=conversation_history
+                        chat_history=conversation_history,
                     )
-                    
+
                     text_response = llm_response.get("response", "")
                     tool_calls = llm_response.get("tool_calls", [])
-                    finish_reason = llm_response.get("finish_reason", "stop")
-                    
+
                     all_responses.append(text_response)
-                    
+
                     # Add this response to conversation history
                     if text_response:
-                        conversation_history.append(ChatMessage(role="assistant", content=text_response))
-                    
+                        conversation_history.append(
+                            ChatMessage(role="assistant", content=text_response)
+                        )
+
                     # If no tool calls, we're done
                     if not tool_calls or not auto_execute:
                         if not auto_execute and tool_calls:
                             all_tool_calls.extend(tool_calls)
                         break
-                    
+
                     # Execute tool calls
                     if tool_calls:
                         all_tool_calls.extend(tool_calls)
-                        
+
                         # Convert tool calls to ToolCall objects and execute them
                         from tools.tool_types import ToolCall
+
                         tool_call_objects = []
                         for tc in tool_calls:
-                            if 'function' in tc:
-                                func = tc['function']
-                                tool_call_objects.append(ToolCall(
-                                    id=tc.get('id', str(uuid.uuid4())),
-                                    name=func['name'],
-                                    parameters=func.get('arguments', {})
-                                ))
-                        
+                            if "function" in tc:
+                                func = tc["function"]
+                                tool_call_objects.append(
+                                    ToolCall(
+                                        id=tc.get("id", str(uuid.uuid4())),
+                                        name=func["name"],
+                                        parameters=func.get("arguments", {}),
+                                    )
+                                )
+
                         # Execute tools - handle async properly
                         try:
+
                             def run_tool_execution():
                                 return asyncio.run(
                                     tool_service.execute_tool_calls(tool_call_objects)
                                 )
-                            
+
                             try:
                                 # Try to get existing loop
-                                loop = asyncio.get_running_loop()
+                                asyncio.get_running_loop()
                                 # We're in an async context, use ThreadPoolExecutor
                                 import concurrent.futures
+
                                 with concurrent.futures.ThreadPoolExecutor() as executor:
                                     future = executor.submit(run_tool_execution)
                                     tool_results = future.result()
@@ -3210,25 +3235,33 @@ class StepHandlerRegistry:
                                 tool_results = asyncio.run(
                                     tool_service.execute_tool_calls(tool_call_objects)
                                 )
-                            
+
                             all_tool_results.extend(tool_results)
-                            
+
                             # Add tool results to conversation
                             tool_results_text = []
                             for result in tool_results:
                                 if result.error:
-                                    tool_results_text.append(f"Tool {result.name} failed: {result.error}")
+                                    tool_results_text.append(
+                                        f"Tool {result.name} failed: {result.error}"
+                                    )
                                 else:
-                                    tool_results_text.append(f"Tool {result.name} result: {result.result}")
-                            
+                                    tool_results_text.append(
+                                        f"Tool {result.name} result: {result.result}"
+                                    )
+
                             # Continue conversation with tool results
-                            current_message = f"Tool execution results:\n" + "\n".join(tool_results_text) + "\n\nPlease continue or provide a summary based on these results."
-                            
+                            current_message = (
+                                "Tool execution results:\n"
+                                + "\n".join(tool_results_text)
+                                + "\n\nPlease continue or provide a summary based on these results."
+                            )
+
                         except Exception as e:
                             print(f"Tool execution failed: {e}")
                             # Continue with error message
                             current_message = f"Tool execution failed: {e}. Please respond without using tools."
-                    
+
                 except Exception as e:
                     return {
                         "success": False,
@@ -3237,14 +3270,17 @@ class StepHandlerRegistry:
                         "tool_calls": all_tool_calls,
                         "tool_results": all_tool_results,
                         "conversation_history": [
-                            {"role": msg.role, "content": msg.content} for msg in conversation_history
+                            {"role": msg.role, "content": msg.content}
+                            for msg in conversation_history
                         ],
                         "iterations": iterations,
                     }
-            
+
             # Format final response
-            final_response = "\n".join(all_responses) if all_responses else "No response generated"
-            
+            final_response = (
+                "\n".join(all_responses) if all_responses else "No response generated"
+            )
+
             return {
                 "success": True,
                 "response": final_response,
@@ -3254,20 +3290,22 @@ class StepHandlerRegistry:
                         "name": tr.name,
                         "result": tr.result,
                         "error": tr.error,
-                        "tool_call_id": tr.tool_call_id
-                    } for tr in all_tool_results
+                        "tool_call_id": tr.tool_call_id,
+                    }
+                    for tr in all_tool_results
                 ],
                 "conversation_history": [
-                    {"role": msg.role, "content": msg.content} for msg in conversation_history
+                    {"role": msg.role, "content": msg.content}
+                    for msg in conversation_history
                 ],
                 "iterations": iterations,
                 "provider": provider,
                 "model": config.model,
                 "tools_used": len(all_tool_calls),
                 "auto_execute": auto_execute,
-                "finish_reason": "completed"
+                "finish_reason": "completed",
             }
-            
+
         except Exception as e:
             return {
                 "success": False,

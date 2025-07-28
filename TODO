@@ -12,152 +12,154 @@ Lets review what is covered by each of the readme's in subfolders, in claude kno
 
 how does the agent logger work, does it have to be invoked?
 
+We made changes to our tool call system but i fear that we've broken something fundemental with the tool call system, can you please set up a home assistant tool connected to an agent orechatstrator json, then make sure it runs with the agent debugger. the required variables are in the .env. you should be able to "turn on the table light" and it should be able to find and turn it on, then see that its status has changed. Once that works ask it to try turning on and off beachy's light.
+
 Current Evaluation System Architecture Research Results                               │ │
-│ │                                                                                       │ │
-│ │ 1. Current ConceptEvaluationService Architecture                                      │ │
-│ │                                                                                       │ │
-│ │ Core Components Identified:                                                           │ │
-│ │                                                                                       │ │
-│ │ ConceptEvaluationService                                                              │ │
-│ │ (/Users/danielbeach/Code/ai-lego-bricks/prompt/concept_evaluation_service.py)         │ │
-│ │                                                                                       │ │
-│ │ - Main orchestration service for concept-based prompt evaluations                     │ │
-│ │ - Key Methods:                                                                        │ │
-│ │   - run_evaluation(): Main execution method that orchestrates the entire evaluation   │ │
-│ │ process                                                                               │ │
-│ │   - _run_test_case(): Executes individual test cases using LLM judge                  │ │
-│ │   - _generate_recommendations(): Basic recommendation engine (basic failure pattern   │ │
-│ │ analysis)                                                                             │ │
-│ │   - _calculate_summary_metrics(): Computes overall scores and pass rates              │ │
-│ │                                                                                       │ │
-│ │ ConceptJudgeService (/Users/danielbeach/Code/ai-lego-bricks/prompt/concept_judge.py)  │ │
-│ │                                                                                       │ │
-│ │ - LLM-as-a-judge implementation for evaluating outputs against concept criteria       │ │
-│ │ - Key Methods:                                                                        │ │
-│ │   - evaluate_concept_check(): Single concept evaluation with detailed judge reasoning │ │
-│ │   - _get_judge_prompt(): Generates structured prompts for different check types       │ │
-│ │   - _parse_judge_response(): Extracts pass/fail, reasoning, and confidence scores     │ │
-│ │ - Supported Check Types:                                                              │ │
-│ │   - MUST_CONTAIN: Checks for presence of concepts                                     │ │
-│ │   - MUST_NOT_CONTAIN: Checks for absence of concepts                                  │ │
-│ │   - BINARY_DECISION: Yes/no decision evaluations                                      │ │
-│ │                                                                                       │ │
-│ │ Data Models (/Users/danielbeach/Code/ai-lego-bricks/prompt/concept_eval_models.py)    │ │
-│ │                                                                                       │ │
-│ │ - CheckResult: Contains judge reasoning, confidence, and pass/fail status             │ │
-│ │ - TestCaseResult: Aggregates multiple check results for a test case                   │ │
-│ │ - EvalExecutionResult: Complete evaluation results with recommendations               │ │
-│ │                                                                                       │ │
-│ │ 2. Current Workflow Integration                                                       │ │
-│ │                                                                                       │ │
-│ │ Agent Orchestration Integration                                                       │ │
-│ │ (/Users/danielbeach/Code/ai-lego-bricks/agent_orchestration/step_handlers.py:212-348) │ │
-│ │                                                                                       │ │
-│ │ - Step Type: CONCEPT_EVALUATION in workflow JSON files                                │ │
-│ │ - Quality Gates: Built-in support for min_score thresholds with pass/fail routing     │ │
-│ │ - Results Format: Structured results compatible with conditional routing              │ │
-│ │                                                                                       │ │
-│ │ Conditional Routing System                                                            │ │
-│ │ (/Users/danielbeach/Code/ai-lego-bricks/agent_orchestration/orchestrator.py:481-511)  │ │
-│ │                                                                                       │ │
-│ │ - Route Mechanism: _get_next_step() method handles conditional workflow routing       │ │
-│ │ - Supports: Field-based routing, default routes, and termination conditions           │ │
-│ │ - Integration: Works with step results from evaluation service                        │ │
-│ │                                                                                       │ │
-│ │ 3. Extension Points for Enhanced Feedback Features                                    │ │
-│ │                                                                                       │ │
-│ │ A. Detailed Failure Feedback Extension Points:                                        │ │
-│ │                                                                                       │ │
-│ │ ConceptJudgeService._get_judge_prompt() Method                                        │ │
-│ │                                                                                       │ │
-│ │ - Location: Lines 121-131 in concept_judge.py                                         │ │
-│ │ - Extension: Add new prompt templates for detailed failure analysis                   │ │
-│ │ - New Method: _get_detailed_feedback_prompt() for comprehensive failure analysis      │ │
-│ │                                                                                       │ │
-│ │ CheckResult Model                                                                     │ │
-│ │                                                                                       │ │
-│ │ - Location: Lines 81-92 in concept_eval_models.py                                     │ │
-│ │ - Extension: Add fields for detailed feedback and improvement suggestions:            │ │
-│ │   - detailed_feedback: Optional[str]                                                  │ │
-│ │   - improvement_suggestions: List[str]                                                │ │
-│ │   - failure_category: Optional[str]                                                   │ │
-│ │                                                                                       │ │
-│ │ B. Automated Prompt Improvement Extension Points:                                     │ │
-│ │                                                                                       │ │
-│ │ ConceptEvaluationService._generate_recommendations() Method                           │ │
-│ │                                                                                       │ │
-│ │ - Location: Lines 357-404 in concept_evaluation_service.py                            │ │
-│ │ - Current: Basic failure pattern analysis                                             │ │
-│ │ - Extension: Enhanced with LLM-powered prompt improvement suggestions                 │ │
-│ │                                                                                       │ │
-│ │ New Service Class: PromptImprovementService                                           │ │
-│ │                                                                                       │ │
-│ │ - Location: New file                                                                  │ │
-│ │ /Users/danielbeach/Code/ai-lego-bricks/prompt/prompt_improvement_service.py           │ │
-│ │ - Methods:                                                                            │ │
-│ │   - analyze_failure_patterns(): Deep analysis of failure reasons                      │ │
-│ │   - generate_prompt_improvements(): LLM-powered improvement suggestions               │ │
-│ │   - create_improved_prompt_variants(): Generate multiple improved versions            │ │
-│ │                                                                                       │ │
-│ │ C. Iteration Loop Workflow Extension Points:                                          │ │
-│ │                                                                                       │ │
-│ │ Workflow Step Types                                                                   │ │
-│ │ (/Users/danielbeach/Code/ai-lego-bricks/agent_orchestration/models.py:20-54)          │ │
-│ │                                                                                       │ │
-│ │ - Current: Basic CONDITION and LOOP step types                                        │ │
-│ │ - Extension: New step type ITERATIVE_IMPROVEMENT                                      │ │
-│ │                                                                                       │ │
-│ │ Routing System                                                                        │ │
-│ │ (/Users/danielbeach/Code/ai-lego-bricks/agent_orchestration/orchestrator.py:481-511)  │ │
-│ │                                                                                       │ │
-│ │ - Current: Simple conditional routing based on evaluation results                     │ │
-│ │ - Extension: Smart routing for iterative improvement workflows                        │ │
-│ │                                                                                       │ │
-│ │ Example Iteration Loop JSON Structure:                                                │ │
-│ │                                                                                       │ │
-│ │ {                                                                                     │ │
-│ │   "id": "evaluate_and_improve",                                                       │ │
-│ │   "type": "concept_evaluation",                                                       │ │
-│ │   "config": {                                                                         │ │
-│ │     "eval_id": "prompt_quality_check",                                                │ │
-│ │     "min_score": 0.8,                                                                 │ │
-│ │     "max_iterations": 3,                                                              │ │
-│ │     "enable_detailed_feedback": true                                                  │ │
-│ │   },                                                                                  │ │
-│ │   "routes": {                                                                         │ │
-│ │     "quality_gate_passed": "success_step",                                            │ │
-│ │     "quality_gate_failed": "improve_prompt_step"                                      │ │
-│ │   }                                                                                   │ │
-│ │ }                                                                                     │ │
-│ │                                                                                       │ │
-│ │ D. Integration with Existing Prompt Management:                                       │ │
-│ │                                                                                       │ │
-│ │ Prompt Service Integration                                                            │ │
-│ │ (/Users/danielbeach/Code/ai-lego-bricks/prompt/prompt_service.py)                     │ │
-│ │                                                                                       │ │
-│ │ - Extension Point: Version management for iterative improvements                      │ │
-│ │ - New Methods: create_improved_version(), track_improvement_lineage()                 │ │
-│ │                                                                                       │ │
-│ │ 4. Specific Implementation Plan                                                       │ │
-│ │                                                                                       │ │
-│ │ Phase 1: Enhanced Feedback Generation                                                 │ │
-│ │                                                                                       │ │
-│ │ 1. Extend ConceptJudgeService with detailed feedback prompts                          │ │
-│ │ 2. Add feedback fields to CheckResult model                                           │ │
-│ │ 3. Implement PromptImprovementService for automated suggestions                       │ │
-│ │                                                                                       │ │
-│ │ Phase 2: Iteration Loop Workflows                                                     │ │
-│ │                                                                                       │ │
-│ │ 1. Add ITERATIVE_IMPROVEMENT step type to orchestrator                                │ │
-│ │ 2. Implement smart routing for improvement cycles                                     │ │
-│ │ 3. Create workflow templates for common improvement patterns                          │ │
-│ │                                                                                       │ │
-│ │ Phase 3: Integration & Testing                                                        │ │
-│ │                                                                                       │ │
-│ │ 1. Add integration tests for improvement workflows                                    │ │
-│ │ 2. Create example JSON workflows demonstrating iteration loops                        │ │
-│ │ 3. Add CLI commands for running improvement evaluations                               │ │
-│ │                                                                                       │ │
-│ │ This architecture provides a solid foundation for adding detailed feedback and        │ │
-│ │ automated improvement capabilities while leveraging the existing evaluation and       │ │
-│ │ workflow orchestration systems.       
+                                                                                      │ │
+1. Current ConceptEvaluationService Architecture                                      │ │
+                                                                                      │ │
+Core Components Identified:                                                           │ │
+                                                                                      │ │
+ConceptEvaluationService                                                              │ │
+(/Users/danielbeach/Code/ai-lego-bricks/prompt/concept_evaluation_service.py)         │ │
+                                                                                      │ │
+- Main orchestration service for concept-based prompt evaluations                     │ │
+- Key Methods:                                                                        │ │
+  - run_evaluation(): Main execution method that orchestrates the entire evaluation   │ │
+process                                                                               │ │
+  - _run_test_case(): Executes individual test cases using LLM judge                  │ │
+  - _generate_recommendations(): Basic recommendation engine (basic failure pattern   │ │
+analysis)                                                                             │ │
+  - _calculate_summary_metrics(): Computes overall scores and pass rates              │ │
+                                                                                      │ │
+ConceptJudgeService (/Users/danielbeach/Code/ai-lego-bricks/prompt/concept_judge.py)  │ │
+                                                                                      │ │
+- LLM-as-a-judge implementation for evaluating outputs against concept criteria       │ │
+- Key Methods:                                                                        │ │
+  - evaluate_concept_check(): Single concept evaluation with detailed judge reasoning │ │
+  - _get_judge_prompt(): Generates structured prompts for different check types       │ │
+  - _parse_judge_response(): Extracts pass/fail, reasoning, and confidence scores     │ │
+- Supported Check Types:                                                              │ │
+  - MUST_CONTAIN: Checks for presence of concepts                                     │ │
+  - MUST_NOT_CONTAIN: Checks for absence of concepts                                  │ │
+  - BINARY_DECISION: Yes/no decision evaluations                                      │ │
+                                                                                      │ │
+Data Models (/Users/danielbeach/Code/ai-lego-bricks/prompt/concept_eval_models.py)    │ │
+                                                                                      │ │
+- CheckResult: Contains judge reasoning, confidence, and pass/fail status             │ │
+- TestCaseResult: Aggregates multiple check results for a test case                   │ │
+- EvalExecutionResult: Complete evaluation results with recommendations               │ │
+                                                                                      │ │
+2. Current Workflow Integration                                                       │ │
+                                                                                      │ │
+Agent Orchestration Integration                                                       │ │
+(/Users/danielbeach/Code/ai-lego-bricks/agent_orchestration/step_handlers.py:212-348) │ │
+                                                                                      │ │
+- Step Type: CONCEPT_EVALUATION in workflow JSON files                                │ │
+- Quality Gates: Built-in support for min_score thresholds with pass/fail routing     │ │
+- Results Format: Structured results compatible with conditional routing              │ │
+                                                                                      │ │
+Conditional Routing System                                                            │ │
+(/Users/danielbeach/Code/ai-lego-bricks/agent_orchestration/orchestrator.py:481-511)  │ │
+                                                                                      │ │
+- Route Mechanism: _get_next_step() method handles conditional workflow routing       │ │
+- Supports: Field-based routing, default routes, and termination conditions           │ │
+- Integration: Works with step results from evaluation service                        │ │
+                                                                                      │ │
+3. Extension Points for Enhanced Feedback Features                                    │ │
+                                                                                      │ │
+A. Detailed Failure Feedback Extension Points:                                        │ │
+                                                                                      │ │
+ConceptJudgeService._get_judge_prompt() Method                                        │ │
+                                                                                      │ │
+- Location: Lines 121-131 in concept_judge.py                                         │ │
+- Extension: Add new prompt templates for detailed failure analysis                   │ │
+- New Method: _get_detailed_feedback_prompt() for comprehensive failure analysis      │ │
+                                                                                      │ │
+CheckResult Model                                                                     │ │
+                                                                                      │ │
+- Location: Lines 81-92 in concept_eval_models.py                                     │ │
+- Extension: Add fields for detailed feedback and improvement suggestions:            │ │
+  - detailed_feedback: Optional[str]                                                  │ │
+  - improvement_suggestions: List[str]                                                │ │
+  - failure_category: Optional[str]                                                   │ │
+                                                                                      │ │
+B. Automated Prompt Improvement Extension Points:                                     │ │
+                                                                                      │ │
+ConceptEvaluationService._generate_recommendations() Method                           │ │
+                                                                                      │ │
+- Location: Lines 357-404 in concept_evaluation_service.py                            │ │
+- Current: Basic failure pattern analysis                                             │ │
+- Extension: Enhanced with LLM-powered prompt improvement suggestions                 │ │
+                                                                                      │ │
+New Service Class: PromptImprovementService                                           │ │
+                                                                                      │ │
+- Location: New file                                                                  │ │
+/Users/danielbeach/Code/ai-lego-bricks/prompt/prompt_improvement_service.py           │ │
+- Methods:                                                                            │ │
+  - analyze_failure_patterns(): Deep analysis of failure reasons                      │ │
+  - generate_prompt_improvements(): LLM-powered improvement suggestions               │ │
+  - create_improved_prompt_variants(): Generate multiple improved versions            │ │
+                                                                                      │ │
+C. Iteration Loop Workflow Extension Points:                                          │ │
+                                                                                      │ │
+Workflow Step Types                                                                   │ │
+(/Users/danielbeach/Code/ai-lego-bricks/agent_orchestration/models.py:20-54)          │ │
+                                                                                      │ │
+- Current: Basic CONDITION and LOOP step types                                        │ │
+- Extension: New step type ITERATIVE_IMPROVEMENT                                      │ │
+                                                                                      │ │
+Routing System                                                                        │ │
+(/Users/danielbeach/Code/ai-lego-bricks/agent_orchestration/orchestrator.py:481-511)  │ │
+                                                                                      │ │
+- Current: Simple conditional routing based on evaluation results                     │ │
+- Extension: Smart routing for iterative improvement workflows                        │ │
+                                                                                      │ │
+Example Iteration Loop JSON Structure:                                                │ │
+                                                                                      │ │
+{                                                                                     │ │
+  "id": "evaluate_and_improve",                                                       │ │
+  "type": "concept_evaluation",                                                       │ │
+  "config": {                                                                         │ │
+    "eval_id": "prompt_quality_check",                                                │ │
+    "min_score": 0.8,                                                                 │ │
+    "max_iterations": 3,                                                              │ │
+    "enable_detailed_feedback": true                                                  │ │
+  },                                                                                  │ │
+  "routes": {                                                                         │ │
+    "quality_gate_passed": "success_step",                                            │ │
+    "quality_gate_failed": "improve_prompt_step"                                      │ │
+  }                                                                                   │ │
+}                                                                                     │ │
+                                                                                      │ │
+D. Integration with Existing Prompt Management:                                       │ │
+                                                                                      │ │
+Prompt Service Integration                                                            │ │
+(/Users/danielbeach/Code/ai-lego-bricks/prompt/prompt_service.py)                     │ │
+                                                                                      │ │
+- Extension Point: Version management for iterative improvements                      │ │
+- New Methods: create_improved_version(), track_improvement_lineage()                 │ │
+                                                                                      │ │
+4. Specific Implementation Plan                                                       │ │
+                                                                                      │ │
+Phase 1: Enhanced Feedback Generation                                                 │ │
+                                                                                      │ │
+1. Extend ConceptJudgeService with detailed feedback prompts                          │ │
+2. Add feedback fields to CheckResult model                                           │ │
+3. Implement PromptImprovementService for automated suggestions                       │ │
+                                                                                      │ │
+Phase 2: Iteration Loop Workflows                                                     │ │
+                                                                                      │ │
+1. Add ITERATIVE_IMPROVEMENT step type to orchestrator                                │ │
+2. Implement smart routing for improvement cycles                                     │ │
+3. Create workflow templates for common improvement patterns                          │ │
+                                                                                      │ │
+Phase 3: Integration & Testing                                                        │ │
+                                                                                      │ │
+1. Add integration tests for improvement workflows                                    │ │
+2. Create example JSON workflows demonstrating iteration loops                        │ │
+3. Add CLI commands for running improvement evaluations                               │ │
+                                                                                      │ │
+This architecture provides a solid foundation for adding detailed feedback and        │ │
+automated improvement capabilities while leveraging the existing evaluation and       │ │
+workflow orchestration systems.       

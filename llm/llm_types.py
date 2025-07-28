@@ -90,13 +90,13 @@ class TextLLMClient(ABC):
     ) -> Dict[str, Any]:
         """
         Chat with tool support enabled.
-        
+
         Args:
             message: The user message
             tools: List of tools in provider-specific format (optional)
             tool_choice: Tool choice setting (optional)
             chat_history: Chat history (optional)
-            
+
         Returns:
             Dict containing:
             - response: The text response from the LLM
@@ -109,12 +109,12 @@ class TextLLMClient(ABC):
             # Enhance the message with tool information
             tool_descriptions = []
             for tool in tools:
-                if 'function' in tool:
-                    func = tool['function']
+                if "function" in tool:
+                    func = tool["function"]
                     tool_descriptions.append(f"- {func['name']}: {func['description']}")
-                elif 'name' in tool:
+                elif "name" in tool:
                     tool_descriptions.append(f"- {tool['name']}: {tool['description']}")
-            
+
             tools_text = "\n".join(tool_descriptions)
             enhanced_message = f"""You have access to the following tools:
 {tools_text}
@@ -123,91 +123,93 @@ To use a tool, respond with a function call in this exact format:
 FUNCTION_CALL: function_name(parameter1=value1, parameter2=value2)
 
 User message: {message}"""
-            
+
             response = self.chat(enhanced_message, chat_history)
-            
+
             # Parse for function calls
             tool_calls = self._parse_function_calls_from_response(response)
-            
+
             return {
                 "response": response,
                 "tool_calls": tool_calls,
-                "finish_reason": "tool_calls" if tool_calls else "stop"
+                "finish_reason": "tool_calls" if tool_calls else "stop",
             }
         else:
             # No tools provided, regular chat
             response = self.chat(message, chat_history)
-            return {
-                "response": response,
-                "tool_calls": [],
-                "finish_reason": "stop"
-            }
-    
-    def _parse_function_calls_from_response(self, response: str) -> List[Dict[str, Any]]:
+            return {"response": response, "tool_calls": [], "finish_reason": "stop"}
+
+    def _parse_function_calls_from_response(
+        self, response: str
+    ) -> List[Dict[str, Any]]:
         """Parse function calls from response text"""
         import re
         import uuid
-        
+
         tool_calls = []
         # Look for various function call patterns
         patterns = [
-            r'FUNCTION_CALL:\s*(\w+)\((.*?)\)',  # FUNCTION_CALL: func(params)
-            r'(\w+):\s*(\w+)\((.*?)\)',          # WORD: func(params) 
-            r'(\w+)\((.*?)\)',                   # func(params)
+            r"FUNCTION_CALL:\s*(\w+)\((.*?)\)",  # FUNCTION_CALL: func(params)
+            r"(\w+):\s*(\w+)\((.*?)\)",  # WORD: func(params)
+            r"(\w+)\((.*?)\)",  # func(params)
         ]
-        
+
         for pattern in patterns:
             matches = re.findall(pattern, response, re.DOTALL)
-            
+
             for match in matches:
                 try:
-                    if len(match) == 3:  # Pattern with prefix like "MULTIPLY: func(params)"
+                    if (
+                        len(match) == 3
+                    ):  # Pattern with prefix like "MULTIPLY: func(params)"
                         _, function_name, params_str = match
                     elif len(match) == 2:  # Pattern like "func(params)"
                         function_name, params_str = match
                     else:
                         continue
-                    
+
                     # Parse parameters
                     parameters = {}
                     if params_str.strip():
                         # Simple parameter parsing (name=value, name=value)
-                        param_pairs = params_str.split(',')
+                        param_pairs = params_str.split(",")
                         for pair in param_pairs:
-                            if '=' in pair:
-                                key, value = pair.split('=', 1)
+                            if "=" in pair:
+                                key, value = pair.split("=", 1)
                                 key = key.strip()
-                                value = value.strip().strip('"\'')  # Remove quotes
-                                
+                                value = value.strip().strip("\"'")  # Remove quotes
+
                                 # Try to convert to appropriate type
                                 if value.isdigit():
                                     value = int(value)
-                                elif value.replace('.', '').isdigit():
+                                elif value.replace(".", "").isdigit():
                                     value = float(value)
-                                    
+
                                 parameters[key] = value
-                    
-                    tool_calls.append({
-                        "id": str(uuid.uuid4()),
-                        "type": "function",
-                        "function": {
-                            "name": function_name,
-                            "arguments": parameters
+
+                    tool_calls.append(
+                        {
+                            "id": str(uuid.uuid4()),
+                            "type": "function",
+                            "function": {
+                                "name": function_name,
+                                "arguments": parameters,
+                            },
                         }
-                    })
-                    
+                    )
+
                     # If we found a function call, don't try other patterns
                     if tool_calls:
                         break
-                        
+
                 except Exception:
                     # Skip malformed function calls
                     continue
-                    
+
             # If we found tool calls with this pattern, stop trying other patterns
             if tool_calls:
                 break
-                
+
         return tool_calls
 
     def chat_stream(

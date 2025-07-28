@@ -1,0 +1,36 @@
+interactions:
+- request:
+    body: '{"model": "llama3.2:3b", "messages": [{"role": "user", "content": "User:
+      Hello assistant\n\nAssistant:"}], "stream": false, "options": {"temperature":
+      0.7, "num_predict": 1000}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate, br, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '164'
+      content-type:
+      - application/json
+      host:
+      - '1'
+      user-agent:
+      - python-httpx/0.28.1
+    method: POST
+    uri: http://localhost:11434/api/chat
+  response:
+    body:
+      string: '{"error":"model \"llama3.2:3b\" not found, try pulling it first"}'
+    headers:
+      Content-Length:
+      - '65'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Sun, 27 Jul 2025 08:13:51 GMT
+    status:
+      code: 404
+      message: Not Found
+version: 1

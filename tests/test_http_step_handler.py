@@ -3,9 +3,7 @@ Tests for HTTP Step Handler
 """
 
 import pytest
-import asyncio
 from unittest.mock import Mock, patch, AsyncMock
-from typing import Dict, Any
 
 # Import the necessary modules
 import sys
@@ -15,7 +13,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from agent_orchestration.step_handlers import StepHandlerRegistry
 from agent_orchestration.models import StepConfig, StepType, ExecutionContext
-from services.http_request_service import HttpResponse, HttpMethod
+from services.http_request_service import HttpResponse
 
 
 class TestHttpStepHandler:

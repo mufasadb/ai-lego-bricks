@@ -7,7 +7,6 @@ import pymupdf
 
 # Vision processing capabilities for image-heavy PDFs
 try:
-    from llm.generation_service import quick_generate_gemini
     from llm.vision_clients import GeminiVisionClient
 
     VISION_AVAILABLE = True

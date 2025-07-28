@@ -1,0 +1,125 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate, br, zstd
+      connection:
+      - keep-alive
+      host:
+      - h
+      user-agent:
+      - python-httpx/0.28.1
+    method: GET
+    uri: https://httpbin.org/redirect/2
+  response:
+    body:
+      string: '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+
+        <title>Redirecting...</title>
+
+        <h1>Redirecting...</h1>
+
+        <p>You should be redirected automatically to target URL: <a href="/relative-redirect/1">/relative-redirect/1</a>.  If
+        not click the link.'
+    headers:
+      Access-Control-Allow-Credentials:
+      - 'true'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '247'
+      Content-Type:
+      - text/html; charset=utf-8
+      Date:
+      - Sun, 27 Jul 2025 08:47:50 GMT
+      Location:
+      - /relative-redirect/1
+      Server:
+      - gunicorn/19.9.0
+    status:
+      code: 302
+      message: FOUND
+- request:
+    body: ''
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate, br, zstd
+      connection:
+      - keep-alive
+      host:
+      - h
+      user-agent:
+      - python-httpx/0.28.1
+    method: GET
+    uri: https://httpbin.org/relative-redirect/1
+  response:
+    body:
+      string: ''
+    headers:
+      Access-Control-Allow-Credentials:
+      - 'true'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '0'
+      Content-Type:
+      - text/html; charset=utf-8
+      Date:
+      - Sun, 27 Jul 2025 08:47:51 GMT
+      Location:
+      - /get
+      Server:
+      - gunicorn/19.9.0
+    status:
+      code: 302
+      message: FOUND
+- request:
+    body: ''
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate, br, zstd
+      connection:
+      - keep-alive
+      host:
+      - h
+      user-agent:
+      - python-httpx/0.28.1
+    method: GET
+    uri: https://httpbin.org/get
+  response:
+    body:
+      string: "{\n  \"args\": {}, \n  \"headers\": {\n    \"Accept\": \"*/*\", \n
+        \   \"Accept-Encoding\": \"gzip, deflate, br, zstd\", \n    \"Host\": \"httpbin.org\",
+        \n    \"User-Agent\": \"python-httpx/0.28.1\", \n    \"X-Amzn-Trace-Id\":
+        \"Root=1-6885e7b7-690135e372a3b16d3f80dff9\"\n  }, \n  \"origin\": \"XXX.XXX.XXX.XXX\",
+        \n  \"url\": \"https://httpbin.org/get\"\n}\n"
+    headers:
+      Access-Control-Allow-Credentials:
+      - 'true'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '314'
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 27 Jul 2025 08:47:51 GMT
+      Server:
+      - gunicorn/19.9.0
+    status:
+      code: 200
+      message: OK
+version: 1

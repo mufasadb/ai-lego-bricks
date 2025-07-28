@@ -1,0 +1,202 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate, br, zstd
+      accept-profile:
+      - public
+      apikey:
+      - eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxcHJjaml6dmN0cmVuYXdjbmZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1ODE2OTcsImV4cCI6MjA2NzE1NzY5N30.bJlVDmw_2SnJ5KzErC3NxlPiYlF5xm-wClaHrMBQ9aY
+      connection:
+      - keep-alive
+      content-profile:
+      - public
+      host:
+      - c
+      user-agent:
+      - python-httpx/0.28.1
+    method: GET
+    uri: https://cqprcjizvctrenawcnfw.supabase.co/rest/v1/prompts?limit=1&select=id
+  response:
+    body:
+      string: '[{"id":"friendly_chat"}]'
+    headers:
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - 96607787dc177820-BNE
+      content-length:
+      - '24'
+      content-location:
+      - /prompts?limit=1&select=id
+      content-profile:
+      - public
+      content-range:
+      - 0-0/*
+      content-type:
+      - application/json; charset=utf-8
+      date:
+      - Mon, 28 Jul 2025 01:05:12 GMT
+      sb-gateway-version:
+      - '1'
+      sb-project-ref:
+      - cqprcjizvctrenawcnfw
+      sb-request-id:
+      - 01984e8f-f0f0-77f0-ad7e-862189741917
+      server:
+      - cloudflare
+      set-cookie:
+      - __cf_bm=W2EojW0iW8AvvUZJlNyX9KR701323aa_z53ggtjhMuM-1753664712-1.0.1.1-VZwZDAJhAd1jd_MlP9g5imVdfK9Wgb919D9eKQS7tKtj5AHwiMxp4tJyVZw_6eeIyLA8nAjUEU_jE9_eyizEeDhXzpyH9pNdCY_KWtAmzq8;
+        path=/; expires=Mon, 28-Jul-25 01:35:12 GMT; domain=.supabase.co; HttpOnly;
+        Secure; SameSite=None
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-envoy-attempt-count:
+      - '1'
+      x-envoy-upstream-service-time:
+      - '8'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: ''
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate, br, zstd
+      accept-profile:
+      - public
+      apikey:
+      - eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxcHJjaml6dmN0cmVuYXdjbmZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1ODE2OTcsImV4cCI6MjA2NzE1NzY5N30.bJlVDmw_2SnJ5KzErC3NxlPiYlF5xm-wClaHrMBQ9aY
+      connection:
+      - keep-alive
+      content-profile:
+      - public
+      cookie:
+      - __cf_bm=W2EojW0iW8AvvUZJlNyX9KR701323aa_z53ggtjhMuM-1753664712-1.0.1.1-VZwZDAJhAd1jd_MlP9g5imVdfK9Wgb919D9eKQS7tKtj5AHwiMxp4tJyVZw_6eeIyLA8nAjUEU_jE9_eyizEeDhXzpyH9pNdCY_KWtAmzq8
+      host:
+      - c
+      user-agent:
+      - python-httpx/0.28.1
+    method: GET
+    uri: https://cqprcjizvctrenawcnfw.supabase.co/rest/v1/prompt_executions?limit=1&select=id
+  response:
+    body:
+      string: '[]'
+    headers:
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - 966077883c9a7820-BNE
+      content-length:
+      - '2'
+      content-location:
+      - /prompt_executions?limit=1&select=id
+      content-profile:
+      - public
+      content-range:
+      - '*/*'
+      content-type:
+      - application/json; charset=utf-8
+      date:
+      - Mon, 28 Jul 2025 01:05:13 GMT
+      sb-gateway-version:
+      - '1'
+      sb-project-ref:
+      - cqprcjizvctrenawcnfw
+      sb-request-id:
+      - 01984e8f-f126-73b2-a498-55a9559cddb1
+      server:
+      - cloudflare
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-envoy-attempt-count:
+      - '1'
+      x-envoy-upstream-service-time:
+      - '6'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: ''
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate, br, zstd
+      accept-profile:
+      - public
+      apikey:
+      - eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxcHJjaml6dmN0cmVuYXdjbmZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1ODE2OTcsImV4cCI6MjA2NzE1NzY5N30.bJlVDmw_2SnJ5KzErC3NxlPiYlF5xm-wClaHrMBQ9aY
+      connection:
+      - keep-alive
+      content-profile:
+      - public
+      cookie:
+      - __cf_bm=W2EojW0iW8AvvUZJlNyX9KR701323aa_z53ggtjhMuM-1753664712-1.0.1.1-VZwZDAJhAd1jd_MlP9g5imVdfK9Wgb919D9eKQS7tKtj5AHwiMxp4tJyVZw_6eeIyLA8nAjUEU_jE9_eyizEeDhXzpyH9pNdCY_KWtAmzq8
+      host:
+      - c
+      user-agent:
+      - python-httpx/0.28.1
+    method: GET
+    uri: https://cqprcjizvctrenawcnfw.supabase.co/rest/v1/prompts?select=%2A&status=eq.active
+  response:
+    body:
+      string: '[]'
+    headers:
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - 966077887cd67820-BNE
+      content-length:
+      - '2'
+      content-location:
+      - /prompts?select=%2A&status=eq.active
+      content-profile:
+      - public
+      content-range:
+      - '*/*'
+      content-type:
+      - application/json; charset=utf-8
+      date:
+      - Mon, 28 Jul 2025 01:05:13 GMT
+      sb-gateway-version:
+      - '1'
+      sb-project-ref:
+      - cqprcjizvctrenawcnfw
+      sb-request-id:
+      - 01984e8f-f152-77ed-9f11-0d55f786cd3d
+      server:
+      - cloudflare
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-envoy-attempt-count:
+      - '1'
+      x-envoy-upstream-service-time:
+      - '7'
+    status:
+      code: 200
+      message: OK
+version: 1

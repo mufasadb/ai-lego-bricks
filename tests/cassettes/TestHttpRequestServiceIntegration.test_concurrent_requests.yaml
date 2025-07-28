@@ -1,0 +1,122 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate, br, zstd
+      connection:
+      - keep-alive
+      host:
+      - h
+      user-agent:
+      - python-httpx/0.28.1
+    method: GET
+    uri: https://httpbin.org/get?request_id=0
+  response:
+    body:
+      string: "{\n  \"args\": {\n    \"request_id\": \"0\"\n  }, \n  \"headers\":
+        {\n    \"Accept\": \"*/*\", \n    \"Accept-Encoding\": \"gzip, deflate, br,
+        zstd\", \n    \"Host\": \"httpbin.org\", \n    \"User-Agent\": \"python-httpx/0.28.1\",
+        \n    \"X-Amzn-Trace-Id\": \"Root=1-6885e7bd-09b513106edef6b6515fe389\"\n
+        \ }, \n  \"origin\": \"XXX.XXX.XXX.XXX\", \n  \"url\": \"https://httpbin.org/get?request_id=0\"\n}\n"
+    headers:
+      Access-Control-Allow-Credentials:
+      - 'true'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '352'
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 27 Jul 2025 08:47:57 GMT
+      Server:
+      - gunicorn/19.9.0
+    status:
+      code: 200
+      message: OK
+- request:
+    body: ''
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate, br, zstd
+      connection:
+      - keep-alive
+      host:
+      - h
+      user-agent:
+      - python-httpx/0.28.1
+    method: GET
+    uri: https://httpbin.org/get?request_id=1
+  response:
+    body:
+      string: "{\n  \"args\": {\n    \"request_id\": \"1\"\n  }, \n  \"headers\":
+        {\n    \"Accept\": \"*/*\", \n    \"Accept-Encoding\": \"gzip, deflate, br,
+        zstd\", \n    \"Host\": \"httpbin.org\", \n    \"User-Agent\": \"python-httpx/0.28.1\",
+        \n    \"X-Amzn-Trace-Id\": \"Root=1-6885e7bd-6794be0053a3623378cedd53\"\n
+        \ }, \n  \"origin\": \"XXX.XXX.XXX.XXX\", \n  \"url\": \"https://httpbin.org/get?request_id=1\"\n}\n"
+    headers:
+      Access-Control-Allow-Credentials:
+      - 'true'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '352'
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 27 Jul 2025 08:47:57 GMT
+      Server:
+      - gunicorn/19.9.0
+    status:
+      code: 200
+      message: OK
+- request:
+    body: ''
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate, br, zstd
+      connection:
+      - keep-alive
+      host:
+      - h
+      user-agent:
+      - python-httpx/0.28.1
+    method: GET
+    uri: https://httpbin.org/get?request_id=2
+  response:
+    body:
+      string: "{\n  \"args\": {\n    \"request_id\": \"2\"\n  }, \n  \"headers\":
+        {\n    \"Accept\": \"*/*\", \n    \"Accept-Encoding\": \"gzip, deflate, br,
+        zstd\", \n    \"Host\": \"httpbin.org\", \n    \"User-Agent\": \"python-httpx/0.28.1\",
+        \n    \"X-Amzn-Trace-Id\": \"Root=1-6885e7bd-4bd261d12cffa8a24bc471fc\"\n
+        \ }, \n  \"origin\": \"XXX.XXX.XXX.XXX\", \n  \"url\": \"https://httpbin.org/get?request_id=2\"\n}\n"
+    headers:
+      Access-Control-Allow-Credentials:
+      - 'true'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '352'
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 27 Jul 2025 08:47:57 GMT
+      Server:
+      - gunicorn/19.9.0
+    status:
+      code: 200
+      message: OK
+version: 1

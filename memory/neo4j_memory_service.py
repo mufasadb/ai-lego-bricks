@@ -15,7 +15,6 @@ from .graph_formatter_service import GraphMemoryFormat
 # Import shared embedding service
 try:
     from llm.embedding_client import SentenceTransformerEmbeddingClient
-    from llm.llm_types import EmbeddingClient
 
     EMBEDDING_ABSTRACTION_AVAILABLE = True
 except ImportError:

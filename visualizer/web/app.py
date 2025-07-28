@@ -9,7 +9,6 @@ import os
 import json
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
-import sys
 
 # Import visualizer components
 from workflow_parser import WorkflowParser

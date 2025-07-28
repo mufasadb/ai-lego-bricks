@@ -6,25 +6,24 @@ recording and security filtering across all tests.
 """
 
 import os
-from typing import Dict, Any, List
+from typing import Dict, Any
 import vcr
 
 
 def get_vcr_config() -> Dict[str, Any]:
     """
     Get standardized VCR configuration with security filtering.
-    
+
     Returns:
         Dict containing VCR configuration options
     """
     return {
         # Recording mode - can be overridden by pytest --record-mode
         "record_mode": "once",
-        
         # Filter sensitive headers
         "filter_headers": [
             "authorization",
-            "x-api-key", 
+            "x-api-key",
             "openai-api-key",
             "anthropic-api-key",
             "x-openai-api-key",
@@ -38,7 +37,6 @@ def get_vcr_config() -> Dict[str, Any]:
             "password",
             "auth",
         ],
-        
         # Filter sensitive query parameters
         "filter_query_parameters": [
             "api_key",
@@ -49,10 +47,9 @@ def get_vcr_config() -> Dict[str, Any]:
             "auth",
             "client_secret",
         ],
-        
         # Filter sensitive POST data
         "filter_post_data_parameters": [
-            "api_key", 
+            "api_key",
             "token",
             "key",
             "secret",
@@ -60,177 +57,165 @@ def get_vcr_config() -> Dict[str, Any]:
             "client_secret",
             "auth",
         ],
-        
         # Cassette library directory
-        "cassette_library_dir": os.path.join(
-            os.path.dirname(__file__), "cassettes"
-        ),
-        
+        "cassette_library_dir": os.path.join(os.path.dirname(__file__), "cassettes"),
         # Decode compressed responses for easier inspection
         "decode_compressed_response": True,
-        
         # Match on method, scheme, host, port, path, and query
         "match_on": ["method", "scheme", "host", "port", "path", "query"],
-        
         # Custom serializer for better readability
         "serializer": "yaml",
-        
         # Ignore certain hosts that shouldn't be recorded
         "ignore_hosts": ["localhost", "127.0.0.1"],
-        
-        # Record all responses, even errors
-        "record_mode": "once",
     }
 
 
 def get_pytest_vcr_config() -> Dict[str, Any]:
     """
     Get pytest-specific VCR configuration for use with @pytest.mark.vcr.
-    
+
     Returns:
         Dict containing pytest-recording configuration
     """
     base_config = get_vcr_config()
-    
+
     # Additional configuration for pytest-recording
     pytest_config = {
         **base_config,
-        
         # Custom before_record hook to sanitize sensitive data
         "before_record_request": sanitize_request,
         "before_record_response": sanitize_response,
-        
         # Fail on new cassettes in CI mode (when PYTEST_RECORD_MODE=none)
         "allow_playback_repeats": True,
     }
-    
+
     return pytest_config
 
 
 def sanitize_request(request):
     """
     Sanitize request before recording to cassette.
-    
+
     Args:
         request: VCR request object
-        
+
     Returns:
         Modified request object with sensitive data removed
     """
     import re
-    
+
     # Sanitize URI - replace all IP addresses with localhost (except 127.0.0.1)
-    if hasattr(request, 'uri'):
+    if hasattr(request, "uri"):
         # Replace all IPv4 addresses except localhost
-        ip_pattern = r'(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)'
-        
+        ip_pattern = r"(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
+
         def replace_ip(match):
             ip = match.group()
             # Don't replace localhost or 0.0.0.0
-            if ip in ('127.0.0.1', '0.0.0.0'):
+            if ip in ("127.0.0.1", "0.0.0.0"):
                 return ip
-            return 'localhost'
-        
+            return "localhost"
+
         request.uri = re.sub(ip_pattern, replace_ip, request.uri)
-    
+
     # Sanitize request body
-    if hasattr(request, 'body') and request.body:
+    if hasattr(request, "body") and request.body:
         if isinstance(request.body, str):
             # Replace all IP addresses in body (except localhost)
-            ip_pattern = r'(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)'
-            
+            ip_pattern = r"(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
+
             def replace_ip(match):
                 ip = match.group()
-                if ip in ('127.0.0.1', '0.0.0.0'):
+                if ip in ("127.0.0.1", "0.0.0.0"):
                     return ip
-                return 'localhost'
-            
+                return "localhost"
+
             request.body = re.sub(ip_pattern, replace_ip, request.body)
-    
+
     # Sanitize headers - replace IP addresses in host headers
-    if hasattr(request, 'headers'):
+    if hasattr(request, "headers"):
         for header_name, header_values in request.headers.items():
-            if header_name.lower() == 'host':
+            if header_name.lower() == "host":
                 # Clean list of header values
                 cleaned_values = []
                 for value in header_values:
-                    ip_pattern = r'(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)'
-                    
+                    ip_pattern = r"(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
+
                     def replace_ip(match):
                         ip = match.group()
-                        if ip in ('127.0.0.1', '0.0.0.0'):
+                        if ip in ("127.0.0.1", "0.0.0.0"):
                             return ip
-                        return 'localhost'
-                    
+                        return "localhost"
+
                     cleaned_value = re.sub(ip_pattern, replace_ip, value)
                     cleaned_values.append(cleaned_value)
                 request.headers[header_name] = cleaned_values
-    
+
     return request
 
 
 def sanitize_response(response):
     """
     Sanitize response before recording to cassette.
-    
+
     Args:
         response: VCR response object (can be dict or object)
-        
+
     Returns:
         Modified response object with sensitive data removed
     """
     import re
-    
+
     # Define IP pattern and replacement function
-    ip_pattern = r'(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)'
-    
+    ip_pattern = r"(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
+
     def replace_ip(match):
         ip = match.group()
-        if ip in ('127.0.0.1', '0.0.0.0'):
+        if ip in ("127.0.0.1", "0.0.0.0"):
             return ip
-        return 'XXX.XXX.XXX.XXX'  # More obvious placeholder for IPs in responses
-    
+        return "XXX.XXX.XXX.XXX"  # More obvious placeholder for IPs in responses
+
     # Handle dict-style response (VCR internal format)
-    if isinstance(response, dict) and 'body' in response:
-        body = response['body']
-        if isinstance(body, dict) and 'string' in body:
-            content = body['string']
+    if isinstance(response, dict) and "body" in response:
+        body = response["body"]
+        if isinstance(body, dict) and "string" in body:
+            content = body["string"]
             if isinstance(content, bytes):
                 # Decode bytes, sanitize, then re-encode
-                content_str = content.decode('utf-8')
+                content_str = content.decode("utf-8")
                 sanitized_str = re.sub(ip_pattern, replace_ip, content_str)
-                response['body']['string'] = sanitized_str.encode('utf-8')
+                response["body"]["string"] = sanitized_str.encode("utf-8")
             elif isinstance(content, str):
                 # Sanitize string directly
-                response['body']['string'] = re.sub(ip_pattern, replace_ip, content)
-    
+                response["body"]["string"] = re.sub(ip_pattern, replace_ip, content)
+
     # Handle object-style response (fallback)
-    elif hasattr(response, 'body') and response.body:
-        if isinstance(response.body, dict) and 'string' in response.body:
-            content = response.body['string']
+    elif hasattr(response, "body") and response.body:
+        if isinstance(response.body, dict) and "string" in response.body:
+            content = response.body["string"]
             if isinstance(content, (str, bytes)):
                 if isinstance(content, bytes):
-                    content = content.decode('utf-8')
-                response.body['string'] = re.sub(ip_pattern, replace_ip, content)
+                    content = content.decode("utf-8")
+                response.body["string"] = re.sub(ip_pattern, replace_ip, content)
         elif isinstance(response.body, str):
             response.body = re.sub(ip_pattern, replace_ip, response.body)
-    
+
     return response
 
 
 def create_vcr_instance(**kwargs) -> vcr.VCR:
     """
     Create a VCR instance with default configuration.
-    
+
     Args:
         **kwargs: Additional configuration to override defaults
-        
+
     Returns:
         Configured VCR instance
     """
     config = get_vcr_config()
     config.update(kwargs)
-    
+
     return vcr.VCR(**config)
 
 

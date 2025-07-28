@@ -1,0 +1,130 @@
+interactions:
+- request:
+    body: '{"contents": [{"role": "user", "parts": [{"text": "I am a teacher. Remember
+      my profession."}]}], "generationConfig": {"temperature": 0.7, "maxOutputTokens":
+      1000}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate, br, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '153'
+      content-type:
+      - application/json
+      host:
+      - g
+      user-agent:
+      - python-httpx/0.28.1
+      x-goog-api-key:
+      - AIzaSyDNakFvvJOByqWqd14VV1MfCow3ilBljPo
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"Understood. I will remember you are
+        a teacher.\\n\"\n          }\n        ],\n        \"role\": \"model\"\n      },\n
+        \     \"finishReason\": \"STOP\",\n      \"avgLogprobs\": -0.17941257086667148\n
+        \   }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\": 9,\n    \"candidatesTokenCount\":
+        11,\n    \"totalTokenCount\": 20,\n    \"promptTokensDetails\": [\n      {\n
+        \       \"modality\": \"TEXT\",\n        \"tokenCount\": 9\n      }\n    ],\n
+        \   \"candidatesTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 11\n      }\n    ]\n  },\n  \"modelVersion\": \"gemini-1.5-flash\",\n
+        \ \"responseId\": \"4QCGaMbmILOlnvgPnbu0wQU\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Sun, 27 Jul 2025 10:35:13 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=434
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+      content-length:
+      - '692'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"role": "user", "parts": [{"text": "I am a teacher. Remember
+      my profession."}]}, {"role": "model", "parts": [{"text": "Understood. I will
+      remember you are a teacher.\n"}]}, {"role": "user", "parts": [{"text": "What
+      is my profession?"}]}], "generationConfig": {"temperature": 0.7, "maxOutputTokens":
+      1000}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate, br, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '300'
+      content-type:
+      - application/json
+      host:
+      - g
+      user-agent:
+      - python-httpx/0.28.1
+      x-goog-api-key:
+      - AIzaSyDNakFvvJOByqWqd14VV1MfCow3ilBljPo
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"You are a teacher.\\n\"\n          }\n
+        \       ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"avgLogprobs\": -3.6848864207665123e-05\n    }\n  ],\n  \"usageMetadata\":
+        {\n    \"promptTokenCount\": 25,\n    \"candidatesTokenCount\": 6,\n    \"totalTokenCount\":
+        31,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 25\n      }\n    ],\n    \"candidatesTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 6\n      }\n
+        \   ]\n  },\n  \"modelVersion\": \"gemini-1.5-flash\",\n  \"responseId\":
+        \"4gCGaPa2Cf6cnvgPtKmf0AQ\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Sun, 27 Jul 2025 10:35:14 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=421
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+      content-length:
+      - '667'
+    status:
+      code: 200
+      message: OK
+version: 1

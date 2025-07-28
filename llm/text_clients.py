@@ -386,7 +386,7 @@ class GeminiTextClient(TextLLMClient):
         if chat_history:
             messages.extend(chat_history)
         messages.append(ChatMessage(role="user", content=message))
-        
+
         gemini_messages = []
         for msg in messages:
             role = "user" if msg.role == "user" else "model"
@@ -407,21 +407,23 @@ class GeminiTextClient(TextLLMClient):
             function_declarations = []
             for tool in tools:
                 if isinstance(tool, dict):
-                    if 'function' in tool:
+                    if "function" in tool:
                         # OpenAI format - convert to Gemini
-                        func = tool['function']
-                        function_declarations.append({
-                            "name": func['name'],
-                            "description": func['description'],
-                            "parameters": func.get('parameters', {})
-                        })
-                    elif 'name' in tool and 'description' in tool:
+                        func = tool["function"]
+                        function_declarations.append(
+                            {
+                                "name": func["name"],
+                                "description": func["description"],
+                                "parameters": func.get("parameters", {}),
+                            }
+                        )
+                    elif "name" in tool and "description" in tool:
                         # Already in Gemini-like format
                         function_declarations.append(tool)
-            
+
             if function_declarations:
                 payload["tools"] = [{"functionDeclarations": function_declarations}]
-                
+
                 # Add tool choice configuration
                 if tool_choice:
                     if tool_choice.upper() in ["AUTO", "ANY", "NONE"]:
@@ -431,7 +433,7 @@ class GeminiTextClient(TextLLMClient):
 
         max_retries = 3
         base_delay = 1.0
-        
+
         for attempt in range(max_retries):
             try:
                 with httpx.Client(timeout=self.config.timeout) as client:
@@ -440,56 +442,58 @@ class GeminiTextClient(TextLLMClient):
                         json=payload,
                         headers={"x-goog-api-key": self.api_key},
                     )
-                    
+
                     if response.status_code == 503 and attempt < max_retries - 1:
                         delay = base_delay * (2**attempt) + random.uniform(0, 1)
                         print(f"503 error, retrying in {delay:.2f}s...")
                         time.sleep(delay)
                         continue
-                        
+
                     response.raise_for_status()
                     result = response.json()
-                    
+
                     # Parse Gemini response for function calls
                     if "candidates" in result and len(result["candidates"]) > 0:
                         candidate = result["candidates"][0]
                         content = candidate.get("content", {})
                         parts = content.get("parts", [])
-                        
+
                         text_response = ""
                         tool_calls = []
-                        
+
                         for part in parts:
                             if "text" in part:
                                 text_response += part["text"]
                             elif "functionCall" in part:
                                 func_call = part["functionCall"]
-                                tool_calls.append({
-                                    "id": f"call_{len(tool_calls)}",
-                                    "type": "function",
-                                    "function": {
-                                        "name": func_call.get("name", ""),
-                                        "arguments": func_call.get("args", {})
+                                tool_calls.append(
+                                    {
+                                        "id": f"call_{len(tool_calls)}",
+                                        "type": "function",
+                                        "function": {
+                                            "name": func_call.get("name", ""),
+                                            "arguments": func_call.get("args", {}),
+                                        },
                                     }
-                                })
-                        
+                                )
+
                         finish_reason = candidate.get("finishReason", "STOP")
                         if finish_reason == "STOP":
                             finish_reason = "tool_calls" if tool_calls else "stop"
-                        
+
                         return {
                             "response": text_response,
                             "tool_calls": tool_calls,
-                            "finish_reason": finish_reason.lower()
+                            "finish_reason": finish_reason.lower(),
                         }
-                    
+
                     # Fallback if no candidates
                     return {
                         "response": "No response generated",
                         "tool_calls": [],
-                        "finish_reason": "stop"
+                        "finish_reason": "stop",
                     }
-                    
+
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 503 and attempt < max_retries - 1:
                     delay = base_delay * (2**attempt) + random.uniform(0, 1)
@@ -501,14 +505,14 @@ class GeminiTextClient(TextLLMClient):
                 else:
                     print(f"HTTP error {e.response.status_code}: {e.response.text}")
                     raise
-            except Exception as e:
+            except Exception:
                 if attempt < max_retries - 1:
                     delay = base_delay * (2**attempt) + random.uniform(0, 1)
                     time.sleep(delay)
                     continue
                 else:
                     raise
-        
+
         raise RuntimeError("Max retries exceeded for Gemini API request")
 
     def chat_stream(
@@ -937,7 +941,7 @@ class OpenRouterTextClient(TextLLMClient):
 
                     return full_response
 
-        except httpx.HTTPError as e:
+        except httpx.HTTPError:
             # Fall back to regular API
             full_response = self.chat_with_messages(messages)
             yield full_response

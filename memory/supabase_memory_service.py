@@ -12,7 +12,6 @@ from .memory_service import MemoryService, Memory
 # Import shared embedding service
 try:
     from llm.embedding_client import SentenceTransformerEmbeddingClient
-    from llm.llm_types import EmbeddingClient
 
     EMBEDDING_ABSTRACTION_AVAILABLE = True
 except ImportError:

@@ -3,10 +3,7 @@ Tests for HTTP Request Service
 """
 
 import pytest
-import asyncio
-import json
 from unittest.mock import Mock, patch, AsyncMock
-from typing import Dict, Any
 
 # Import the HTTP request service
 import sys

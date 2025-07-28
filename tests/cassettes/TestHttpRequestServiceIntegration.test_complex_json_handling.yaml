@@ -1,0 +1,62 @@
+interactions:
+- request:
+    body: '{"user": {"name": "Test User", "email": "test@example.com", "preferences":
+      {"theme": "dark", "notifications": true, "tags": ["developer", "tester", "integration"]}},
+      "metadata": {"created_at": "2025-01-01T00:00:00Z", "version": 1.0, "features":
+      ["auth", "api", "testing"]}, "numbers": [1, 2, 3.14, 42], "boolean_flags": {"active":
+      true, "verified": false, "premium": null}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate, br, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '339'
+      content-type:
+      - application/json
+      host:
+      - h
+      user-agent:
+      - python-httpx/0.28.1
+    method: POST
+    uri: https://httpbin.org/post
+  response:
+    body:
+      string: "{\n  \"args\": {}, \n  \"data\": \"{\\\"user\\\":{\\\"name\\\":\\\"Test
+        User\\\",\\\"email\\\":\\\"test@example.com\\\",\\\"preferences\\\":{\\\"theme\\\":\\\"dark\\\",\\\"notifications\\\":true,\\\"tags\\\":[\\\"developer\\\",\\\"tester\\\",\\\"integration\\\"]}},\\\"metadata\\\":{\\\"created_at\\\":\\\"2025-01-01T00:00:00Z\\\",\\\"version\\\":1.0,\\\"features\\\":[\\\"auth\\\",\\\"api\\\",\\\"testing\\\"]},\\\"numbers\\\":[1,2,3.14,42],\\\"boolean_flags\\\":{\\\"active\\\":true,\\\"verified\\\":false,\\\"premium\\\":null}}\",
+        \n  \"files\": {}, \n  \"form\": {}, \n  \"headers\": {\n    \"Accept\": \"*/*\",
+        \n    \"Accept-Encoding\": \"gzip, deflate, br, zstd\", \n    \"Content-Length\":
+        \"339\", \n    \"Content-Type\": \"application/json\", \n    \"Host\": \"httpbin.org\",
+        \n    \"User-Agent\": \"python-httpx/0.28.1\", \n    \"X-Amzn-Trace-Id\":
+        \"Root=1-6885e7bc-585ae0300e4efc875385660b\"\n  }, \n  \"json\": {\n    \"boolean_flags\":
+        {\n      \"active\": true, \n      \"premium\": null, \n      \"verified\":
+        false\n    }, \n    \"metadata\": {\n      \"created_at\": \"2025-01-01T00:00:00Z\",
+        \n      \"features\": [\n        \"auth\", \n        \"api\", \n        \"testing\"\n
+        \     ], \n      \"version\": 1.0\n    }, \n    \"numbers\": [\n      1, \n
+        \     2, \n      3.14, \n      42\n    ], \n    \"user\": {\n      \"email\":
+        \"test@example.com\", \n      \"name\": \"Test User\", \n      \"preferences\":
+        {\n        \"notifications\": true, \n        \"tags\": [\n          \"developer\",
+        \n          \"tester\", \n          \"integration\"\n        ], \n        \"theme\":
+        \"dark\"\n      }\n    }\n  }, \n  \"origin\": \"XXX.XXX.XXX.XXX\", \n  \"url\":
+        \"https://httpbin.org/post\"\n}\n"
+    headers:
+      Access-Control-Allow-Credentials:
+      - 'true'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1453'
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 27 Jul 2025 08:47:57 GMT
+      Server:
+      - gunicorn/19.9.0
+    status:
+      code: 200
+      message: OK
+version: 1

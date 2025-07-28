@@ -126,18 +126,20 @@ def get_available_services() -> Dict[str, bool]:
     # Check Neo4j
     if os.getenv("NEO4J_URI") or os.getenv("NEO4J_URL"):
         try:
-            from .neo4j_memory_service import Neo4jMemoryService
-
-            services["neo4j"] = True
+            import importlib.util
+            spec = importlib.util.find_spec("memory.neo4j_memory_service")
+            if spec is not None:
+                services["neo4j"] = True
         except ImportError:
             pass
 
     # Check Supabase
     if os.getenv("SUPABASE_URL") and os.getenv("SUPABASE_ANON_KEY"):
         try:
-            from .supabase_memory_service import SupabaseMemoryService
-
-            services["supabase"] = True
+            import importlib.util
+            spec = importlib.util.find_spec("memory.supabase_memory_service")
+            if spec is not None:
+                services["supabase"] = True
         except ImportError:
             pass
 

@@ -49,7 +49,7 @@ class ChunkingService:
             chunk = self._get_next_chunk(remaining_text)
             if chunk:
                 chunks.append(chunk)
-                remaining_text = remaining_text[len(chunk):].lstrip()
+                remaining_text = remaining_text[len(chunk) :].lstrip()
             else:
                 # Fallback: take whatever remains
                 chunks.append(remaining_text)

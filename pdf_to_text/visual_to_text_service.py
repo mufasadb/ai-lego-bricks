@@ -9,7 +9,6 @@ import io
 
 # Vision processing capabilities
 try:
-    from llm.generation_service import quick_generate_gemini
     from llm.vision_clients import GeminiVisionClient
 
     VISION_AVAILABLE = True

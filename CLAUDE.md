@@ -16,7 +16,7 @@ AI Lego Bricks is a modular library of building blocks for LLM agentic work, des
 - Human approval workflows
 
 ### 💬 Chat Services
-**Conversation engine** - Unified chat interfaces supporting multiple LLM providers (Gemini, Ollama, OpenAI, Anthropic). Choose between stateless quick interactions or stateful multi-turn conversations with full history management.
+**Conversation engine** - Unified chat interfaces supporting multiple LLM providers (Gemini, Ollama, OpenAI, Anthropic, OpenRouter). Choose between stateless quick interactions or stateful multi-turn conversations with full history management. OpenRouter provides access to 100+ models through a single API key with unified billing.
 
 ### 🧠 Memory Services  
 **Long-term knowledge** - Semantic memory system with vector embeddings and graph storage. Automatically store and retrieve relevant context using similarity search across Neo4j and Supabase backends.
@@ -48,6 +48,9 @@ AI Lego Bricks is a modular library of building blocks for LLM agentic work, des
 ### 📊 Visualizer
 **Workflow debugging** - Generate visual diagrams of agent workflows for debugging and documentation purposes.
 
+### 🧪 Testing Framework
+**VCR-based testing** - Comprehensive testing infrastructure with three-tier approach: integration tests that record real API calls to VCR cassettes, unit tests that use recorded cassettes for fast CI execution, and CLI commands for easy tape management. Includes automatic security filtering to prevent API key leakage and GitHub Actions integration.
+
 ## Core Design Principle: JSON-Driven Configuration
 
 The fundamental principle of AI Lego Bricks is that **behavior should be driven through agent orchestrator JSON files**, not Python code. This means:
@@ -60,7 +63,7 @@ The fundamental principle of AI Lego Bricks is that **behavior should be driven 
     {"type": "pdf_to_text", "input": "document_path"},
     {"type": "chunking", "chunk_size": 1000},
     {"type": "memory_store", "metadata": {"type": "document"}},
-    {"type": "llm_analysis", "provider": "gemini", "model": "gemini-1.5-flash"},
+    {"type": "llm_analysis", "provider": "openrouter", "model": "anthropic/claude-3.5-sonnet"},
     {"type": "tts", "voice": "alloy"}
   ]
 }
@@ -81,12 +84,44 @@ This approach provides:
 2. **Check examples** - See `/agent_orchestration/examples/` for JSON workflow templates
 3. **Use the CLI** - `ailego` command provides scaffolding and templates
 4. **Start with JSON** - Build agents through configuration, not code
+5. **Run tests** - Use `ailego test record` to record API interactions, then `ailego test unit` for fast testing
+
+## Testing Framework
+
+AI Lego Bricks includes a comprehensive VCR-based testing framework with three main components:
+
+### 🎬 Integration Tests
+- **Real API calls** that record to VCR cassettes
+- **Full environment setup** with actual API keys
+- **Comprehensive coverage** of chat, HTTP, memory, and orchestration services
+- **Command**: `ailego test record [service]`
+
+### ⚡ Unit Tests  
+- **Fast execution** using recorded cassettes (no network calls)
+- **CI/CD friendly** - runs in GitHub Actions without API keys
+- **Identical test logic** to integration tests for consistency
+- **Command**: `ailego test unit [service]`
+
+### 🛠️ Tape Management
+- **Easy cassette management** with CLI commands
+- **Security validation** to prevent API key leakage
+- **Update workflows** to refresh recordings when APIs change
+- **Commands**: `ailego test info`, `ailego test validate`, `ailego test clean-cassettes`
+
+### Key Benefits
+- **No API keys in CI** - Unit tests run entirely offline using cassettes
+- **Automatic security filtering** - Sensitive data automatically removed from recordings
+- **Easy updates** - Simple commands to refresh when APIs change
+- **Full coverage** - Both real API validation and fast CI execution
+
+See `TESTING.md` for complete documentation and usage examples.
 
 ## Documentation Structure
 
 - **CLAUDE.md** files in each brick folder contain detailed technical guides for Claude
 - **The Brick Books/** contains user-facing documentation for each brick
 - **claude-knowledge/** contains general guides and architectural overviews
+- **TESTING.md** contains comprehensive testing framework documentation
 
 ## Security & Credentials
 

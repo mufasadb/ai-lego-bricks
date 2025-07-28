@@ -1,0 +1,43 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, br, zstd
+      connection:
+      - keep-alive
+      host:
+      - h
+      user-agent:
+      - AI-Lego-Bricks/1.0
+      x-custom-header:
+      - Integration-Test
+    method: GET
+    uri: https://httpbin.org/headers
+  response:
+    body:
+      string: "{\n  \"headers\": {\n    \"Accept\": \"application/json\", \n    \"Accept-Encoding\":
+        \"gzip, deflate, br, zstd\", \n    \"Host\": \"httpbin.org\", \n    \"User-Agent\":
+        \"AI-Lego-Bricks/1.0\", \n    \"X-Amzn-Trace-Id\": \"Root=1-6885e7a3-3351fa10262fd7bb00c3aa7e\",
+        \n    \"X-Custom-Header\": \"Integration-Test\"\n  }\n}\n"
+    headers:
+      Access-Control-Allow-Credentials:
+      - 'true'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '288'
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 27 Jul 2025 08:47:32 GMT
+      Server:
+      - gunicorn/19.9.0
+    status:
+      code: 200
+      message: OK
+version: 1

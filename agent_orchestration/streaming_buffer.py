@@ -124,7 +124,7 @@ class StreamBuffer:
         if len(self.buffer) >= self.config.chunk_size:
             # Forward chunk_size characters
             to_forward = self.buffer[: self.config.chunk_size]
-            self.buffer = self.buffer[self.config.chunk_size:]
+            self.buffer = self.buffer[self.config.chunk_size :]
             self.total_forwarded += len(to_forward)
             self.last_forward_time = time.time()
             return [to_forward]
@@ -142,7 +142,7 @@ class StreamBuffer:
         if len(words) >= self.config.word_count:
             # Forward word_count words
             words_to_forward = words[: self.config.word_count]
-            remaining_words = words[self.config.word_count:]
+            remaining_words = words[self.config.word_count :]
 
             content = " ".join(words_to_forward)
             self.buffer = " ".join(remaining_words)

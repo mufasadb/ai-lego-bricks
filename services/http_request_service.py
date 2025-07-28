@@ -8,11 +8,11 @@ Supports async operations, credential integration, and comprehensive error handl
 import asyncio
 import json
 import logging
-from typing import Dict, Any, Optional, Union, List
+from typing import Dict, Any, Optional, Union
 from dataclasses import dataclass, field
 from enum import Enum
 import httpx
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urlparse
 
 try:
     from credentials.credential_manager import CredentialManager
@@ -261,15 +261,9 @@ class HttpRequestService:
         # Prepare headers with authentication
         headers = self._prepare_auth_headers(config)
 
-        # Prepare request data
-        request_data = None
+        # Set content type for JSON data
         if config.json_data:
-            request_data = config.json_data
             headers["Content-Type"] = "application/json"
-        elif config.form_data:
-            request_data = config.form_data
-        elif config.data:
-            request_data = config.data
 
         # Retry logic
         last_exception = None
@@ -477,7 +471,6 @@ async def quick_request(config: HttpRequestConfig) -> HttpResponse:
 
 # Example usage
 if __name__ == "__main__":
-    import asyncio
 
     async def main():
         # Example 1: Basic GET request

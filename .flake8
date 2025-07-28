@@ -10,7 +10,9 @@ extend-ignore =
     # Allow imported but unused (F401)
     F401,
     # Allow module level import not at top of file (E402)
-    E402
+    E402,
+    # Allow whitespace before ':' (conflicts with black)
+    E203
 exclude = 
     .git,
     __pycache__,

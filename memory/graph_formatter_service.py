@@ -254,7 +254,7 @@ class GraphFormatterService:
         results = []
 
         for i in range(0, len(memory_contents), batch_size):
-            batch = memory_contents[i:i + batch_size]
+            batch = memory_contents[i : i + batch_size]
 
             for content in batch:
                 formatted_memory = self.format_memory_as_graph(content)

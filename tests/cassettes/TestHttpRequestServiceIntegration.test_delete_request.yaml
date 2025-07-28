@@ -1,0 +1,43 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate, br, zstd
+      connection:
+      - keep-alive
+      host:
+      - h
+      user-agent:
+      - python-httpx/0.28.1
+    method: DELETE
+    uri: https://httpbin.org/delete
+  response:
+    body:
+      string: "{\n  \"args\": {}, \n  \"data\": \"\", \n  \"files\": {}, \n  \"form\":
+        {}, \n  \"headers\": {\n    \"Accept\": \"*/*\", \n    \"Accept-Encoding\":
+        \"gzip, deflate, br, zstd\", \n    \"Host\": \"httpbin.org\", \n    \"User-Agent\":
+        \"python-httpx/0.28.1\", \n    \"X-Amzn-Trace-Id\": \"Root=1-6885e7a2-7ded2f2670e7e52c09488032\"\n
+        \ }, \n  \"json\": null, \n  \"origin\": \"XXX.XXX.XXX.XXX\", \n  \"url\":
+        \"https://httpbin.org/delete\"\n}\n"
+    headers:
+      Access-Control-Allow-Credentials:
+      - 'true'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '380'
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 27 Jul 2025 08:47:31 GMT
+      Server:
+      - gunicorn/19.9.0
+    status:
+      code: 200
+      message: OK
+version: 1

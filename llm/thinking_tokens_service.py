@@ -117,18 +117,18 @@ class ThinkingTokensService:
                 end_pos = response_lower.find(closing_pattern.lower(), start_pos)
                 if end_pos == -1:
                     # No closing tag found, treat rest as thinking
-                    thinking_content = response[start_pos + len(delimiter):].strip()
+                    thinking_content = response[start_pos + len(delimiter) :].strip()
                     clean_response = response[:start_pos].strip()
                 else:
                     # Extract thinking content between tags
                     thinking_content = response[
-                        start_pos + len(delimiter):end_pos
+                        start_pos + len(delimiter) : end_pos
                     ].strip()
 
                     # Remove entire thinking block
                     clean_response = (
                         response[:start_pos]
-                        + response[end_pos + len(closing_pattern):].lstrip()
+                        + response[end_pos + len(closing_pattern) :].lstrip()
                     ).strip()
 
             break  # Use first match

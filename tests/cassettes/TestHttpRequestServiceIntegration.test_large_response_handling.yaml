@@ -1,0 +1,39 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate, br, zstd
+      connection:
+      - keep-alive
+      host:
+      - h
+      user-agent:
+      - python-httpx/0.28.1
+    method: GET
+    uri: https://httpbin.org/base64/SFRUUCBSZXF1ZXN0IFNlcnZpY2UgVGVzdCAtIExhcmdlIFJlc3BvbnNlIERhdGEgd2l0aCBtdWx0aXBsZSBsaW5lcyBhbmQgc3BlY2lhbCBjaGFyYWN0ZXJzIDEyMzQ1Njc4OTAhQCMkJV4mKigp
+  response:
+    body:
+      string: HTTP Request Service Test - Large Response Data with multiple lines
+        and special characters 1234567890!@#$%^&*()
+    headers:
+      Access-Control-Allow-Credentials:
+      - 'true'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '111'
+      Content-Type:
+      - text/html; charset=utf-8
+      Date:
+      - Sun, 27 Jul 2025 08:47:59 GMT
+      Server:
+      - gunicorn/19.9.0
+    status:
+      code: 200
+      message: OK
+version: 1

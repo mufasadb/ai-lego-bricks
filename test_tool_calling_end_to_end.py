@@ -13,7 +13,6 @@ Created to validate the tool calling restoration work.
 """
 
 import sys
-import os
 import asyncio
 
 sys.path.append(".")

@@ -111,6 +111,9 @@ all = [
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-recording>=0.13.0",
+    "vcrpy>=6.0.0",
     "black>=23.0.0",
     "flake8>=6.0.0",
     "mypy>=1.0.0",
@@ -165,6 +168,9 @@ filterwarnings = [
 ]
 markers = [
     "integration: marks tests as integration tests (may require external services)",
+    "unit: marks tests as unit tests (mocked, no external services)",
+    "vcr: marks tests that use VCR cassettes",
+    "real_api: marks tests that make real API calls",
     "performance: marks tests as performance tests",
     "slow: marks tests as slow running"
 ]

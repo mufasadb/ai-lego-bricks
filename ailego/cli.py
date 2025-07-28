@@ -148,6 +148,97 @@ Use 'ailego create --help' to see all available agent types.
     console.print(Panel(examples_text, title="Examples", border_style="blue"))
 
 
+# Test Management Commands
+test_app = typer.Typer(name="test", help="Manage VCR cassettes and run tests")
+app.add_typer(test_app, name="test")
+
+
+@test_app.command("record")
+def test_record(
+    service: Optional[str] = typer.Argument(
+        None, help="Service to record (chat, http, memory, etc.)"
+    ),
+    force: bool = typer.Option(False, "--force", help="Overwrite existing cassettes"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed output"),
+):
+    """Record VCR cassettes by running integration tests with real API calls."""
+    from ailego.commands.test import record_cassettes
+
+    record_cassettes(service, force, verbose)
+
+
+@test_app.command("update")
+def test_update(
+    service: Optional[str] = typer.Argument(None, help="Service to update"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed output"),
+):
+    """Update existing cassettes with new episodes."""
+    from ailego.commands.test import update_cassettes
+
+    update_cassettes(service, verbose)
+
+
+@test_app.command("unit")
+def test_unit(
+    service: Optional[str] = typer.Argument(None, help="Service to test"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed output"),
+    coverage: bool = typer.Option(False, "--coverage", help="Generate coverage report"),
+):
+    """Run unit tests using recorded cassettes (no network calls)."""
+    from ailego.commands.test import run_unit_tests
+
+    run_unit_tests(service, verbose, coverage)
+
+
+@test_app.command("integration")
+def test_integration(
+    service: Optional[str] = typer.Argument(None, help="Service to test"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed output"),
+):
+    """Run integration tests with real API calls."""
+    from ailego.commands.test import run_integration_tests
+
+    run_integration_tests(service, verbose)
+
+
+@test_app.command("run")
+def test_run(
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed output"),
+    coverage: bool = typer.Option(False, "--coverage", help="Generate coverage report"),
+):
+    """Run all tests (unit + integration)."""
+    from ailego.commands.test import run_all_tests
+
+    run_all_tests(verbose, coverage)
+
+
+@test_app.command("clean-cassettes")
+def test_clean(
+    service: Optional[str] = typer.Argument(None, help="Service to clean"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation"),
+):
+    """Clean old or invalid VCR cassettes."""
+    from ailego.commands.test import clean_cassettes
+
+    clean_cassettes(service, yes)
+
+
+@test_app.command("info")
+def test_info():
+    """Show information about existing VCR cassettes."""
+    from ailego.commands.test import show_cassette_info
+
+    show_cassette_info()
+
+
+@test_app.command("validate")
+def test_validate():
+    """Validate that cassettes don't contain sensitive data."""
+    from ailego.commands.test import validate_cassettes
+
+    validate_cassettes()
+
+
 def main():
     """Main entry point for the CLI."""
     try:
